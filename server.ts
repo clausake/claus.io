@@ -74,7 +74,7 @@ function getOllamaHost(s: any) {
 
 async function startServer() {
   const app = express();
-  let PORT = 3000;
+  let PORT = Number(process.env.PORT) || 3000;
   app.use(express.json({ limit: "10mb" }));
   let storageDir = process.env.USER_DATA_PATH;
   if (!storageDir) {
@@ -4566,6 +4566,10 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
     }
   });
 
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite").then(
       (s) => {
@@ -4588,7 +4592,7 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
     });
   }
   const startListening = () => {
-    const server = app.listen(PORT, "0.0.0.0", () => {
+    const server = app.listen(PORT, "127.0.0.1", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
     server.on("error", (err: any) => {
