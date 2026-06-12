@@ -1,0 +1,28 @@
+node_modules/
+build/
+dist/
+dist-server/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Fichiers sensibles et bases de données
+*.db
+local_database.db
+agent_culinaire.db
+
+# Fichiers utilitaires de génération de clés / admin
+all_keys.txt
+keys_found.txt
+generate-key.js
+keygen.ts
+
+# Scripts d'installation / Admin non destinés au dépot
+1_INSTALLER.bat
+2_LANCER_SERVEUR.bat
+START_CLAUS_IO.bat
+lancer-app-windows.bat
+NOTICE_INSTALLATION_*.txt
+instruction_creation_logiciel.txt

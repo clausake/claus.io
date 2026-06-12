@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CLAUS.IO - Agent Culinaire</title>
+    <!-- Multi-layered Error Catcher to prevent silent Black Screens -->
+    <script>
+      window.addEventListener('error', function(event) {
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML.trim() === "")) {
+          root.innerHTML = '<div style="background-color:#050505;color:#e2e8f0;font-family:sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;"><div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:30px;max-width:550px;width:100%;"><div style="font-size:40px;margin-bottom:15px;">⚠️</div><h2 style="font-size:18px;font-weight:600;margin-bottom:10px;color:#fff;">Incident de Chargement de l\'Interface</h2><p style="font-size:13px;color:#94a3b8;line-height:1.5;margin-bottom:20px;">Une erreur JavaScript locale s\'est produite durant le chargement de votre Agent Culinaire.</p><div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:12px;text-align:left;font-family:monospace;font-size:12px;color:#f87171;overflow-x:auto;white-space:pre-wrap;margin-bottom:20px;">' + (event.message || 'Erreur indéterminée') + '<br/>Source : ' + (event.filename || 'Inconnue') + ':' + (event.lineno || '0') + '</div><p style="font-size:13px;color:#cbd5e1;margin-bottom:15px;"><b>Solution Recommandée :</b> Lancez le logiciel en fermant cette page et en double-cliquant sur <b>LANCER_APPLICATION.bat</b>.</p><button onclick="window.location.reload(true)" style="background:#10b981;border:none;color:#fff;padding:8px 16px;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;">Rafraîchir l\'Affichage</button></div></div>';
+        }
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        var root = document.getElementById('root');
+        if (root && (!root.innerHTML || root.innerHTML.trim() === "")) {
+          root.innerHTML = '<div style="background-color:#050505;color:#e2e8f0;font-family:sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;"><div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:30px;max-width:550px;width:100%;"><div style="font-size:40px;margin-bottom:15px;">ℹ️</div><h2 style="font-size:18px;font-weight:600;margin-bottom:10px;color:#fff;">Établissement de la Connexion...</h2><p style="font-size:13px;color:#94a3b8;line-height:1.5;margin-bottom:20px;">L\'interface graphique est en cours d\'initialisation et de connexion avec le serveur local.</p><div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:12px;text-align:left;font-family:monospace;font-size:11px;color:#94a3b8;overflow-x:auto;white-space:pre-wrap;margin-bottom:20px;">' + (event.reason || 'Attente d\'échange de données de démarrage') + '</div><button onclick="window.location.reload(true)" style="background:#10b981;border:none;color:#fff;padding:8px 16px;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;">Réessayer</button></div></div>';
+        }
+      });
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

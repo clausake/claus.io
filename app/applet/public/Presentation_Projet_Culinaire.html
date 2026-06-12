@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logiciel de Gestion Culinaire - Présentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        surface: {
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            background-attachment: fixed;
+        }
+
+        .spotlight {
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80vw;
+            height: 80vh;
+            background: radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15), transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .img-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            transform: perspective(1000px) rotateX(2deg);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .img-container:hover {
+            transform: perspective(1000px) rotateX(0deg);
+        }
+
+        .img-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(90deg, #f8fafc, #94a3b8);
+        }
+        .text-gradient-emerald {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(90deg, #34d399, #10b981);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+
+    <div class="spotlight"></div>
+
+    <header class="fixed top-0 w-full z-50 glass border-b-0">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                </div>
+                <span class="font-display font-semibold tracking-wide text-sm text-white">Gestion Culinaire</span>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <a href="#" class="text-xs font-medium text-slate-400 hover:text-white transition-colors">Fonctionnalités</a>
+                <a href="#" class="text-xs font-medium text-slate-400 hover:text-white transition-colors">Architecture</a>
+                <div class="h-4 w-px bg-slate-700 mx-2"></div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-medium text-slate-300">Système Actif</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-32 pb-24 px-6 max-w-7xl mx-auto w-full relative z-10">
+        
+        <section class="text-center max-w-4xl mx-auto mb-20">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 mb-8 text-xs font-medium text-emerald-400">
+                Performance Locale & Intelligence Prédictive
+            </div>
+            
+            <h1 class="text-5xl md:text-7xl font-display font-bold tracking-tight mb-8 leading-[1.1]">
+                L'efficacité opérationnelle <br>
+                <span class="text-gradient-emerald">pilotée par la donnée.</span>
+            </h1>
+            
+            <p class="text-slate-400 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto font-light">
+                Un hub central automatisé conçu pour les professionnels exigeants. De l'ingestion IA des factures au contrôle du food cost, visualisez et optimisez vos opérations en temps réel.
+            </p>
+        </section>
+
+        <section class="mb-32 relative max-w-6xl mx-auto">
+            <div class="absolute -inset-1 rounded-xl bg-gradient-to-b from-white/10 to-transparent opacity-20 blur-sm"></div>
+            <div class="img-container bg-[#050505]">
+                <img src="/screenshot.png" onerror="this.src='https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2000&auto=format&fit=crop'" alt="Tableau de bord de gestion culinaire" class="w-full h-auto">
+            </div>
+        </section>
+
+        <section class="max-w-6xl mx-auto">
+            <div class="mb-12">
+                <h3 class="text-3xl font-display font-semibold text-white mb-4">L'écosystème unifié</h3>
+                <p class="text-slate-400 max-w-2xl">L'architecture repose sur une synchronisation asynchrone ultra-rapide. Chaque module alimente le tableau de bord principal pour une supervision totale.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="glass p-8 rounded-2xl flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-6 text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-display font-semibold text-white mb-3">Ingestion IA des factures</h4>
+                    <p class="text-sm text-slate-400 leading-relaxed flex-grow">
+                        Traitement cognitif des bons de livraison. Le système extrait les lots et les variations de tarifs pour mettre à jour instantanément la base de données sans saisie manuelle.
+                    </p>
+                </div>
+
+                <div class="glass p-8 rounded-2xl flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-6 text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-display font-semibold text-white mb-3">Ingénierie & Food Cost</h4>
+                    <p class="text-sm text-slate-400 leading-relaxed flex-grow">
+                        La clé de la rentabilité. Toute hausse d'un ingrédient réajuste instantanément le coût marginal des recettes liées, offrant une vue claire sur les marges opérationnelles.
+                    </p>
+                </div>
+
+                <div class="glass p-8 rounded-2xl flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-6 text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h4 class="text-xl font-display font-semibold text-white mb-3">Anticipation Anti-Gaspillage</h4>
+                    <p class="text-sm text-slate-400 leading-relaxed flex-grow">
+                        Surveillance prédictive des DLC. Le système croise les stocks à risque avec votre carnet de recettes pour suggérer des productions de sauvetage ciblées.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+        
+        <section class="max-w-6xl mx-auto mt-24 border-t border-slate-800 pt-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h3 class="text-2xl font-display font-semibold text-white mb-4">Architecture Locale Résiliente</h3>
+                    <p class="text-slate-400 leading-relaxed mb-6">
+                        Une base de données autonome encapsulée garantit l'accès fluide même lors des coupures réseau inhérentes aux environnements professionnels. La donnée vous appartient, sécurisée et interrogeable localement en temps réel.
+                    </p>
+                    <ul class="space-y-3">
+                        <li class="flex items-center gap-3 text-sm text-slate-300">
+                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Exécution offline prioritaire
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300">
+                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Synchronisation cloud asynchrone
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300">
+                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Interface fluide sans rafraîchissement
+                        </li>
+                    </ul>
+                </div>
+                <div class="glass p-6 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>
+                    <div class="relative z-10 space-y-4 font-mono text-xs">
+                        <div class="flex items-center gap-2 text-slate-500 mb-4">
+                            <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                            <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        </div>
+                        <div class="text-slate-300"><span class="text-emerald-400">const</span> <span class="text-blue-300">syncEngine</span> = <span class="text-emerald-400">new</span> <span class="text-purple-300">LocalFirstStrategy</span>({</div>
+                        <div class="text-slate-300 pl-4">persistence: <span class="text-emerald-400">'indexedDB'</span>,</div>
+                        <div class="text-slate-300 pl-4">conflictResolution: <span class="text-emerald-400">'last-write-wins'</span>,</div>
+                        <div class="text-slate-300 pl-4">fallbackToNetwork: <span class="text-purple-300">true</span></div>
+                        <div class="text-slate-300">});</div>
+                        <br>
+                        <div class="text-slate-300"><span class="text-emerald-400">await</span> syncEngine.<span class="text-blue-300">initialize</span>();</div>
+                        <div class="text-slate-500 italic">// Data is permanently secure, network or not.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800 py-12 mt-12">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2 text-slate-500 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                <span>Propulsé par une architecture moderne.</span>
+            </div>
+            <div class="text-slate-600 text-xs">
+                © Portfolio Technique.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

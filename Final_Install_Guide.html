@@ -1,0 +1,577 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>CLAUS.IO Installation Guides</title><style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap');
+  
+  :root {
+    --primary: #0ea5e9; --dark: #0f172a; --light: #f8fafc; --gray: #64748b; --border: #e2e8f0;
+  }
+  
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: var(--dark); margin: 0; padding: 0; }
+  
+  .page {
+    width: 794px; min-height: 1122px; margin: 0 auto; padding: 50px 60px;
+    position: relative; background: white;
+    page-break-after: always;
+  }
+  
+  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 25px; }
+  .header-left { display: flex; flex-direction: column; }
+  .header .logo-sm { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 800; color: var(--primary); margin:0;}
+  .header .os-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 800; color: var(--dark); margin-top: 4px; display:flex; align-items:center; gap:8px;}
+  .header .lang { background: #bae6fd; color: #0369a1; padding: 4px 10px; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+  
+  .intro { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 30px; font-weight: 500; }
+  
+  .step { display: flex; gap: 15px; margin-bottom: 25px; }
+  .step-num { flex-shrink: 0; width: 32px; height: 32px; background: var(--primary); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 800; }
+  .step-content { flex: 1; }
+  .step-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: var(--dark); margin: 0 0 10px 0; line-height: 1.3; text-transform: uppercase;}
+  
+  .instruction-list { margin: 0; padding-left: 0; list-style: none; }
+  .instruction-list li { position: relative; padding-left: 18px; font-size: 13px; color: #334155; line-height: 1.5; margin-bottom: 8px; }
+  .instruction-list li::before { content: '→'; position: absolute; left: 0; font-weight: 800; color: var(--primary); }
+  
+  .highlight { display: inline-block; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11.5px; font-weight: 600; color: #0f172a; }
+  
+  .footer { position: absolute; bottom: 30px; left: 60px; right: 60px; border-top: 1px solid var(--border); padding-top: 15px; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 500; }
+</style></head><body>
+  <div class="page" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+    <h1 style="font-size: 60px; color: var(--primary); font-family: 'Plus Jakarta Sans'; font-weight: 800;">CLAUS.IO</h1>
+    <div style="font-size: 24px; color: var(--gray); font-weight: 500;">Installation Guides - Multilingual</div>
+    <div style="margin-top: 30px; font-size: 14px; color: var(--gray);">FR • EN • DE • IT • ES</div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🟦 Windows Installation</div>
+       </div>
+       <div class="lang">FRANÇAIS</div>
+    </div>
+    <div class="intro">Voici les étapes pour installer votre assistant culinaire intelligent CLAUS.IO sur Windows.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLATION DU LOGICIEL</h3><ul class="instruction-list"><li>Lancez le fichier <span class="highlight">CLAUS.IO-Setup.exe</span>.</li><li>Suivez les instructions à l'écran.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLATION DU CERVEAU IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama est une plateforme sécurisée qui fait tourner des modèles d'IA localement pour une confidentialité totale.</li><li>Téléchargez et installez Ollama : https://ollama.com/download/windows</li><li>Une fois installé, ouvrez l'invite de commande (cmd) ou PowerShell et tapez : <span class="highlight">ollama pull llama3.2</span></li><li>Dans CLAUS.IO, allez dans "PARAMÈTRES" -> "IA" et cliquez sur "Tester Connexion".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVATION DE LA LICENCE</h3><ul class="instruction-list"><li>Allez dans l'onglet "PARAMÈTRES". Notez le "Machine ID" et envoyez-le à votre administrateur pour recevoir votre clé.</li><li>Entrez la clé et cliquez sur "Activer".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCÈS SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>Dans les paramètres de CLAUS.IO, scannez le QR Code apparaissant à l'écran.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">SAUVEGARDE</h3><ul class="instruction-list"><li>Prenez note de l'emplacement de vos données (généralement dans <span class="highlight">%APPDATA%\CLAUS.IO</span>). Copiez <span class="highlight">agent_culinaire.db</span> et le dossier <span class="highlight">uploads</span> régulièrement.</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Windows</span>
+      <span>FRANÇAIS</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🟦 Windows Installation</div>
+       </div>
+       <div class="lang">ENGLISH</div>
+    </div>
+    <div class="intro">Here are the steps to install your intelligent culinary assistant CLAUS.IO on Windows.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">SOFTWARE INSTALLATION</h3><ul class="instruction-list"><li>Run <span class="highlight">CLAUS.IO-Setup.exe</span>.</li><li>Follow the on-screen instructions.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">AI BRAIN INSTALLATION (OLLAMA)</h3><ul class="instruction-list"><li>Ollama is a secure platform that runs AI models locally for absolute privacy.</li><li>Download and install Ollama: https://ollama.com/download/windows</li><li>Once installed, open Command Prompt (cmd) or PowerShell and type: <span class="highlight">ollama pull llama3.2</span></li><li>Inside CLAUS.IO, go to "SETTINGS" -> "AI" and click on "Test Connection".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LICENSE ACTIVATION</h3><ul class="instruction-list"><li>Go to the "SETTINGS" tab. Note the "Machine ID" and send it to your administrator to receive your key.</li><li>Input the key and click "Activate".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">SMARTPHONE ACCESS (WIFI)</h3><ul class="instruction-list"><li>In CLAUS.IO settings, scan the on-screen QR Code.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Take note of your data location (usually <span class="highlight">%APPDATA%\CLAUS.IO</span>). Copy <span class="highlight">agent_culinaire.db</span> and the <span class="highlight">uploads</span> folder regularly.</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Windows</span>
+      <span>ENGLISH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🟦 Windows Installation</div>
+       </div>
+       <div class="lang">DEUTSCH</div>
+    </div>
+    <div class="intro">Hier sind die Schritte zur Installation Ihres intelligenten Küchenassistenten CLAUS.IO unter Windows.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">SOFTWARE-INSTALLATION</h3><ul class="instruction-list"><li>Führen Sie die Datei <span class="highlight">CLAUS.IO-Setup.exe</span> aus.</li><li>Folgen Sie den Anweisungen auf dem Bildschirm.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">KI GEHIRN INSTALLATION (OLLAMA)</h3><ul class="instruction-list"><li>Ollama ist eine sichere Plattform, die KI-Modelle lokal für absolute Privatsphäre ausführt.</li><li>Laden Sie Ollama herunter und installieren Sie es: https://ollama.com/download/windows</li><li>Nach der Installation, öffnen Sie die Eingabeaufforderung (cmd) oder PowerShell und tippen Sie: <span class="highlight">ollama pull llama3.2</span></li><li>Gehen Sie in CLAUS.IO zu "EINSTELLUNGEN" -> "KI" und klicken Sie auf "Verbindung testen".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LIZENZAKTIVIERUNG</h3><ul class="instruction-list"><li>Gehen Sie zum Tab "EINSTELLUNGEN". Notieren Sie sich die "Machine ID" und senden Sie sie an Ihren Administrator, um Ihren Schlüssel zu erhalten.</li><li>Geben Sie den Schlüssel ein und klicken Sie auf "Aktivieren".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">SMARTPHONE-ZUGRIFF (WIFI)</h3><ul class="instruction-list"><li>Scannen Sie in den CLAUS.IO-Einstellungen den auf dem Bildschirm angezeigten QR-Code.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Notieren Sie sich Ihren Speicherort (normalerweise <span class="highlight">%APPDATA%\CLAUS.IO</span>). Kopieren Sie <span class="highlight">agent_culinaire.db</span> und den Ordner <span class="highlight">uploads</span> regelmäßig.</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Windows</span>
+      <span>DEUTSCH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🟦 Windows Installation</div>
+       </div>
+       <div class="lang">ITALIANO</div>
+    </div>
+    <div class="intro">Ecco i passaggi per installare il tuo assistente culinario intelligente CLAUS.IO su Windows.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLAZIONE DEL SOFTWARE</h3><ul class="instruction-list"><li>Esegui <span class="highlight">CLAUS.IO-Setup.exe</span>.</li><li>Segui le istruzioni sullo schermo.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLAZIONE CERVELLO IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama è una piattaforma sicura che esegue modelli IA localmente per la massima privacy.</li><li>Scarica e installa Ollama: https://ollama.com/download/windows</li><li>Una volta installato, apri il Prompt dei comandi (cmd) o PowerShell e digita: <span class="highlight">ollama pull llama3.2</span></li><li>All'interno di CLAUS.IO, vai su "IMPOSTAZIONI" -> "IA" e clicca su "Testa Connessione".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ATTIVAZIONE DELLA LICENZA</h3><ul class="instruction-list"><li>Vai alla scheda "IMPOSTAZIONI". Annota il "Machine ID" e invialo al tuo amministratore per ricevere la tua chiave.</li><li>Inserisci la chiave e clicca su "Attiva".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCESSO SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>Nelle impostazioni di CLAUS.IO, scansiona il QR Code sullo schermo.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Prendi nota della posizione dei tuoi dati (solitamente <span class="highlight">%APPDATA%\CLAUS.IO</span>). Copia <span class="highlight">agent_culinaire.db</span> e la cartella <span class="highlight">uploads</span> regolarmente.</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Windows</span>
+      <span>ITALIANO</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🟦 Windows Installation</div>
+       </div>
+       <div class="lang">ESPAÑOL</div>
+    </div>
+    <div class="intro">Aquí están los pasos para instalar tu asistente culinario inteligente CLAUS.IO en Windows.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALACIÓN DE SOFTWARE</h3><ul class="instruction-list"><li>Ejecuta <span class="highlight">CLAUS.IO-Setup.exe</span>.</li><li>Sigue las instrucciones en pantalla.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALACIÓN DEL CEREBRO DE IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama es una plataforma segura que ejecuta modelos de IA localmente para una privacidad absoluta.</li><li>Descarga e instala Ollama: https://ollama.com/download/windows</li><li>Una vez instalado, abre el Símbolo del sistema (cmd) o PowerShell y escribe: <span class="highlight">ollama pull llama3.2</span></li><li>Dentro de CLAUS.IO, ve a "AJUSTES" -> "IA" y haz clic en "Probar Conexión".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVACIÓN DE LICENCIA</h3><ul class="instruction-list"><li>Ve a la pestaña "AJUSTES". Annota el "Machine ID" y envíalo a tu administrador para recibir tu clave.</li><li>Introduce la clave y haz clic en "Activar".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCESO DESDE SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>En los ajustes de CLAUS.IO, escanea el código QR en pantalla.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">COPIA DE SEGURIDAD</h3><ul class="instruction-list"><li>Toma nota de la ubicación de tus datos (generalmente <span class="highlight">%APPDATA%\CLAUS.IO</span>). Copia <span class="highlight">agent_culinaire.db</span> y la carpeta <span class="highlight">uploads</span> regularmente.</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Windows</span>
+      <span>ESPAÑOL</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🍏 macOS Installation</div>
+       </div>
+       <div class="lang">FRANÇAIS</div>
+    </div>
+    <div class="intro">Voici les étapes pour installer votre assistant culinaire intelligent CLAUS.IO sur Mac.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLATION DU LOGICIEL</h3><ul class="instruction-list"><li>Double-cliquez sur le fichier téléchargé <span class="highlight">CLAUS.IO.dmg</span>.</li><li>Glissez l'icône "CLAUS.IO" vers le dossier "Applications".</li><li>Si le Mac bloque l'ouverture, allez dans <b>Réglages Système</b> > <b>Confidentialité et sécurité</b> > Cliquez sur <b>"Ouvrir quand même"</b>.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLATION DU CERVEAU IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama est une plateforme sécurisée qui fait tourner des modèles d'IA localement pour une confidentialité totale.</li><li>Téléchargez et installez Ollama : https://ollama.com/download/mac</li><li>Une fois installé, ouvrez l'application Terminal (dans Applications > Utilitaires) et tapez : <span class="highlight">ollama pull llama3.2</span></li><li>Dans CLAUS.IO, allez dans "PARAMÈTRES" -> "IA" et cliquez sur "Tester Connexion".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVATION DE LA LICENCE</h3><ul class="instruction-list"><li>Allez dans l'onglet "PARAMÈTRES". Notez le "Machine ID" et envoyez-le à votre administrateur pour recevoir votre clé.</li><li>Entrez la clé et cliquez sur "Activer".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCÈS SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>Dans les paramètres de CLAUS.IO, scannez le QR Code apparaissant à l'écran.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">SAUVEGARDE</h3><ul class="instruction-list"><li>Ne désinstallez jamais sans copier le fichier <span class="highlight">agent_culinaire.db</span> et le dossier <span class="highlight">uploads</span> !</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - macOS</span>
+      <span>FRANÇAIS</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🍏 macOS Installation</div>
+       </div>
+       <div class="lang">ENGLISH</div>
+    </div>
+    <div class="intro">Here are the steps to install your intelligent culinary assistant CLAUS.IO on Mac.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">SOFTWARE INSTALLATION</h3><ul class="instruction-list"><li>Double-click <span class="highlight">CLAUS.IO.dmg</span>.</li><li>Drag the "CLAUS.IO" app icon into the "Applications" folder.</li><li>If macOS blocks opening, go to <b>System Settings</b> > <b>Privacy & Security</b> > Click <b>"Open Anyway"</b>.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">AI BRAIN INSTALLATION (OLLAMA)</h3><ul class="instruction-list"><li>Ollama is a secure platform that runs AI models locally for absolute privacy.</li><li>Download and install Ollama: https://ollama.com/download/mac</li><li>Once installed, open the Terminal app (in Applications > Utilities) and type: <span class="highlight">ollama pull llama3.2</span></li><li>Inside CLAUS.IO, go to "SETTINGS" -> "AI" and click on "Test Connection".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LICENSE ACTIVATION</h3><ul class="instruction-list"><li>Go to the "SETTINGS" tab. Note the "Machine ID" and send it to your administrator to receive your key.</li><li>Input the key and click "Activate".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">SMARTPHONE ACCESS (WIFI)</h3><ul class="instruction-list"><li>In CLAUS.IO settings, scan the on-screen QR Code.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Never uninstall without copying the <span class="highlight">agent_culinaire.db</span> file and the <span class="highlight">uploads</span> folder!</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - macOS</span>
+      <span>ENGLISH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🍏 macOS Installation</div>
+       </div>
+       <div class="lang">DEUTSCH</div>
+    </div>
+    <div class="intro">Hier sind die Schritte zur Installation Ihres intelligenten Küchenassistenten CLAUS.IO auf dem Mac.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">SOFTWARE-INSTALLATION</h3><ul class="instruction-list"><li>Doppelklicken Sie auf <span class="highlight">CLAUS.IO.dmg</span>.</li><li>Ziehen Sie das App-Symbol "CLAUS.IO" in den Ordner "Programme".</li><li>Wenn macOS das Öffnen blockiert, gehen Sie zu <b>Systemeinstellungen</b> > <b>Datenschutz & Sicherheit</b> > Klicken Sie auf <b>"Dennoch öffnen"</b>.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">KI GEHIRN INSTALLATION (OLLAMA)</h3><ul class="instruction-list"><li>Ollama ist eine sichere Plattform, die KI-Modelle lokal ausführt.</li><li>Laden Sie Ollama herunter und installieren Sie es: https://ollama.com/download/mac</li><li>Öffnen Sie die Terminal-App (unter Dienstprogramme) und tippen Sie: <span class="highlight">ollama pull llama3.2</span></li><li>In CLAUS.IO: "EINSTELLUNGEN" -> "KI" -> "Verbindung testen".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LIZENZAKTIVIERUNG</h3><ul class="instruction-list"><li>Gehen Sie zum Tab "EINSTELLUNGEN". Senden Sie die "Machine ID" an Ihren Administrator.</li><li>Geben Sie den Schlüssel ein und klicken Sie auf "Aktivieren".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">SMARTPHONE-ZUGRIFF (WIFI)</h3><ul class="instruction-list"><li>Scannen Sie in den CLAUS.IO-Einstellungen den QR-Code.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Deinstallieren Sie niemals, ohne die Datei <span class="highlight">agent_culinaire.db</span> und den Ordner <span class="highlight">uploads</span> zu kopieren!</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - macOS</span>
+      <span>DEUTSCH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🍏 macOS Installation</div>
+       </div>
+       <div class="lang">ITALIANO</div>
+    </div>
+    <div class="intro">Ecco i passaggi per installare il tuo assistente culinario intelligente CLAUS.IO su Mac.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLAZIONE DEL SOFTWARE</h3><ul class="instruction-list"><li>Fai doppio clic su <span class="highlight">CLAUS.IO.dmg</span>.</li><li>Trascina l'icona dell'app "CLAUS.IO" nella cartella "Applicazioni".</li><li>Se macOS blocca l'apertura, vai in <b>Impostazioni di Sistema</b> > <b>Privacy e Sicurezza</b> > Clicca su <b>"Apri comunque"</b>.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALLAZIONE CERVELLO IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama è una piattaforma sicura che esegue modelli IA localmente.</li><li>Scarica e installa Ollama: https://ollama.com/download/mac</li><li>Apri l'app Terminale (in Applicazioni > Utility) e digita: <span class="highlight">ollama pull llama3.2</span></li><li>In CLAUS.IO, vai su "IMPOSTAZIONI" -> "IA" e clicca su "Testa Connessione".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ATTIVAZIONE DELLA LICENZA</h3><ul class="instruction-list"><li>Vai alla scheda "IMPOSTAZIONI". Invia il "Machine ID" al tuo amministratore.</li><li>Inserisci la chiave e clicca su "Attiva".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCESSO SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>Nelle impostazioni, scansiona il QR Code.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP</h3><ul class="instruction-list"><li>Non disinstallare mai senza copiare il file <span class="highlight">agent_culinaire.db</span> e la cartella <span class="highlight">uploads</span>!</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - macOS</span>
+      <span>ITALIANO</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🍏 macOS Installation</div>
+       </div>
+       <div class="lang">ESPAÑOL</div>
+    </div>
+    <div class="intro">Aquí están los pasos para instalar tu asistente culinario inteligente CLAUS.IO en Mac.</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALACIÓN DE SOFTWARE</h3><ul class="instruction-list"><li>Haz doble clic en <span class="highlight">CLAUS.IO.dmg</span>.</li><li>Arrastra el icono de la aplicación "CLAUS.IO" a la carpeta "Aplicaciones".</li><li>Si macOS bloquea la apertura, ve a <b>Ajustes del Sistema</b> > <b>Privacidad y Seguridad</b> > Haz clic en <b>"Abrir de todos modos"</b>.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">INSTALACIÓN DEL CEREBRO DE IA (OLLAMA)</h3><ul class="instruction-list"><li>Ollama es una plataforma segura que ejecuta modelos de IA localmente.</li><li>Descarga e instala Ollama: https://ollama.com/download/mac</li><li>Abre la aplicación Terminal (en Utilidades) y escribe: <span class="highlight">ollama pull llama3.2</span></li><li>En CLAUS.IO, ve a "AJUSTES" -> "IA" y haz clic en "Probar Conexión".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVACIÓN DE LICENCIA</h3><ul class="instruction-list"><li>Ve a la pestaña "AJUSTES". Envía el "Machine ID" a tu administrador.</li><li>Introduce la clave y haz clic en "Activar".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">ACCESO DESDE SMARTPHONE (WIFI)</h3><ul class="instruction-list"><li>En los ajustes escanea el código QR.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h3 class="step-title">COPIA DE SEGURIDAD</h3><ul class="instruction-list"><li>¡Nunca desinstales sin copiar el archivo <span class="highlight">agent_culinaire.db</span> y la carpeta <span class="highlight">uploads</span>!</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - macOS</span>
+      <span>ESPAÑOL</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🐧 Linux Installation</div>
+       </div>
+       <div class="lang">FRANÇAIS</div>
+    </div>
+    <div class="intro">Voici les étapes pour installer CLAUS.IO sur Linux (Ubuntu/Debian).</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">EXÉCUTION DU LOGICIEL</h3><ul class="instruction-list"><li>Vous avez un fichier <span class="highlight">.AppImage</span>.</li><li>Clic droit sur le fichier -> <b>Propriétés</b> > Onglet <b>Permissions</b>.</li><li>Cochez <b>"Autoriser l'exécution du fichier comme un programme"</b>.</li><li>Fermez et double-cliquez pour lancer CLAUS.IO.</li><li>Terminal: <span class="highlight">chmod +x CLAUS.IO-1.0.0.AppImage</span> puis <span class="highlight">./CLAUS.IO-1.0.0.AppImage</span></li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">CERVEAU IA (OLLAMA)</h3><ul class="instruction-list"><li>Ouvrez un terminal: <span class="highlight">curl -fsSL https://ollama.com/install.sh | sh</span></li><li>Une fois installé, tapez dans ce même terminal : <span class="highlight">ollama pull llama3.2</span></li><li>Dans CLAUS.IO -> "PARAMÈTRES" -> "IA" -> "Tester Connexion".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVATION DE LA LICENCE</h3><ul class="instruction-list"><li>Dans "PARAMÈTRES", notez le "Machine ID" et envoyez-le au support.</li><li>Renseignez la clé et activez l'application.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">SAUVEGARDE ET ACCÈS SMARTPHONE</h3><ul class="instruction-list"><li>QR Code Wi-Fi disponible dans les paramètres.</li><li>Copiez TOUJOURS <span class="highlight">agent_culinaire.db</span> et le dossier <span class="highlight">uploads</span> avant une maj. (Dans le répertoire de l'AppImage ou <span class="highlight">~/.config/agent-culinaire-os</span>).</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Linux</span>
+      <span>FRANÇAIS</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🐧 Linux Installation</div>
+       </div>
+       <div class="lang">ENGLISH</div>
+    </div>
+    <div class="intro">Here are the steps to install CLAUS.IO on Linux (Ubuntu/Debian based).</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">RUNNING THE SOFTWARE</h3><ul class="instruction-list"><li>You have an <span class="highlight">.AppImage</span> file.</li><li>Right-click on the file -> <b>Properties</b> > <b>Permissions</b> tab.</li><li>Check <b>"Allow executing file as program"</b>.</li><li>Close and double-click to launch CLAUS.IO.</li><li>Terminal: <span class="highlight">chmod +x CLAUS.IO-1.0.0.AppImage</span> then <span class="highlight">./CLAUS.IO-1.0.0.AppImage</span></li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">AI BRAIN (OLLAMA)</h3><ul class="instruction-list"><li>Open a terminal: <span class="highlight">curl -fsSL https://ollama.com/install.sh | sh</span></li><li>Once installed, type in the terminal: <span class="highlight">ollama pull llama3.2</span></li><li>Inside CLAUS.IO -> "SETTINGS" -> "AI" -> "Test Connection".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LICENSE ACTIVATION</h3><ul class="instruction-list"><li>Go to "SETTINGS", note the "Machine ID" and send it to support.</li><li>Enter the received key and activate.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP AND SMARTPHONE ACCESS</h3><ul class="instruction-list"><li>Wi-Fi QR Code available in settings.</li><li>ALWAYS backup <span class="highlight">agent_culinaire.db</span> and the <span class="highlight">uploads</span> folder before updates. (In the AppImage directory or <span class="highlight">~/.config/agent-culinaire-os</span>).</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Linux</span>
+      <span>ENGLISH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🐧 Linux Installation</div>
+       </div>
+       <div class="lang">DEUTSCH</div>
+    </div>
+    <div class="intro">Hier sind die Schritte zur Installation von CLAUS.IO unter Linux (Ubuntu/Debian).</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">SOFTWARE AUSFÜHREN</h3><ul class="instruction-list"><li>Sie haben eine <span class="highlight">.AppImage</span>-Datei.</li><li>Rechtsklick auf die Datei -> <b>Eigenschaften</b> > Tab <b>Berechtigungen</b>.</li><li>Aktivieren Sie <b>"Datei als Programm ausführen zulassen"</b>.</li><li>Terminal: <span class="highlight">chmod +x CLAUS.IO-1.0.0.AppImage</span> und dann <span class="highlight">./CLAUS.IO-1.0.0.AppImage</span></li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">KI GEHIRN (OLLAMA)</h3><ul class="instruction-list"><li>Terminal öffnen: <span class="highlight">curl -fsSL https://ollama.com/install.sh | sh</span></li><li>Nach der Installation tippen Sie im Terminal: <span class="highlight">ollama pull llama3.2</span></li><li>In CLAUS.IO -> "EINSTELLUNGEN" -> "KI" -> "Verbindung testen".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">LIZENZAKTIVIERUNG</h3><ul class="instruction-list"><li>Notieren Sie sich in den "EINSTELLUNGEN" die "Machine ID" und senden Sie diese an den Support.</li><li>Geben Sie den Schlüssel ein und aktivieren Sie die App.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP UND SMARTPHONE-ZUGRIFF</h3><ul class="instruction-list"><li>WLAN-QR-Code in den Einstellungen verfügbar.</li><li>Immer ein Backup von <span class="highlight">agent_culinaire.db</span> und dem Ordner <span class="highlight">uploads</span> erstellen. (Im AppImage-Verzeichnis oder <span class="highlight">~/.config/agent-culinaire-os</span>).</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Linux</span>
+      <span>DEUTSCH</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🐧 Linux Installation</div>
+       </div>
+       <div class="lang">ITALIANO</div>
+    </div>
+    <div class="intro">Ecco i passaggi per installare CLAUS.IO su Linux (Ubuntu/Debian).</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">ESECUZIONE DEL SOFTWARE</h3><ul class="instruction-list"><li>Hai un file <span class="highlight">.AppImage</span>.</li><li>Tasto destro sul file -> <b>Proprietà</b> > Scheda <b>Permessi</b>.</li><li>Spunta <b>"Consenti l'esecuzione del file come programma"</b>.</li><li>Terminale: <span class="highlight">chmod +x CLAUS.IO-1.0.0.AppImage</span> poi <span class="highlight">./CLAUS.IO-1.0.0.AppImage</span></li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">CERVELLO IA (OLLAMA)</h3><ul class="instruction-list"><li>Apri un terminale: <span class="highlight">curl -fsSL https://ollama.com/install.sh | sh</span></li><li>Una volta installato, digita nel terminale: <span class="highlight">ollama pull llama3.2</span></li><li>In CLAUS.IO -> "IMPOSTAZIONI" -> "IA" -> "Testa Connessione".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ATTIVAZIONE DELLA LICENZA</h3><ul class="instruction-list"><li>In "IMPOSTAZIONI", annota il "Machine ID" e invialo al supporto.</li><li>Inserisci la chiave ricevuta e attiva.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">BACKUP E ACCESSO SMARTPHONE</h3><ul class="instruction-list"><li>QR Code Wi-Fi disponibile nelle impostazioni.</li><li>Esegui SEMPRE il backup di <span class="highlight">agent_culinaire.db</span> e della cartella <span class="highlight">uploads</span>. (Nella directory di AppImage o in <span class="highlight">~/.config/agent-culinaire-os</span>).</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Linux</span>
+      <span>ITALIANO</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="header">
+       <div class="header-left">
+         <h1 class="logo-sm">CLAUS.IO</h1>
+         <div class="os-title">🐧 Linux Installation</div>
+       </div>
+       <div class="lang">ESPAÑOL</div>
+    </div>
+    <div class="intro">Aquí están los pasos para instalar CLAUS.IO en Linux (Ubuntu/Debian).</div>
+    <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3 class="step-title">EJECUCIÓN DE SOFTWARE</h3><ul class="instruction-list"><li>Tienes un archivo <span class="highlight">.AppImage</span>.</li><li>Haz clic derecho en el archivo -> <b>Propiedades</b> > Pestaña <b>Permisos</b>.</li><li>Marca <b>"Permitir ejecutar el archivo como programa"</b>.</li><li>Terminal: <span class="highlight">chmod +x CLAUS.IO-1.0.0.AppImage</span> luego <span class="highlight">./CLAUS.IO-1.0.0.AppImage</span></li></ul></div></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3 class="step-title">CEREBRO DE IA (OLLAMA)</h3><ul class="instruction-list"><li>Abre un terminal: <span class="highlight">curl -fsSL https://ollama.com/install.sh | sh</span></li><li>Una vez instalado, escribe en el terminal: <span class="highlight">ollama pull llama3.2</span></li><li>En CLAUS.IO -> "AJUSTES" -> "IA" -> "Probar Conexión".</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3 class="step-title">ACTIVACIÓN DE LICENCIA</h3><ul class="instruction-list"><li>En "AJUSTES", anota el "Machine ID" y envíalo al soporte.</li><li>Introduce la clave recibida y activa.</li></ul></div></div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h3 class="step-title">COPIA DE SEGURIDAD Y ACCESO DESDE SMARTPHONE</h3><ul class="instruction-list"><li>Código QR Wi-Fi disponible en los ajustes.</li><li>SIEMPRE haz copia de seguridad de <span class="highlight">agent_culinaire.db</span> y de la carpeta <span class="highlight">uploads</span>. (En el directorio de AppImage o <span class="highlight">~/.config/agent-culinaire-os</span>).</li></ul></div></div>
+    </div>
+    <div class="footer">
+      <span>CLAUS.IO - Linux</span>
+      <span>ESPAÑOL</span>
+    </div>
+  </div></body></html>
