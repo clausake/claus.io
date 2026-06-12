@@ -1,0 +1,8 @@
+{
+  "name": "Logiciel de Gestion Restauration IO",
+  "description": "Système expert en ingénierie de production alimentaire et Supply Chain Management.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

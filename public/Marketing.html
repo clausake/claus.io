@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Culinaire OS - Marketing Posters Mockups</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        claus: {
+                            bg: '#0a0a0a',
+                            sidebar: '#121212',
+                            panel: '#1a1a1a',
+                            green: '#10B981',
+                            greenGlow: 'rgba(16, 185, 129, 0.4)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0a0a0a; color: white; }
+        .poster {
+            width: 1080px; height: 1080px; margin: 0 auto 40px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #121212 100%);
+            position: relative; overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', sans-serif;
+        }
+        .preview-container { transform: scale(0.65); transform-origin: top center; margin-bottom: -35%; }
+        
+        /* Realistic UI Elements */
+        .ui-mockup {
+            background-color: #121212; border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+        .ui-header { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .ui-body { padding: 24px; display: flex; gap: 24px; }
+        .ui-sidebar { width: 220px; border-right: 1px solid rgba(255,255,255,0.05); padding-right: 16px; }
+        .ui-content { flex: 1; }
+        
+        .nav-item { padding: 10px 12px; color: #a1a1aa; font-size: 13px; font-weight: 500; border-radius: 6px; margin-bottom: 4px; }
+        .nav-item.active { background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%); color: white; border-left: 3px solid #10B981; }
+        
+        .decorative-blur { position: absolute; filter: blur(120px); border-radius: 50%; z-index: 0; }
+    </style>
+</head>
+<body class="min-h-screen font-sans bg-neutral-900 pb-32">
+
+    <div class="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md p-4 text-center border-b border-white/10">
+        <h1 class="text-xl font-bold">Agent Culinaire OS - Posters Réalistes (1080x1080)</h1>
+        <p class="text-gray-400 text-sm">Mon générateur d'images IA est en limite de quota. Ouvrez ce fichier HTML dans votre navigateur et utilisez un outil de capture d'écran pour enregistrer ces designs en format JPG/PNG.</p>
+    </div>
+
+    <div class="mt-32 preview-container flex flex-col gap-16">
+
+        <!-- POSTER 1: HACCP & Traçabilité -->
+        <div class="poster flex flex-col pt-16 px-16 relative" style="background-image: linear-gradient(to bottom, rgba(10,10,10,0.4), rgba(18,18,18,0.95)), url('https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?q=80&w=1080&auto=format&fit=crop'); background-size: cover; background-position: center;">
+            <div class="decorative-blur w-[600px] h-[600px] bg-emerald-600/30 -top-40 -left-40 mix-blend-screen"></div>
+            
+            <!-- Marketing Text -->
+            <div class="z-10 mb-12 text-center drop-shadow-2xl">
+                <h2 class="text-6xl font-black tracking-tight mb-4 text-white drop-shadow-lg">Traçabilité HACCP <span class="text-emerald-400 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">Zéro Défaut</span></h2>
+                <p class="text-2xl text-gray-200 font-medium">Automatisez vos relevés. Soyez toujours prêt pour l'audit.</p>
+            </div>
+
+            <!-- UI Mockup -->
+            <div class="ui-mockup flex-1 w-full z-10 border-t-4 border-t-emerald-500 backdrop-blur-md bg-[#121212]/90">
+                <div class="ui-header bg-black/60">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-black border border-emerald-400">C</div>
+                        <span class="font-bold tracking-widest text-sm drop-shadow-md">Agent Culinaire OS</span>
+                    </div>
+                </div>
+                <div class="ui-body flex-1 bg-[#0a0a0a]/80">
+                    <div class="ui-sidebar">
+                        <div class="text-xs font-bold text-gray-400 mb-4 px-3 tracking-wider">OPERATIONS</div>
+                        <div class="nav-item">Menu Engineering</div>
+                        <div class="nav-item">Purchasing</div>
+                        <div class="nav-item">Documents</div>
+                        <div class="nav-item active">HACCP Traceability</div>
+                        <div class="nav-item">Anti-Waste</div>
+                    </div>
+                    <div class="ui-content">
+                        <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                            HACCP Traceability <span class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">SYSTEM OPERATIONAL</span>
+                        </h3>
+                        
+                        <!-- Tabs -->
+                        <div class="flex gap-2 mb-6 shadow-lg">
+                            <div class="px-4 py-2 bg-emerald-500 rounded-lg text-black font-semibold text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)]">Admission Entry</div>
+                            <div class="px-4 py-2 bg-black/60 rounded-lg text-gray-300 text-sm border border-white/5">Controls</div>
+                            <div class="px-4 py-2 bg-black/60 rounded-lg text-gray-300 text-sm border border-white/5">Traceability</div>
+                            <div class="px-4 py-2 bg-black/60 rounded-lg text-gray-300 text-sm border border-white/5">Labels</div>
+                            <div class="px-4 py-2 bg-black/60 rounded-lg text-gray-300 text-sm border border-white/5">Evidence & Audits</div>
+                        </div>
+
+                        <!-- Form Concept -->
+                        <div class="bg-black/60 rounded-xl p-6 border border-white/10 shadow-2xl backdrop-blur-sm">
+                            <div class="font-bold mb-4 text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.2)]">Admission Entry</div>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div class="bg-black/80 p-3 rounded border border-white/5 text-sm text-gray-400">-- Select a product --</div>
+                                <div class="bg-black/80 p-3 rounded border border-white/5 text-sm text-gray-400">Lot N°</div>
+                                <div class="bg-black/80 p-3 rounded border border-white/5 text-sm text-gray-400">Quantity</div>
+                                <div class="bg-black/80 p-3 rounded border border-emerald-500/30 text-sm text-emerald-400 flex items-center gap-2 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Emballage Intact
+                                </div>
+                            </div>
+                            <button class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-bold py-3 rounded text-sm mb-2 hover:from-emerald-400 hover:to-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-400/50">SAVE</button>
+                            <button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-3 rounded text-sm shadow-[0_0_20px_rgba(37,99,235,0.4)] border border-blue-500/50">Scan Document (AI)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-6 w-full text-center text-gray-300 font-mono text-sm left-0 tracking-widest drop-shadow-md">WWW.Agent Culinaire OS // CULINARY OS V2.0</div>
+        </div>
+
+        <!-- POSTER 2: INTELLIGENCE ARTIFICIELLE & IA SCAN -->
+        <div class="poster flex flex-col pt-16 px-16 relative" style="background-image: linear-gradient(to bottom, rgba(10,10,10,0.4), rgba(18,18,18,0.95)), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1080&auto=format&fit=crop'); background-size: cover; background-position: center;">
+            <div class="decorative-blur w-[700px] h-[500px] bg-blue-600/30 bottom-0 right-0 mix-blend-screen"></div>
+            
+            <!-- Marketing Text -->
+            <div class="z-10 mb-12 text-center drop-shadow-2xl">
+                <h2 class="text-6xl font-black tracking-tight mb-4 text-white">Finie la <span class="text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">saisie manuelle</span></h2>
+                <p class="text-2xl text-gray-200 font-medium">Glissez un PDF (Facture, Bon de livraison, Menu). L'IA lit tout.</p>
+            </div>
+
+            <!-- UI Mockup -->
+            <div class="ui-mockup flex-1 w-full z-10 border-t-4 border-t-blue-500 backdrop-blur-md bg-[#121212]/90">
+                <div class="ui-header bg-black/60">
+                    <div class="flex items-center gap-3">
+                         <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.6)] border border-blue-400">AI</div>
+                         <span class="font-bold tracking-widest text-sm drop-shadow-md">Agent Culinaire OS VISION SCANNER</span>
+                    </div>
+                </div>
+                <div class="ui-body flex-1 bg-[#0a0a0a]/80 flex-col items-center justify-center relative p-12">
+                    
+                    <div class="w-full max-w-3xl">
+                        <div class="text-sm font-bold text-gray-400 mb-2">New Document</div>
+                        <!-- Drag and Drop Area -->
+                        <div class="w-full border-2 border-dashed border-blue-500/50 bg-black/60 rounded-2xl h-64 flex flex-col items-center justify-center relative overflow-hidden group shadow-[inset_0_0_30px_rgba(59,130,246,0.1)] backdrop-blur-sm">
+                            <!-- Scanning effect -->
+                            <div class="absolute top-0 left-0 w-full h-1 bg-blue-400 shadow-[0_0_20px_#60a5fa] animate-[scan_2s_ease-in-out_infinite]"></div>
+                            
+                            <svg class="w-12 h-12 text-blue-400 mb-4 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            <span class="text-xl text-white font-semibold mb-2 drop-shadow-md">Drag & drop or click</span>
+                            <span class="text-sm text-gray-400">Supports PDF, JPG, PNG pour factures et bons de livraison</span>
+                            
+                            <div class="mt-6 flex items-center gap-2">
+                                <div class="w-4 h-4 rounded bg-blue-500 flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                                <span class="text-sm text-blue-200">Quick draft (Création rapide par l'IA)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Extraction results mockup -->
+                    <div class="w-full max-w-3xl mt-8 grid grid-cols-3 gap-4 opacity-80">
+                        <div class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-lg backdrop-blur-sm">
+                            <div class="text-xs text-gray-400 mb-1">Fournisseur detecté</div>
+                            <div class="text-blue-400 font-bold text-lg drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">METRO FRANCE</div>
+                        </div>
+                        <div class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-lg backdrop-blur-sm">
+                            <div class="text-xs text-gray-400 mb-1">Total Facture</div>
+                            <div class="text-white font-bold text-lg drop-shadow-sm">842.50 €</div>
+                        </div>
+                        <div class="bg-black/60 p-4 rounded-xl border border-white/10 shadow-lg backdrop-blur-sm">
+                            <div class="text-xs text-gray-400 mb-1">Articles Ingérés</div>
+                            <div class="text-emerald-400 font-bold text-lg drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">42 mis à jour en stock</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="absolute bottom-6 w-full text-center text-gray-300 font-mono text-sm left-0 tracking-widest drop-shadow-md">WWW.Agent Culinaire OS // CULINARY OS V2.0</div>
+            <style>
+                @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+            </style>
+        </div>
+
+    </div>
+
+</body>
+</html>

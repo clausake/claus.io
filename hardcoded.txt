@@ -1,0 +1,58 @@
+337:>CLAUS.IO<
+3039:>Période d'Essai Terminée<
+3045:>Identifiant Machine (à communiquer au support)<
+3050:>Entrer la clé d'activation<
+3202:>CLAUS.IO<
+3203:>Culinary OS v2.0<
+3674:>Llama 3.2 Vision (Standard Exclusif)<
+3707:>Français<
+3708:>English<
+3709:>Español<
+3710:>Italiano<
+3711:>Deutsch<
+3715:>Modèle IA Actif<
+3723:>Modèle utilisé pour toutes les analyses IA locales.<
+3749:>Machine ID<
+3770:>CLAUS.IO est activé sur ce poste.<
+3774:>Chargement de la licence...<
+3881:>Moteur Actif<
+3882:>SQLite 3.0<
+3951:>CAVIAR !!!<
+3953:>BOUILLON CALAMARS<
+3955:>LINGUINES AU<
+3956:>BOUILLON<
+3958:>HUITRES BASSE TEMP.<
+4659:>Mode 01<
+4676:>Mode 02<
+4693:>Mode 03<
+4710:>Mode 04<
+5597:>L<
+5698:>L<
+5784:>Initialisation CLAUS.IO...<
+5802:>ID<
+5803:>DÉSIGNATION<
+5804:>STOCK / SEUIL<
+5805:>UNITÉ<
+5806:>GESTION<
+6511:>Instructions détaillées non disponibles pour cette recette.<
+6972:>Source<
+7238:>Article (Stock)<
+7239:>Quantité<
+7240:>P.U.<
+7241:>Total<
+7362:>Ajouter au Stock<
+7373:>Désignation<
+7384:>Unité<
+7391:>L<
+7397:>Catégorie<
+7403:>Protéines<
+7404:>Sec<
+7405:>Légumes<
+7406:>Fruits<
+7407:>Crémerie<
+7408:>Pâtisserie<
+7414:>Prix Unitaire Estimé <
+7424:>Stock Minimum<
+8189:>Sélectionner...<
+8240:>Aucune recette trouvée sur cette lettre.<
+8366:>Aucune étape de préparation renseignée.<
