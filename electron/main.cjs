@@ -10,8 +10,8 @@ function createWindow() {
     width: 1400,
     height: 900,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
     title: "CLAUS.IO - Agent Culinaire"
   });
