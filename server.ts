@@ -4566,8 +4566,63 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
     }
   });
 
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
+  app.get("/health", async (_req, res) => {
+    const lang = settings.language || "fr";
+    const model = getModel(settings);
+    const host = getOllamaHost(settings);
+
+    const messages = {
+      ok: {
+        fr: `Pr\xEAt. Mod\xE8le "${model}" disponible sur ${host}.`,
+        es: `Listo. Modelo "${model}" disponible en ${host}.`,
+        de: `Bereit. Modell "${model}" verf\xFCgbar auf ${host}.`,
+        it: `Pronto. Modello "${model}" disponibile su ${host}.`,
+        en: `Ready. Model "${model}" available on ${host}.`,
+      },
+      unreachable: {
+        fr: `Ollama est injoignable sur ${host}. V\xE9rifiez qu'il est bien lanc\xE9 (commande: ollama serve).`,
+        es: `Ollama no responde en ${host}. Verifique que est\xE9 en ejecuci\xF3n (ollama serve).`,
+        de: `Ollama ist unter ${host} nicht erreichbar. Stellen Sie sicher, dass es l\xE4uft (ollama serve).`,
+        it: `Ollama non \xE8 raggiungibile su ${host}. Verificate che sia avviato (ollama serve).`,
+        en: `Ollama is unreachable on ${host}. Make sure it is running (ollama serve).`,
+      },
+      missing: {
+        fr: `Le mod\xE8le "${model}" n'est pas install\xE9. Lancez: ollama pull ${model}`,
+        es: `El modelo "${model}" no est\xE1 instalado. Ejecute: ollama pull ${model}`,
+        de: `Das Modell "${model}" ist nicht installiert. F\xFChren Sie aus: ollama pull ${model}`,
+        it: `Il modello "${model}" non \xE8 installato. Eseguite: ollama pull ${model}`,
+        en: `Model "${model}" is not installed. Run: ollama pull ${model}`,
+      },
+    };
+    const pick = (key: "ok" | "unreachable" | "missing") =>
+      messages[key][lang as keyof (typeof messages)["ok"]] || messages[key].en;
+
+    try {
+      const list = await ollama.list();
+      const installed = (list.models || []).map((m: any) => m.name || m.model || "");
+      const modelInstalled = installed.some(
+        (n: string) => n === model || n.split(":")[0] === String(model).split(":")[0],
+      );
+      res.json({
+        ok: modelInstalled,
+        ollamaReachable: true,
+        modelInstalled,
+        model,
+        host,
+        installedModels: installed,
+        message: pick(modelInstalled ? "ok" : "missing"),
+      });
+    } catch (error) {
+      res.json({
+        ok: false,
+        ollamaReachable: false,
+        modelInstalled: false,
+        model,
+        host,
+        installedModels: [],
+        message: pick("unreachable"),
+      });
+    }
   });
 
   if (process.env.NODE_ENV !== "production") {
