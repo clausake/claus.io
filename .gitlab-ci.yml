@@ -1,0 +1,29 @@
+# CI GitLab - verification lint + build
+image: node:22
+
+stages:
+  - verify
+
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+
+lint:
+  stage: verify
+  allow_failure: true
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npx tsc --noEmit
+
+build:
+  stage: verify
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week

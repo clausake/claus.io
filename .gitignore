@@ -10,6 +10,7 @@ coverage/
 
 # Fichiers sensibles et bases de données
 *.db
+*.sqlite
 local_database.db
 agent_culinaire.db
 
