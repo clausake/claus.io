@@ -1,3 +1,4 @@
+# CI GitLab - verification lint + build
 image: node:22
 
 stages:
