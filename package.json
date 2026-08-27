@@ -63,6 +63,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "express": "^4.22.1",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
     "jsdom": "^29.1.1",
     "jsonrepair": "^3.14.0",
     "jspdf": "^4.2.1",
