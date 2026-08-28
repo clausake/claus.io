@@ -27,3 +27,15 @@ START_CLAUS_IO.bat
 lancer-app-windows.bat
 NOTICE_INSTALLATION_*.txt
 instruction_creation_logiciel.txt
+
+# Backups locaux générés par /api/backup (ne jamais committer)
+backup.zip
+*.backup
+
+# Clés de licence (jamais commitées — elles contiennent la clé privée)
+license_private.pem
+*.pem
+!README*
+
+# Artefacts LFS déjà couverts par .gitattributes, mais on ignore les caches
+.lfs_cache/

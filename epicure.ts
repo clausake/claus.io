@@ -524,9 +524,9 @@ export class EpicureModel {
         }
       }
 
-      this.chemEmbeddings = this.loadEmbeddings("embeddings.safetensors");
-      this.coocEmbeddings = this.loadEmbeddings("embeddings (1).safetensors");
-      this.coreEmbeddings = this.loadEmbeddings("embeddings (2).safetensors");
+      this.chemEmbeddings = this.loadEmbeddings("embeddings.chem.safetensors");
+      this.coocEmbeddings = this.loadEmbeddings("embeddings.cooc.safetensors");
+      this.coreEmbeddings = this.loadEmbeddings("embeddings.core.safetensors");
       this.isLoaded = true;
       console.log("EpicureModel loaded 1790 ingredients and vectors successful.");
     } catch (err) {
