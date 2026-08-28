@@ -266,7 +266,7 @@ export function Haccp({
     const month = viewMonth.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfMonth(year, month);
-    const days = [];
+    const days: React.ReactNode[] = [];
 
     for (let i = 0; i < firstDay; i++)
       days.push(<div key={`empty-${i}`} className="h-12 w-12"></div>);

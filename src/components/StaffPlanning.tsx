@@ -38,7 +38,7 @@ export function StaffPlanning({ t }: { t: any }) {
 
   const getWeekDates = () => {
     const start = parseISO(weekStart);
-    const dates = [];
+    const dates: string[] = [];
     for (let i = 0; i < 7; i++) {
         dates.push(format(addDays(start, i), 'yyyy-MM-dd'));
     }

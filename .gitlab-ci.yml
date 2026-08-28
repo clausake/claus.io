@@ -1,8 +1,9 @@
-# CI GitLab - verification lint + build
+# CI GitLab - verification lint + build + test
 image: node:22
 
 stages:
   - verify
+  - test
 
 cache:
   key:
@@ -26,3 +27,20 @@ build:
     paths:
       - dist/
     expire_in: 1 week
+
+# --- Tests ---
+# Unitaires (vitest) : utilitaires partagés (safeJsonParse, prix, matching flou, modèle Ollama).
+unit-test:
+  stage: test
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npx vitest run
+
+# E2E (Playwright) : démarre le serveur Express (tsx) sur un port isolé et
+# vérifie les routes critiques (CRUD inventaire, licence, dashboard, HACCP).
+# Le runner doit permettre les ports locaux (pas de problème sur runner docker).
+e2e-test:
+  stage: test
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npx playwright test

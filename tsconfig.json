@@ -23,7 +23,18 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noImplicitThis": false
   },
+  "include": [
+    "server.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "epicure.ts",
+    "main.tsx"
+  ],
   "exclude": ["dist", "dist-server", "node_modules", "electron", "*.cjs", "*.mjs", "*.js"]
 }
