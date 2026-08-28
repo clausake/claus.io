@@ -43,41 +43,8 @@ export function resolveStorageDir(): string {
   return storageDir;
 }
 
-function runDailyDatabaseBackup(storageDir: string, dbPath: string) {
-  try {
-      if (!fs.existsSync(dbPath)) return;
-      const backupDir = path.join(storageDir, "db_backups");
-      if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir, { recursive: true });
-      }
-
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const backupFile = path.join(backupDir, `db_${today}.db`);
-
-      if (!fs.existsSync(backupFile)) {
-        fs.copyFileSync(dbPath, backupFile);
-        console.log(`[BACKUP] Daily auto-backup created: ${backupFile}`);
-
-        // Rotate backups: keep only last 5 days of SQLite backup
-        const files = fs.readdirSync(backupDir)
-          .filter(f => f.startsWith("db_") && f.endsWith(".db"))
-          .map(f => ({ name: f, path: path.join(backupDir, f), time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }));
-
-        // Sort oldest first
-        files.sort((a, b) => a.time - b.time);
-
-        while (files.length > 5) {
-          const fileToDelete = files.shift();
-          if (fileToDelete) {
-            fs.unlinkSync(fileToDelete.path);
-            console.log(`[BACKUP] Old fallback deleted during rotation: ${fileToDelete.name}`);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("[BACKUP] Error running daily auto-backup:", err);
-    }
-}
+// (Le backup quotidien a été remplacé par le backup horaire de
+//  src/services/db-backup.ts — rotation 5, plus granulaire.)
 
 // Clé publique RSA de licence (Phase 0). La clé privée reste chez l'éditeur.
 const LICENSE_PUBLIC_KEY_PEM =
@@ -110,7 +77,6 @@ export function verifyLicenseKey(machineId: string, keyCandidate: string): boole
 export async function initDatabase(): Promise<DbInitResult> {
   const storageDir = resolveStorageDir();
   const dbPath = path.join(storageDir, "agent_culinaire.db");
-  runDailyDatabaseBackup(storageDir, dbPath);
   const db = await open({ filename: dbPath, driver: sqlite3.Database });
   await db.exec("PRAGMA journal_mode = WAL;");
   await db.exec("PRAGMA synchronous = NORMAL;");
