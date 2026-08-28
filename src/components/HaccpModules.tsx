@@ -3,8 +3,10 @@ import { PackageSearch, Thermometer, ScanLine, FileCheck, AlertTriangle, CheckCi
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { MediaDisplay } from "../lib/helpers";
+import { useToast, ConfirmDialog } from "./ui/Toast";
 
 export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateIngredient?: (name: string, lang: string) => string }) => {
+  const toast = useToast();
   const [view, setView] = React.useState<'stocks' | 'history' | 'suppliers'>('stocks');
   const [batches, setBatches] = React.useState<any[]>([]);
   const [inventory, setInventory] = React.useState<any[]>([]);
@@ -49,7 +51,7 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
             const data = await res.json();
             
             if (!res.ok || data.error || data.status === 'error') {
-               alert(t.error ? t.error + ": " + (data.error || data.message || "Scan failed") : "Error: Scan failed. Provide a better picture format.");
+               toast(t.error ? t.error + ": " + (data.error || data.message || "Scan failed", "error") : "Error: Scan failed. Provide a better picture format.");
             } else {
               // Try to find matching product in inventory
               if (data.product) {
@@ -57,7 +59,7 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
                 const match = inventory.find(i => i.name.toLowerCase().includes(data.product.toLowerCase()) || data.product.toLowerCase().includes(i.name.toLowerCase()));
                 if (match) setSelectedInventoryId(match.id);
               } else {
-                alert(t.error ? t.error + ": Could not read product" : "Error: Could not read product details.");
+                toast(t.error ? t.error + ": Could not read product" : "Error: Could not read product details.", "error");
               }
               if (data.lot) setLot(data.lot);
               if (data.dlc) setDlc(data.dlc);
@@ -70,7 +72,7 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
             }
           } catch (err) {
             console.error(err);
-            alert(t.iaScanError || "Error during AI scan");
+            toast(t.iaScanError || "Error during AI scan", "error");
           } finally {
             setIsScanning(false);
           }
@@ -110,12 +112,12 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
              if (newInvData.id) {
                finalInventoryId = newInvData.id;
              } else {
-               alert("Erreur lors de la création de l'ingrédient.");
+               toast("Erreur lors de la création de l'ingrédient.", "error");
                return;
              }
            } catch(e) {
              console.error(e);
-             alert("Erreur réseau lors de la création de l'ingrédient.");
+             toast("Erreur réseau lors de la création de l'ingrédient.", "error");
              return;
            }
         }
@@ -583,6 +585,8 @@ export const LabelingModule = ({ t }: { t: any }) => {
 };
 
 export const EvidenceModule = ({ t }: { t: any }) => {
+    const toast = useToast();
+    const [pendingDeleteDoc, setPendingDeleteDoc] = React.useState<string | null>(null);
     const [docs, setDocs] = React.useState<any[]>([]);
     const [isUploading, setIsUploading] = React.useState(false);
     const [docType, setDocType] = React.useState('HACCP_ENTRETIEN');
@@ -710,7 +714,7 @@ export const EvidenceModule = ({ t }: { t: any }) => {
                                           ) : (
                                              <span className="px-2 py-1 text-[10px] bg-slate-800 text-slate-400 rounded">{t.manual || "Manuel"}</span>
                                           )}
-                                          <button onClick={() => deleteDoc(d.id)} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
+                                          <button onClick={() => setPendingDeleteDoc(d.id)} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"><X className="w-4 h-4" /></button>
                                        </div>
                                     </div>
                                  ))}
@@ -731,6 +735,23 @@ export const EvidenceModule = ({ t }: { t: any }) => {
                   </div>
                 </div>
             )}
-        </div>
-    );
+              <ConfirmDialog
+        open={!!pendingDeleteDoc}
+        title={t.confirmDelete || "Supprimer ?"}
+        description="Ce document sera définitivement supprimé."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={async () => {
+          if (pendingDeleteDoc) {
+            await deleteDoc(pendingDeleteDoc);
+          }
+          setPendingDeleteDoc(null);
+        }}
+        onCancel={() => setPendingDeleteDoc(null)}
+      />
+</div>
+  
+
+  );
 };

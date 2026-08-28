@@ -45,7 +45,7 @@ export const getSupplierForIngredient = (ingredientName: string) => {
   return "Charles Martin";
 };
 
-export const gerer_flux_culinaire = async (jsonData: string) => {
+export const gerer_flux_culinaire = async (jsonData: string, notify?: (msg: string, type?: string) => void) => {
   try {
     const payload = {
       source: "mobile",
@@ -67,17 +67,18 @@ export const gerer_flux_culinaire = async (jsonData: string) => {
     console.log("Réponse du serveur :", result);
 
     if (result.claus_analysis) {
-      alert(`✅ Ordre transmis avec succès !
+      notify?.(`✅ Ordre transmis avec succès !
 
 🧠 Avis de l'Assistant IA :
-${result.claus_analysis}`);
+${result.claus_analysis}`, "success");
     } else {
-      alert("✅ Ordre transmis avec succès !");
+      notify?.("✅ Ordre transmis avec succès !", "success");
     }
   } catch (error) {
     console.error("Erreur de transmission:", error);
-    alert(
+    notify?.(
       "❌ Erreur de connexion au serveur Agent Culinaire OS. Vérifiez que le backend est lancé.",
+      "error"
     );
   }
 };
