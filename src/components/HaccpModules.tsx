@@ -2,7 +2,7 @@ import React from 'react';
 import { PackageSearch, Thermometer, ScanLine, FileCheck, AlertTriangle, CheckCircle2, Droplets, CalendarClock, Printer, Expand, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { MediaDisplay } from '../App';
+import { MediaDisplay } from "../lib/helpers";
 
 export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateIngredient?: (name: string, lang: string) => string }) => {
   const [view, setView] = React.useState<'stocks' | 'history' | 'suppliers'>('stocks');
