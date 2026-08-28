@@ -93,13 +93,23 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   être propre sous `strict`. Pattern à réappliquer ailleurs si on retombe sur
   des `never`/`any` : typer l'arg + la variable `bestMatch`.
 
-### 2. Découpage `src/App.tsx` — ⬜ À FAIRE (seul point restant)
-- `App.tsx` : 14 535 → **10 559 lignes** déjà (const partiellement extraites).
-- Les vues sont déjà dans `src/components/` (Purchasing, Haccp, StaffPlanning,
-  EpicureStudio…). À faire :
-  - Extraire dans `src/data/` : TRANSLATIONS (132 Ko),
-    INGREDIENT_TRANSLATIONS_*, COST_DATA, MENU_DATA…
-  - Réduire `App.tsx` à routing + état global partagé.
+### 2. Découpage `src/App.tsx` — ✅ FAIT (commit `b5acf35`)
+- `App.tsx` : 10 559 → **934 lignes** (routing + état global uniquement).
+- 13 vues extraites dans `src/components/` (un fichier par vue) :
+  - `MenuAnalysis.tsx` (1753), `FichesTechniques.tsx` (2348),
+    `DocumentManager.tsx` (1238), `InventoryAudit.tsx` (1231),
+    `SettingsView.tsx` (945), `DashboardOverview.tsx` (550),
+    `AntiWaste.tsx` (390), `ProductionPlan.tsx` (375),
+    `CulinaryChat.tsx` (226), `RobotManagement.tsx` (180),
+    `QualityControl.tsx` (158), `LandingPage.tsx` (47), `NavItem.tsx` (46)
+- 7 helpers extraits dans `src/lib/helpers.tsx` (256 lignes) :
+  `MediaDisplay`, `getSupplierForIngredient`, `gerer_flux_culinaire`,
+  `translateIngredientHelper`, `translateAlertMessage`,
+  `getCostModifier`, `getIngredientEffectivePrice`
+- Barrel `src/components/views.ts` pour les imports centralisés.
+- `HaccpModules.tsx` : import `MediaDisplay` déporté de `../App` → `../lib/helpers`.
+- Données déjà dans `src/data/` : `translations.ts` (3676), `menuData.ts` (141),
+  `ingredientTranslations.ts` (172).
 
 ### 3. `strict: true` — ✅ ACTIVÉ (relâché)
 - `tsconfig.json` : `"strict": true`. Mais `noImplicitAny: false` et
@@ -117,12 +127,11 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   (unit-test vitest + e2e-test playwright).
 
 ## 🚧 Prochaine étape (pour le prochain chat)
-1. **Découper `App.tsx`** (point 2) : extraire les gros consts dans `src/data/`,
-   laisser routing + état global. `translations.ts` (132 Ko) est déjà dans
-   `src/data/` — le rattacher + faire de même pour les autres.
-2. Vérifier que le build (`npm run build`) + tests passent sur le runner x64
-   (le lock contient les binaires natifs x64/arm64/darwin/win — voir fix CI).
-3. Commit par sous-partie + MR quand chaque morceau est propre.
+> **Tous les points de la Phase 2 sont maintenant terminés** (au 28 août).
+> La Phase 2 est complète : server.ts (pt1), App.tsx (pt2), strict (pt3), tests+CI (pt4).
+1. **Push sur `main`** : le commit `b5acf35` est local.
+2. **Optionnel** : durcir `noImplicitAny: true` et dépiler les `: any` restants.
+3. **Optionnel** : code-splitting (vite warns chunk >500 kB) — dynamic import des vues.
 
 ## 🔙 Points de retour (Git)
 - `a701e70` = état **original** (avant toutes modifs)
