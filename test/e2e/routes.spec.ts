@@ -13,13 +13,10 @@ let server: ChildProcess;
 
 test.beforeAll(async () => {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
-  const nodePath = "/home/clausake/.hermes/node/bin";
-  server = spawn(path.join(nodePath, "node"), [
-    path.join(process.cwd(), "node_modules", ".bin", "tsx"),
-    "server.ts",
-  ], {
+  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+  server = spawn(process.execPath, [tsxBin, "server.ts"], {
     cwd: process.cwd(),
-    env: { ...process.env, PATH: nodePath + ":" + (process.env.PATH || ""), PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
+    env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
     stdio: "pipe",
   });
   server.stdout?.on("data", (d) => process.stdout.write(d));
