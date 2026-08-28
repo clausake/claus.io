@@ -12,16 +12,6 @@ import "dotenv/config";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { setGlobalDispatcher, Agent } from "undici";
-
-// Timeouts HTTP étendus (les appels Ollama/IA peuvent être longs)
-setGlobalDispatcher(
-  new Agent({
-    headersTimeout: 1e3 * 60 * 60,
-    bodyTimeout: 1e3 * 60 * 60,
-    connectTimeout: 1e3 * 60 * 5,
-  }),
-);
 
 import { initDatabase, LicenseState } from "./src/db/init.js";
 import { licenseMiddleware } from "./src/middleware/license.js";
