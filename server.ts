@@ -2,7 +2,8 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) =>
   __defProp(target, "name", { value, configurable: true });
 import express from "express";
-import { GoogleGenAI } from "@google/genai";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import "dotenv/config";
 import sqlite3 from "sqlite3";
@@ -58,7 +59,24 @@ function calculatePricePerRef(rawPrice: number, supplierUnit: string, inventoryU
   return rawPrice * (inventoryMod / supplierMod);
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    // 25 Mo max par upload (factures/scans + PDF) — évite les uploads illimités
+    fileSize: 25 * 1024 * 1024,
+    files: 5,
+    fields: 20,
+  },
+  fileFilter: (_req, file, cb) => {
+    // On refuse les exécutables / scripts (le serveur n'en a pas besoin)
+    const blocked = /\.(exe|msi|bat|cmd|sh|ps1|js|cjs|mjs|ts|py|jar|apk|iso|zip)$/i;
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (blocked.test(file.originalname) || (ext === ".js" || ext === ".ts")) {
+      return cb(new Error(`Type de fichier non autorisé : ${file.originalname}`));
+    }
+    cb(null, true);
+  },
+});
 
 function getOllamaHost(s: any) {
   if (s && s.ollama_url) {
@@ -75,7 +93,61 @@ function getOllamaHost(s: any) {
 async function startServer() {
   const app = express();
   let PORT = Number(process.env.PORT) || 3000;
+  app.use(helmet());
   app.use(express.json({ limit: "10mb" }));
+
+  // Rate-limit global sur /api (anti bruteforce / abuse). On le pose AVANT
+  // toutes les routes pour qu'aucun endpoint ne soit contourné.
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Trop de requêtes, réessaie dans quelques minutes." },
+  });
+  app.use("/api", apiLimiter);
+
+  // Phase 0 (fix S2) : variables d'état de la licence déclarées au sommet.
+  // Elles sont initialisées plus bas (après l'ouverture de la base SQLite) mais
+  // le middleware de licence ci-dessous les lit au moment de la requête, donc
+  // elles sont prêtes avant tout appel. Déclarées ici pour couvrir TOUTES les
+  // routes /api/* (y compris celles définies avant l'init de db).
+  let db: any = null;
+  let finalInstallTime = "0";
+  let machineId = "UNKNOWN";
+
+  // Middleware de licence — posé AVANT toutes les routes pour que plus aucune
+  // endpoint ne contourne le paywall. Il ne bloque QUE les mutations (POST/PUT/
+  // DELETE/PATCH) une fois le trial expiré et l'app non unlockée ; les GET
+  // (lecture) restent autorisés pour l'UI.
+  const TRIAL_DAYS_GLOBAL = 30;
+  const TRIAL_MS_GLOBAL = TRIAL_DAYS_GLOBAL * 24 * 60 * 60 * 1e3;
+  app.use("/api", async (req, res, next) => {
+    if (req.path === "/trial-status" || req.path === "/unlock") return next();
+    if (!db) return next(); // pas encore initialisé (démarrage)
+    let unlockedRow: any = null;
+    try {
+      unlockedRow = await db.get(
+        "SELECT value FROM app_license WHERE key = 'is_unlocked'",
+      );
+    } catch (e) {
+      return next(); // erreur DB → ne pas bloquer à cause d'un bug d'init
+    }
+    const isUnlocked = unlockedRow ? unlockedRow.value === "true" : false;
+    if (!isUnlocked) {
+      const installDate = parseInt(finalInstallTime) || 0;
+      const isExpired = Date.now() - installDate > TRIAL_MS_GLOBAL;
+      const isMutation = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+      if (isExpired && isMutation) {
+        return res.status(403).json({
+          error: "TRIAL_EXPIRED",
+          message: "La période d'essai de 30 jours est terminée.",
+        });
+      }
+    }
+    next();
+  });
+
   let storageDir = process.env.USER_DATA_PATH;
   if (!storageDir) {
     const home = os.homedir();
@@ -1719,7 +1791,7 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
 
   const dbPath = path.join(storageDir, "agent_culinaire.db");
   runDailyDatabaseBackup(storageDir, dbPath);
-  const db = await open({ filename: dbPath, driver: sqlite3.Database });
+  db = await open({ filename: dbPath, driver: sqlite3.Database });
   await db.exec("PRAGMA journal_mode = WAL;");
   await db.exec("PRAGMA synchronous = NORMAL;");
   await db.exec(`
@@ -2045,57 +2117,13 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
     await db.run("INSERT INTO iot_sensors (id, name, type, equipment_type, battery, last_reading, last_reading_at, webhook_token) VALUES ('bt1', 'Sonde Bluetooth d''Aiguille CoreTemp', 'probe', 'Chaud', 82, 74.2, ?, 'token_bt1')", [new Date().toISOString()]);
     await db.run("INSERT INTO iot_sensors (id, name, type, equipment_type, battery, last_reading, last_reading_at, webhook_token) VALUES ('cel1', 'Cellule de Refroidissement Rapide', 'blast_chiller', 'Refroidissement', 100, 12.0, ?, 'token_cel1')", [new Date().toISOString()]);
   }
-  const osHome = os.homedir();
-  let shadowDir = "";
-  let shadowFile = "";
-  if (process.platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || path.join(osHome, "AppData", "Local");
-    shadowDir = path.join(localAppData, "Microsoft", "CLR_v4.0", "UsageLogs");
-    shadowFile = path.join(shadowDir, "AppUsage.json.bak");
-  } else {
-    shadowDir = path.join(osHome, ".local", "share", "systemd");
-    shadowFile = path.join(shadowDir, "timers.log");
-  }
-  let deepShadowDir = "";
-  let deepShadowFile = "";
-  if (process.platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || path.join(osHome, "AppData", "Local");
-    deepShadowDir = path.join(localAppData, "Microsoft", "Windows", "INetCache", "Content.Telemetry");
-    deepShadowFile = path.join(deepShadowDir, "sys_telem_v2.dat");
-  } else if (process.platform === "darwin") {
-    deepShadowDir = path.join(osHome, "Library", "Caches", "com.apple.Safari", "SafeBrowsing");
-    deepShadowFile = path.join(deepShadowDir, "metrics.plist");
-  } else {
-    deepShadowDir = path.join(osHome, ".cache", "gnome-software", "telemetry");
-    deepShadowFile = path.join(deepShadowDir, "app_state.bin");
-  }
-
-  let shadowDate = null;
-  let deepShadowDate = null;
-
-  const encodeDate = (d: string) => Buffer.from(d).toString('hex');
-  const decodeDate = (h: string) => {
-    try { return Buffer.from(h, 'hex').toString('utf8'); } catch(e) { return null; }
-  };
-
-  if (fs.existsSync(shadowFile)) {
-    try {
-      const rawHex = fs.readFileSync(shadowFile, "utf8").trim();
-      const decoded = decodeDate(rawHex);
-      if (decoded && !isNaN(parseInt(decoded))) {
-        shadowDate = decoded;
-      }
-    } catch (e) {}
-  }
-  if (deepShadowFile && fs.existsSync(deepShadowFile)) {
-    try {
-      const rawHex = fs.readFileSync(deepShadowFile, "utf8").trim();
-      const decoded = decodeDate(rawHex);
-      if (decoded && !isNaN(parseInt(decoded))) {
-        deepShadowDate = decoded;
-      }
-    } catch (e) {}
-  }
+  // NOTE Phase 0 : l'ancienne logique "shadow files" (cache de la date
+  // d'installation dans de faux fichiers de télémétrie système) a été supprimée.
+  // Elle écrivait dans des dossiers utilisateurs / système en se faisant
+  // passer pour de la télémétrie (Microsoft\CLR_v4.0\UsageLogs, INetCache,
+  // ~/.local/share/systemd, Library/Caches/com.apple.Safari, etc.) — non
+  // acceptable. La date d'installation vit désormais uniquement dans SQLite
+  // (app_license), ce qui est prévisible et inspectable.
   await db.exec(`
     CREATE TABLE IF NOT EXISTS app_license (
       key TEXT PRIMARY KEY,
@@ -2140,20 +2168,14 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
     );
     machineIdRow = { value: newId };
   }
-  const machineId = machineIdRow.value;
+  machineId = machineIdRow.value;
   let dbLicense = await db.get(
     "SELECT value FROM app_license WHERE key = 'install_date'",
   );
-  const foundDates = [
-    dbLicense ? parseInt(dbLicense.value) : Infinity,
-    shadowDate ? parseInt(shadowDate) : Infinity,
-    deepShadowDate ? parseInt(deepShadowDate) : Infinity,
-  ].filter((d) => !isNaN(d) && d !== Infinity);
-  let finalInstallTime;
-  if (foundDates.length === 0) {
-    finalInstallTime = Date.now().toString();
+  if (dbLicense && !isNaN(parseInt(dbLicense.value))) {
+    finalInstallTime = dbLicense.value;
   } else {
-    finalInstallTime = Math.min(...foundDates).toString();
+    finalInstallTime = Date.now().toString();
   }
   if (!dbLicense || dbLicense.value !== finalInstallTime) {
     await db.run(
@@ -2161,24 +2183,48 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
       [finalInstallTime],
     );
   }
-  if (shadowDate !== finalInstallTime) {
+  const TRIAL_MS = TRIAL_MS_GLOBAL;
+  // Phase 0 : le "secret de licence" est désormais une clé RSA PUBLIQUE (asymétrique).
+  // L'ancienne valeur (SECRET_SALT en clair dans le binaire) permettait à quiconque
+  // de décompiler le .exe de générer sa propre clé d'unlock. Avec une paire RSA :
+  //  - la CLÉ PRIVÉE reste chez l'éditeur (serveur de signature / outil interne),
+  //  - le binaire ne contient QUE la clé publique → impossible de forger une clé
+  //    valide sans la privée.
+  // Pour générer une paire :  openssl genrsa -out license_private.pem 2048
+  //                          openssl rsa -in license_private.pem -pubout -out license_public.pem
+  // Le contenu de license_public.pem (PEM) est ensuite injecté ci-dessous.
+  const LICENSE_PUBLIC_KEY_PEM =
+    process.env.COOKDRIVE_LICENSE_PUBLIC_KEY ||
+    `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyLBV7Q1BWIDuObTtEMTc
+lAzPzzM+jJjFugnjbOZIb3fNWbPVbe/IX867u1eRjVyPrzKegL7aGQi2RSp49LH1
+n4d9ZpmXSXnOw0rYgYL6+QV1vE1ZNabgC1RawRwBi3iFWKplwdx8+AgMQ6erROrs
+m8hyb4T+F9VC3iGju8KxEzr5E4rv2VzsAeAj/foGsxBHO+Ezm6Eqgib6dNLsXLvf
+eYiVnxihbheM2EEEOjYikjD5xcCLzK/mev+pLweIWwdvxrtrmLhn9p7qRStFMQg1
+vusD+/E1vjvKS4UaCvUDOdOz4lUNx63ZygcPZR8BU2XMt35vGWoXo9Z48gkgS9fW
+uwIDAQAB
+-----END PUBLIC KEY-----`;
+
+  const crypto = await import("crypto");
+  const cryptoMod = crypto.default || crypto;
+
+  // Vérifie une clé d'unlock signée (base64 du RSA signature de machineId).
+  // La clé envoyée par le client est le base64 de RSA_sign(machineId, PRIVÉE, sha256),
+  // éventuellement formaté en groupes de 4 séparés par "-" (cosmétique).
+  // On normalise (retire tirets + padding) avant de décoder en base64.
+  function verifyLicenseKey(machineId: string, keyCandidate: string): boolean {
     try {
-      if (!fs.existsSync(shadowDir))
-        fs.mkdirSync(shadowDir, { recursive: true });
-      fs.writeFileSync(shadowFile, encodeDate(finalInstallTime), "utf8");
-    } catch (e) {}
+      const normalized = keyCandidate.replace(/[^A-Za-z0-9+/=]/g, "");
+      const signature = Buffer.from(normalized, "base64");
+      if (signature.length === 0) return false;
+      const verifier = cryptoMod.createVerify("RSA-SHA256");
+      verifier.update(machineId);
+      return verifier.verify(LICENSE_PUBLIC_KEY_PEM, signature);
+    } catch (e) {
+      return false;
+    }
   }
-  if (deepShadowFile && deepShadowDate !== finalInstallTime) {
-    try {
-      if (!fs.existsSync(deepShadowDir))
-        fs.mkdirSync(deepShadowDir, { recursive: true });
-      fs.writeFileSync(deepShadowFile, encodeDate(finalInstallTime), "utf8");
-    } catch (e) {}
-  }
-  const TRIAL_DAYS = 30;
-  const TRIAL_MS = TRIAL_DAYS * 24 * 60 * 60 * 1e3;
-  // Le secret de licence est encodé en base64 pour éviter qu'il n'apparaisse en clair dans le fichier .exe final
-  const SECRET_SALT = Buffer.from("Q0xBVVNfQUlfUFJPX1ZFUl8x", "base64").toString("utf8");
+
   app.get("/api/trial-status", async (req, res) => {
     const installDate = parseInt(finalInstallTime);
     const elapsed = Date.now() - installDate;
@@ -2197,44 +2243,22 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
   app.post("/api/unlock", express.json(), async (req, res) => {
     const { key } = req.body;
     if (!key) return res.status(400).json({ error: "Missing key" });
-    const crypto = await import("crypto").then((s) => {
-      const e = "default";
-      return s[e] && typeof s[e] == "object" && "__esModule" in s[e] ? s[e] : s;
-    });
-    const expectedHash = crypto
-      .createHash("sha256")
-      .update(machineId + SECRET_SALT)
-      .digest("hex")
-      .substring(0, 12)
-      .toUpperCase();
-    const expectedKey = expectedHash.match(/.{1,4}/g).join("-");
-    if (key.trim().toUpperCase() === expectedKey) {
+    // Phase 0 : la clé est une signature RSA de machineId (vérifiée avec la clé
+    // publique). L'ancienne méthode (sha256(machineId + SALT) en clair) était
+    // contournable car le SALT était présent dans le binaire.
+    if (verifyLicenseKey(machineId, key.trim())) {
       await db.run(
         "INSERT OR REPLACE INTO app_license (key, value) VALUES ('is_unlocked', 'true')",
       );
       return res.json({ success: true });
-    } else {
-      return res.status(401).json({ error: "Invalid key" });
     }
+    return res.status(401).json({ error: "Invalid key" });
   });
-  app.use("/api", async (req, res, next) => {
-    if (req.path === "/trial-status" || req.path === "/unlock") return next();
-    let unlockedRow = await db.get(
-      "SELECT value FROM app_license WHERE key = 'is_unlocked'",
-    );
-    const isUnlocked = unlockedRow ? unlockedRow.value === "true" : false;
-    if (!isUnlocked) {
-      const installDate = parseInt(finalInstallTime);
-      const isExpired = Date.now() - installDate > TRIAL_MS;
-      if (isExpired && req.method !== "GET") {
-        return res.status(403).json({
-          error: "TRIAL_EXPIRED",
-          message: "La p\xE9riode d'essai de 30 jours est termin\xE9e.",
-        });
-      }
-    }
-    next();
-  });
+  // NOTE Phase 0 : l'ancien middleware de licence (déclaré ici, après ~40 routes)
+  // a été supprimé. Il est maintenant posé au TOUT DÉBUT de startServer (voir
+  // le middleware "app.use("/api", ...)" juste après apiLimiter), ce qui le rend
+  // in-contournable : toutes les routes /api/* passent par lui, y compris celles
+  // définies avant l'initialisation de la base.
   const STANDARD_QUANTITIES_PROMPT = `
         IMPORTANT: Respecte IMP\xC9RATIVEMENT CES STANDARDS DE QUANTIT\xC9S PAR PERSONNE :
         - INTERDICTION ABSOLUE : N'utilise JAMAIS de "L\xE9gumes surgel\xE9s" dans tes recettes. Utilise uniquement des produits FRAIS et de SAISON.
@@ -4469,7 +4493,11 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
         return res.status(400).json({ status: "error", message: "Invalid payload" });
       }
       const inventory = await db.all("SELECT id, name, unit FROM inventory");
-      const invMap = new Map(inventory.map(item => [item.id, item]));
+      const invMap = new Map(
+        (inventory as Array<{ id: string; name: string; unit: string }>).map(
+          (item) => [item.id, item],
+        ),
+      );
       
       await db.run("BEGIN TRANSACTION");
       try {
