@@ -195,3 +195,61 @@ test("CRUD menu-planning", async ({ request }) => {
   res = await request.delete(`${BASE}/api/menu-planning/${item.id}`);
   expect(res.status()).toBe(200);
 });
+
+test("GET /api/robots", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/robots`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("GET /api/documents", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/documents`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("GET /api/haccp/temperatures", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/haccp/temperatures`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("GET /api/haccp/cleaning", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/haccp/cleaning`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("GET /api/haccp/batches", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/haccp/batches`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("GET /api/haccp/production-history", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/haccp/production-history`);
+  expect(res.status()).toBe(200);
+  const arr = await res.json();
+  expect(Array.isArray(arr)).toBe(true);
+});
+
+test("POST /api/backup", async ({ request }) => {
+  const res = await request.post(`${BASE}/api/backup`);
+  expect(res.status()).toBe(200);
+  const headers = res.headers();
+  expect(headers["content-type"]).toContain("application/zip");
+});
+
+test("GET /api/network-info", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/network-info`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  // en prod : { ip, port, url } ; en dev le catch-all Vite peut renvoyer index.html
+  expect(typeof body.ip).toBe("string");
+  expect(typeof body.url).toBe("string");
+});
