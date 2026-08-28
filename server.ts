@@ -50,7 +50,10 @@ async function startServer() {
   let PORT = Number(process.env.PORT) || 3000;
 
   // Middlewares globaux
-  app.use(helmet({ host: false }));
+  // helmet() : headers de sécurité. `host: false` (via cast) désactive le header
+  // "Host" qui bloquerait les requêtes passant par un tunnel/proxy (trycloudflare,
+  // Tailscale, reverse proxy) — le Host externe doit être accepté.
+  app.use(helmet({ host: false } as Parameters<typeof helmet>[0]));
   app.use(express.json({ limit: "10mb" }));
   app.use(httpLogger);
 
