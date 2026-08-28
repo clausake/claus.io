@@ -454,7 +454,7 @@ export function Haccp({
                         Nouveau Capteur Physique
                       </h4>
                       <div>
-                        <label className="block text-[8px] font-mono text-slate-500 uppercase tracking-widest mb-1 font-bold">
+                        <label className="block text-caption font-mono text-slate-500 uppercase tracking-widest mb-1 font-bold">
                           ID UNIQUE (SANS ESPACE)
                         </label>
                         <input
@@ -467,7 +467,7 @@ export function Haccp({
                         />
                       </div>
                       <div>
-                        <label className="block text-[8px] font-mono text-slate-550 uppercase tracking-widest mb-1 font-bold">
+                        <label className="block text-caption font-mono text-text-faint uppercase tracking-widest mb-1 font-bold">
                           NOM DE L'ÉQUIPEMENT
                         </label>
                         <input
@@ -481,7 +481,7 @@ export function Haccp({
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[8px] font-mono text-slate-550 uppercase tracking-widest mb-1 font-bold">
+                          <label className="block text-caption font-mono text-text-faint uppercase tracking-widest mb-1 font-bold">
                             TYPE DE SONDE
                           </label>
                           <select
@@ -497,7 +497,7 @@ export function Haccp({
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[8px] font-mono text-slate-550 uppercase tracking-widest mb-1 font-bold">
+                          <label className="block text-caption font-mono text-text-faint uppercase tracking-widest mb-1 font-bold">
                             MESURE HACCP
                           </label>
                           <select
@@ -532,7 +532,7 @@ export function Haccp({
 
                   <div className="space-y-3 font-sans">
                     {sensors.length === 0 ? (
-                      <p className="text-[11px] text-slate-550 text-center py-4 font-mono">
+                      <p className="text-[11px] text-text-faint text-center py-4 font-mono">
                         Aucun capteur enregistré.
                       </p>
                     ) : (
@@ -569,7 +569,7 @@ export function Haccp({
                                 >
                                   {sensor.name}
                                 </span>
-                                <span className="text-[8px] font-mono text-slate-400 block mt-0.5">
+                                <span className="text-caption font-mono text-slate-400 block mt-0.5">
                                   ID:{" "}
                                   <strong className="text-emerald-400 font-mono">
                                     {sensor.id}
@@ -602,7 +602,7 @@ export function Haccp({
                             {/* Temp Gauge Section */}
                             <div className="grid grid-cols-2 gap-2 bg-black/40 p-2 text-xs rounded-lg border border-white/5 font-sans">
                               <div>
-                                <label className="block text-[7px] font-mono text-slate-500 uppercase tracking-wider leading-none mb-1">
+                                <label className="block text-caption font-mono text-slate-500 uppercase tracking-wider leading-none mb-1">
                                   Température
                                 </label>
                                 <div className="flex items-center gap-1.5 font-sans">
@@ -619,10 +619,10 @@ export function Haccp({
                                 </div>
                               </div>
                               <div className="text-right flex flex-col justify-end">
-                                <label className="block text-[7px] font-mono text-slate-500 uppercase tracking-wider leading-none mb-1">
+                                <label className="block text-caption font-mono text-slate-500 uppercase tracking-wider leading-none mb-1">
                                   Reçu le
                                 </label>
-                                <span className="text-[9px] font-mono text-slate-350 truncate">
+                                <span className="text-caption font-mono text-text-muted truncate">
                                   {sensor.last_reading_at
                                     ? new Date(
                                         sensor.last_reading_at,
@@ -633,11 +633,11 @@ export function Haccp({
                             </div>
 
                             {/* Webhook Token details */}
-                            <div className="flex items-center gap-1.5 text-[8px] font-mono text-slate-400 bg-black/20 px-2 py-1 rounded">
-                              <Key className="w-2.5 h-2.5 text-slate-550" />
+                            <div className="flex items-center gap-1.5 text-caption font-mono text-slate-400 bg-black/20 px-2 py-1 rounded">
+                              <Key className="w-2.5 h-2.5 text-text-faint" />
                               <span>
                                 Token:{" "}
-                                <strong className="text-slate-350 select-all font-mono">
+                                <strong className="text-text-muted select-all font-mono">
                                   {sensor.webhook_token}
                                 </strong>
                               </span>
@@ -645,7 +645,7 @@ export function Haccp({
 
                             {/* Tester & Real integration trigger */}
                             <div className="space-y-1.5 border-t border-white/5 pt-2">
-                              <span className="block text-[8px] font-mono font-bold text-slate-400 uppercase tracking-widest text-[7px]">
+                              <span className="block text-caption font-mono font-bold text-slate-400 uppercase tracking-widest text-caption">
                                 Tester la Sonde (Appel HTTP Direct)
                               </span>
 
@@ -671,14 +671,14 @@ export function Haccp({
                                       sensor.webhook_token,
                                     )
                                   }
-                                  className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded text-[9px] font-bold font-mono transition-all"
+                                  className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded text-caption font-bold font-mono transition-all"
                                 >
                                   Déclencher POST
                                 </button>
                               </div>
 
-                              <div className="bg-[#121212] p-2 rounded text-[8px] font-mono text-slate-500 border border-white/5 space-y-1 overflow-x-auto max-w-full text-left font-mono">
-                                <div className="flex items-center gap-1 text-[7.5px] text-emerald-500 font-bold uppercase tracking-widest mb-0.5">
+                              <div className="bg-[#121212] p-2 rounded text-caption font-mono text-slate-500 border border-white/5 space-y-1 overflow-x-auto max-w-full text-left font-mono">
+                                <div className="flex items-center gap-1 text-caption text-emerald-500 font-bold uppercase tracking-widest mb-0.5">
                                   <Terminal className="w-2.5 h-2.5 text-emerald-400 animate-bounce" />{" "}
                                   Requête HTTP physique
                                 </div>
@@ -747,12 +747,12 @@ export function Haccp({
                               {log.user}
                             </span>
                             {log.entry_type === "iot" ? (
-                              <span className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded text-[8px] font-mono border border-emerald-500/10">
+                              <span className="flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded text-caption font-mono border border-emerald-500/10">
                                 <Radio className="w-2.5 h-2.5 animate-pulse" />{" "}
                                 IoT
                               </span>
                             ) : (
-                              <span className="flex items-center gap-1 text-slate-400 bg-white/5 px-1.5 py-0.5 rounded text-[8px] font-mono border border-white/5">
+                              <span className="flex items-center gap-1 text-slate-400 bg-white/5 px-1.5 py-0.5 rounded text-caption font-mono border border-white/5">
                                 <Keyboard className="w-2.5 h-2.5" /> MANUEL
                               </span>
                             )}

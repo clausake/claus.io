@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -34,7 +34,8 @@ import { EpicureStudio } from "./components/EpicureStudio";
 import { Haccp } from "./components/Haccp";
 import { PurchasingTab } from "./components/Purchasing";
 import { StaffPlanning } from "./components/StaffPlanning";
-import { AntiWaste, CulinaryChat, DashboardOverview, DocumentManager, FichesTechniques, InventoryAudit, LandingPage, MenuAnalysis, NavItem, ProductionPlan, QualityControl, RobotManagement, SettingsView } from "./components/views";
+import { LandingPage, NavItem } from "./components/views";
+import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
 
 export default function App() {
@@ -809,16 +810,21 @@ export default function App() {
 
         {/* Content Area */}
         <div
-          className={`flex-1 overflow-auto ${activeTab === "chat" ? "p-0" : "p-10"} custom-scrollbar relative`}
+          className={`flex-1 overflow-auto ${activeTab === "chat" ? "p-0" : "p-4 md:p-8"} custom-scrollbar relative`}
         >
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full min-h-[300px]">
+              <div className="w-8 h-8 border-2 border-accent-500/30 border-t-accent-500 rounded-full animate-spin" />
+            </div>
+          }>
           {activeTab === "dashboard" && (
             <div className="animate-in fade-in duration-200">
-              <DashboardOverview t={t} settings={settings} />
+              <LazyViews.DashboardOverview t={t} settings={settings} />
             </div>
           )}
           {activeTab === "menus" && (
             <div className="animate-in fade-in duration-200">
-              <MenuAnalysis
+              <LazyViews.MenuAnalysis
                 cartItems={cartItems}
                 setCartItems={setCartItems}
                 setActiveTab={setActiveTab}
@@ -830,12 +836,12 @@ export default function App() {
           )}
           {activeTab === "robots" && (
             <div className="animate-in fade-in duration-200">
-              <RobotManagement t={t} />
+              <LazyViews.RobotManagement t={t} />
             </div>
           )}
           {activeTab === "inventory" && (
             <div className="animate-in fade-in duration-200">
-              <InventoryAudit
+              <LazyViews.InventoryAudit
                 t={t}
                 translateIngredient={translateIngredientHelper}
                 settings={settings}
@@ -849,7 +855,7 @@ export default function App() {
           )}
           {activeTab === "production" && (
             <div className="animate-in fade-in duration-200">
-              <ProductionPlan
+              <LazyViews.ProductionPlan
                 cartItems={cartItems}
                 setCartItems={setCartItems}
                 t={t}
@@ -874,7 +880,7 @@ export default function App() {
           )}
           {activeTab === "quality" && (
             <div className="animate-in fade-in duration-200">
-              <QualityControl t={t} />
+              <LazyViews.QualityControl t={t} />
             </div>
           )}
           {activeTab === "haccp" && (
@@ -884,7 +890,7 @@ export default function App() {
           )}
           {activeTab === "anti-waste" && (
             <div className="animate-in fade-in duration-200">
-              <AntiWaste t={t} />
+              <LazyViews.AntiWaste t={t} />
             </div>
           )}
           {activeTab === "epicure-studio" && (
@@ -897,12 +903,12 @@ export default function App() {
           )}
           {activeTab === "documents" && (
             <div className="animate-in fade-in duration-200">
-              <DocumentManager t={t} />
+              <LazyViews.DocumentManager t={t} />
             </div>
           )}
           {activeTab === "recipes" && (
             <div className="animate-in fade-in duration-200">
-              <FichesTechniques
+              <LazyViews.FichesTechniques
                 activeTab={activeTab}
                 cartItems={cartItems}
                 setCartItems={setCartItems}
@@ -913,12 +919,12 @@ export default function App() {
           )}
           {activeTab === "chat" && (
             <div className="h-full animate-in fade-in duration-200">
-              <CulinaryChat t={t} settings={settings} />
+              <LazyViews.CulinaryChat t={t} settings={settings} />
             </div>
           )}
           {activeTab === "settings" && (
             <div className="animate-in fade-in duration-200">
-              <SettingsView
+              <LazyViews.SettingsView
                 settings={settings}
                 setSettings={setSettings}
                 t={t}
@@ -927,6 +933,7 @@ export default function App() {
               />
             </div>
           )}
+          </Suspense>
         </div>
       </main>
     </div>
