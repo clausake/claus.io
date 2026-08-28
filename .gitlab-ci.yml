@@ -4,28 +4,12 @@ image: node:22
 stages:
   - verify
 
-variables:
-  # Les fichiers binaires (PDF/PNG) sont en Git LFS : on les récupère avant build
-  GIT_STRATEGY: fetch
-  # Cache npm stable par version de node + lock
-  NPM_CONFIG_CACHE: .npm
-
 cache:
   key:
     files:
       - package-lock.json
   paths:
     - .npm/
-
-# Job dédié : récupérer les objets LFS (PDF/PNG). Sans ça, le checkout GitLab
-# ne contient que les pointers LFS et certains outils cassent.
-lfs-fetch:
-  stage: verify
-  allow_failure: true
-  script:
-    - git lfs install --force
-    - git lfs pull
-    - git lfs ls-files || true
 
 lint:
   stage: verify
@@ -37,7 +21,6 @@ lint:
 build:
   stage: verify
   script:
-    - git lfs install --force && git lfs pull || true
     - npm ci --cache .npm --prefer-offline --no-audit --no-fund
     - npm run build
   artifacts:
