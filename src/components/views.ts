@@ -1,0 +1,13 @@
+export { RobotManagement } from "./RobotManagement";
+export { LandingPage } from "./LandingPage";
+export { NavItem } from "./NavItem";
+export { SettingsView } from "./SettingsView";
+export { DashboardOverview } from "./DashboardOverview";
+export { MenuAnalysis } from "./MenuAnalysis";
+export { InventoryAudit } from "./InventoryAudit";
+export { ProductionPlan } from "./ProductionPlan";
+export { QualityControl } from "./QualityControl";
+export { AntiWaste } from "./AntiWaste";
+export { CulinaryChat } from "./CulinaryChat";
+export { DocumentManager } from "./DocumentManager";
+export { FichesTechniques } from "./FichesTechniques";
