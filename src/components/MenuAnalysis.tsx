@@ -805,7 +805,7 @@ export function MenuAnalysis({
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <UploadCloud className="w-10 h-10 text-brand-500" />
               </div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+              <h3 className="text-caption font-bold text-slate-500 uppercase tracking-widest mb-3">
                 {t.mode01 || "Mode 01"}
               </h3>
               <h4 className="text-lg font-black text-white tracking-tighter mb-2">
@@ -817,7 +817,7 @@ export function MenuAnalysis({
               </p>
               <div className="mt-auto pt-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></div>
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
+                <span className="text-caption font-mono text-slate-500 uppercase tracking-widest">
                   {t.aiAnalysisActive || "IA Analyse Active"}
                 </span>
               </div>
@@ -837,7 +837,7 @@ export function MenuAnalysis({
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <Clock className="w-10 h-10 text-blue-500" />
               </div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+              <h3 className="text-caption font-bold text-slate-500 uppercase tracking-widest mb-3">
                 {t.mode02 || "Mode 02"}
               </h3>
               <h4 className="text-lg font-black text-white tracking-tighter mb-2">
@@ -849,7 +849,7 @@ export function MenuAnalysis({
               </p>
               <div className="mt-auto pt-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
+                <span className="text-caption font-mono text-slate-500 uppercase tracking-widest">
                   {t.creativeConcept || "Concept Créatif"}
                 </span>
               </div>
@@ -869,7 +869,7 @@ export function MenuAnalysis({
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <Sparkles className="w-10 h-10 text-purple-500" />
               </div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+              <h3 className="text-caption font-bold text-slate-500 uppercase tracking-widest mb-3">
                 {t.mode03 || "Mode 03"}
               </h3>
               <h4 className="text-lg font-black text-white tracking-tighter mb-2">
@@ -881,7 +881,7 @@ export function MenuAnalysis({
               </p>
               <div className="mt-auto pt-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
+                <span className="text-caption font-mono text-slate-500 uppercase tracking-widest">
                   {t.highGastronomy || "Haute Gastronomie"}
                 </span>
               </div>
@@ -901,7 +901,7 @@ export function MenuAnalysis({
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <ChefHat className="w-10 h-10 text-amber-500" />
               </div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+              <h3 className="text-caption font-bold text-slate-500 uppercase tracking-widest mb-3">
                 {t.mode04 || "Mode 04"}
               </h3>
               <h4 className="text-lg font-black text-white tracking-tighter mb-2">
@@ -913,7 +913,7 @@ export function MenuAnalysis({
               </p>
               <div className="mt-auto pt-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
+                <span className="text-caption font-mono text-slate-500 uppercase tracking-widest">
                   {t.traditionalCooking || "Cuisine Bistro Chic"}
                 </span>
               </div>
@@ -1300,7 +1300,7 @@ export function MenuAnalysis({
                                           (all: string, i: number) => (
                                             <span
                                               key={i}
-                                              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
+                                              className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
                                             >
                                               {all}
                                             </span>
@@ -1354,7 +1354,7 @@ export function MenuAnalysis({
                                             (all: string, i: number) => (
                                               <span
                                                 key={i}
-                                                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
+                                                className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
                                               >
                                                 {all}
                                               </span>
@@ -1389,7 +1389,7 @@ export function MenuAnalysis({
                                           (all: string, i: number) => (
                                             <span
                                               key={i}
-                                              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
+                                              className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
                                             >
                                               {all}
                                             </span>
@@ -1443,7 +1443,7 @@ export function MenuAnalysis({
                                             (all: string, i: number) => (
                                               <span
                                                 key={i}
-                                                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
+                                                className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
                                               >
                                                 {all}
                                               </span>
@@ -1509,7 +1509,7 @@ export function MenuAnalysis({
                                               (all: string, i: number) => (
                                                 <span
                                                   key={i}
-                                                  className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
+                                                  className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
                                                 >
                                                   {all}
                                                 </span>
@@ -1622,7 +1622,7 @@ export function MenuAnalysis({
                                       (all: string, i: number) => (
                                         <span
                                           key={i}
-                                          className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
+                                          className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
                                         >
                                           {all}
                                         </span>
@@ -1728,7 +1728,7 @@ export function MenuAnalysis({
                                       (all: string, i: number) => (
                                         <span
                                           key={i}
-                                          className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
+                                          className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
                                         >
                                           {all}
                                         </span>

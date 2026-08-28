@@ -587,12 +587,12 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                                   {translateIngredient ? translateIngredient(item.name, t.language) : item.name}
                                 </span>
                                 {manualIds && manualIds.has(item.inventory_id) && (
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 flex items-center gap-1">
+                                  <span className="text-caption font-black uppercase tracking-widest text-emerald-500 flex items-center gap-1">
                                     <Plus className="w-2 h-2" /> {t.manualEntry || "Saisie Manuelle"}
                                   </span>
                                 )}
                                 {(!manualIds || !manualIds.has(item.inventory_id)) && (
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1">
+                                  <span className="text-caption font-black uppercase tracking-widest text-indigo-500 flex items-center gap-1">
                                     <Sparkles className="w-2 h-2" /> {t.iaAutomated || "IA Automatisé"}
                                   </span>
                                 )}
@@ -936,7 +936,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                 <div className="overflow-auto max-h-[300px] custom-scrollbar">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-white/5 text-slate-500 uppercase font-black text-[9px] tracking-widest">
+                      <tr className="border-b border-white/5 text-slate-500 uppercase font-black text-caption tracking-widest">
                         <th className="p-2">Libellé Fournisseur</th>
                         <th className="p-2 text-right">Prix Brut</th>
                         <th className="p-2">Unité d'achat</th>
@@ -973,7 +973,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                           </td>
                           <td className="p-2 text-center">
                             {m.matched_inventory_id ? (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                              <span className={`px-2 py-0.5 rounded-full text-caption font-black ${
                                 m.confidence > 1.2 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
                               }`}>
                                 {m.confidence > 1.2 ? "Haut" : "Moyen"}
@@ -1071,7 +1071,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                                       <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
                                           <span className="font-bold text-slate-200">{p.supplier_name}</span>
-                                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                                          <span className={`text-caption font-black uppercase px-1.5 py-0.5 rounded ${
                                             p.is_verified_from_invoice ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-400'
                                           }`}>
                                             {p.is_verified_from_invoice ? "Facture" : "Mercuriale"}
@@ -1084,7 +1084,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                                       <div className="flex items-center gap-4">
                                         <div className="text-right">
                                           <span className="font-mono text-sm font-black text-amber-400">{p.calculated_price_per_ref.toFixed(2)} €</span>
-                                          <span className="block text-[8px] uppercase tracking-wider text-slate-600">Ramene au {g.inventory_unit}</span>
+                                          <span className="block text-caption uppercase tracking-wider text-slate-600">Ramene au {g.inventory_unit}</span>
                                         </div>
                                         <button 
                                           onClick={() => handleDeletePrice(p.id)}
