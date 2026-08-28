@@ -525,38 +525,38 @@ export const LabelingModule = ({ t }: { t: any }) => {
         doc.setTextColor(0, 0, 0);
         
         doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text(`${t.labelUpper || "ÉTIQUETTE"}`, 31, 12, { align: 'center' });
         
         doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(`${t.productUpper || "PRODUIT"} :`, 5, 25);
         
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         const splitProduct = doc.splitTextToSize(product.toUpperCase(), 52);
         doc.text(splitProduct, 5, 32);
         
         let currentY = 32 + (splitProduct.length * 6) + 5;
         
         doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(`${t.productionDate || "DATE DE FAB."} :`, 5, currentY);
         
         currentY += 6;
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         const fabDate = new Date().toLocaleDateString(t.language === 'fr' ? 'fr-FR' : t.language === 'es' ? 'es-ES' : t.language === 'de' ? 'de-DE' : t.language === 'it' ? 'it-IT' : 'en-US');
         doc.text(fabDate, 5, currentY);
         
         currentY += 12;
         doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(`DLC :`, 5, currentY);
         
         currentY += 6;
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         let dlcStr = "----/--/--";
         if (dlc) {
             dlcStr = new Date(dlc).toLocaleDateString(t.language === 'fr' ? 'fr-FR' : t.language === 'es' ? 'es-ES' : t.language === 'de' ? 'de-DE' : t.language === 'it' ? 'it-IT' : 'en-US');
