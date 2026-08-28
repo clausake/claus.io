@@ -13,8 +13,10 @@ import {
   X,
 } from "lucide-react";
 import { translateIngredientHelper } from "../lib/helpers";
+import { useToast } from "./ui/Toast";
 
 export function AntiWaste({ t }: { t: any }) {
+  const toast = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [recipes, setRecipes] = useState<any[] | null>(null);
   const [criticalStock, setCriticalStock] = useState<any[]>([]);
@@ -51,14 +53,14 @@ export function AntiWaste({ t }: { t: any }) {
       }
     } catch (e) {
       console.error("Erreur de l'IA anti-gaspi:", e);
-      alert(t.syncFTError);
+      toast(t.syncFTError, "error");
     } finally {
       setIsGenerating(false);
     }
   };
 
   return (
-    <div className="led-glow-container p-8 h-full flex flex-col animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
+    <div className="led-glow-container p-8 h-full flex flex-col animate-in fade-in duration-150 overflow-y-auto custom-scrollbar">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -188,7 +190,7 @@ export function AntiWaste({ t }: { t: any }) {
           )}
 
           {recipes && (
-            <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
+            <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-150">
               <h3 className="font-bold text-slate-100 mb-4 flex items-center">
                 <ChefHat className="w-5 h-5 mr-2 text-emerald-500" />
                 {t.clausProposals}

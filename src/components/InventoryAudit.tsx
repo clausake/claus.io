@@ -20,6 +20,8 @@ import {
 } from "recharts";
 import Papa from "papaparse";
 import { translateIngredientHelper } from "../lib/helpers";
+import { useToast } from "./ui/Toast";
+import { SkeletonTable, Skeleton } from "./ui/Skeleton";
 
 export function InventoryAudit({
   t,
@@ -36,6 +38,7 @@ export function InventoryAudit({
   onAddToPurchasing: (id: string) => void;
   showNotification: (m: string, type?: any) => void;
 }) {
+  const toast = useToast();
   const [inventory, setInventory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [clausAnalysis, setClausAnalysis] = useState<string | null>(null);
@@ -157,23 +160,19 @@ export function InventoryAudit({
           });
 
           if (res.ok) {
-            alert(
-              (
+            toast((
                 t.importSuccess ||
-                "✅ {count} ingrédients importés avec succès !"
-              ).replace("{count}", items.length.toString()),
+                "✅ {count} ingrédients importés avec succès !", "success").replace("{count}", items.length.toString()),
             );
             const newRes = await fetch("/api/inventory");
             const newData = await newRes.json();
             setInventory(newData);
           } else {
-            alert(t.importError || "❌ Erreur lors de l'importation.");
+            toast(t.importError || "❌ Erreur lors de l'importation.", "error");
           }
         } catch (err) {
           console.error("Erreur d'import", err);
-          alert(
-            t.csvReadError || "❌ Erreur lors de la lecture du fichier CSV.",
-          );
+          toast(t.csvReadError || "❌ Erreur lors de la lecture du fichier CSV.", "error");
         }
 
         // Reset input
@@ -181,7 +180,7 @@ export function InventoryAudit({
       },
       error: (error) => {
         console.error("Erreur PapaParse:", error);
-        alert(t.csvLoadError || "❌ Impossible de lire le fichier CSV.");
+        toast(t.csvLoadError || "❌ Impossible de lire le fichier CSV.", "error");
       },
     });
   };
@@ -257,10 +256,8 @@ export function InventoryAudit({
       })
       .catch((err) => {
         console.error("Erreur de chargement de l'inventaire :", err);
-        alert(
-          t.inventoryLoadError ||
-            "Impossible de charger l'inventaire depuis le serveur d'IA.",
-        );
+        toast(t.inventoryLoadError ||
+            "Impossible de charger l'inventaire depuis le serveur d'IA.", "error");
         setIsLoading(false);
       });
   }, []);
@@ -485,7 +482,7 @@ export function InventoryAudit({
   const ChartTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length && !payload[0].payload.isEmpty) {
       return (
-        <div className="glass-panel p-3 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-xl">
+        <div className="glass-panel p-3 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-md">
           <p className="text-slate-300 font-medium text-xs uppercase tracking-widest mb-1">
             {payload[0].name}
           </p>
@@ -501,7 +498,7 @@ export function InventoryAudit({
   const StatusTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length && !payload[0].payload.isEmpty) {
       return (
-        <div className="glass-panel p-2 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-xl flex items-center gap-2">
+        <div className="glass-panel p-2 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-md flex items-center gap-2">
           <div
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: payload[0].payload.color }}
@@ -538,7 +535,7 @@ export function InventoryAudit({
   };
 
   return (
-    <div className="led-glow-container animate-in fade-in duration-500 relative">
+    <div className="led-glow-container animate-in fade-in duration-150 relative">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -1061,11 +1058,9 @@ export function InventoryAudit({
         className="overflow-hidden rounded-3xl border border-white/10 bg-[#0A0A0A]/60 shadow-2xl"
       >
         {isLoading ? (
-          <div className="py-24 text-center">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-500 text-xs font-black uppercase tracking-widest">
-              {t.initClaus || "Initialisation en cours..."}
-            </p>
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-6 w-48" />
+            <SkeletonTable rows={6} />
           </div>
         ) : (
           <div className="overflow-auto max-h-[700px] custom-scrollbar">

@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import {ToastProvider} from './components/ui/Toast';
 import './index.css';
 
 // Mute specific React console warnings that are noisy and outside our control (like Recharts defaultProps)
@@ -14,6 +15,8 @@ console.error = (...args) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ToastProvider>
+      <App />
+    </ToastProvider>
   </StrictMode>,
 );

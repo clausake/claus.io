@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -84,6 +84,7 @@ export default function App() {
 
   const t = { ...TRANSLATIONS.fr, ...(TRANSLATIONS[settings.language] || {}) };
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -202,6 +203,46 @@ export default function App() {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Keyboard shortcuts: Ctrl/Cmd+K = focus search, Alt+1-9 = sidebar tabs, Esc = close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K = focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      // Esc = close dropdowns
+      if (e.key === "Escape") {
+        setShowSearchDropdown(false);
+        setShowAlerts(false);
+        setShowProfileMenu(false);
+        return;
+      }
+      // Alt + 1-9 = sidebar tabs
+      if (e.altKey && !e.metaKey && !e.ctrlKey) {
+        const tabMap: Record<string, string> = {
+          "1": "dashboard",
+          "2": "inventory",
+          "3": "menus",
+          "4": "recipes",
+          "5": "production",
+          "6": "purchasing",
+          "7": "documents",
+          "8": "staff-planning",
+          "9": "haccp",
+        };
+        const tab = tabMap[e.key];
+        if (tab) {
+          e.preventDefault();
+          setActiveTab(tab);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -637,13 +678,14 @@ export default function App() {
                 className={`w-4 h-4 absolute left-4 top-1/2 transform -translate-y-1/2 transition-colors ${isSearching ? "text-brand-500 animate-pulse" : "text-slate-500 group-focus-within:text-brand-500"}`}
               />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() =>
                   searchQuery.length >= 2 && setShowSearchDropdown(true)
                 }
-                placeholder={t.searchPlaceholder}
+                placeholder={(t.searchPlaceholder || "Rechercher...") + "  (Ctrl+K)"}
                 className="pl-12 pr-6 py-3 bg-white/5 border border-transparent focus:border-brand-500/30 rounded-2xl text-sm text-white focus:outline-none focus:ring-8 focus:ring-brand-500/5 transition-all w-80 font-medium placeholder:text-slate-600"
               />
 
