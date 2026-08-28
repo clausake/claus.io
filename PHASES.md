@@ -127,11 +127,30 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   (unit-test vitest + e2e-test playwright).
 
 ## 🚧 Prochaine étape (pour le prochain chat)
-> **Tous les points de la Phase 2 sont maintenant terminés** (au 28 août).
-> La Phase 2 est complète : server.ts (pt1), App.tsx (pt2), strict (pt3), tests+CI (pt4).
-1. **Push sur `main`** : le commit `b5acf35` est local.
-2. **Optionnel** : durcir `noImplicitAny: true` et dépiler les `: any` restants.
-3. **Optionnel** : code-splitting (vite warns chunk >500 kB) — dynamic import des vues.
+> **Phase 2 + 6 améliorations post-Phase 2 terminées** (28 août).
+> La CI est verte (lint, build, unit, e2e). Le code est maintenable et testé.
+
+### Améliorations post-Phase 2 (commits `9332e80` → `???`)
+1. **Tests e2e étendus** : 7 → 13 tests (recettes, staff, search, anti-waste,
+   epicure, menu-planning ajoutés).
+2. **Validation des inputs API** : `src/middleware/validate.ts` avec helpers
+   `requireString`, `requireNumber`, `requireArray`, `optionalString`.
+   Appliqué sur haccp/documents, recipes, staff, menuplanning.
+3. **Logging HTTP** : `src/middleware/http-logger.ts` (chaque requête logguée
+   avec durée, /health exclu) + `src/middleware/error-logger.ts` (helper logError).
+4. **Code-splitting Vite** : `manualChunks` dans vite.config.ts — jspdf,
+   html2canvas, recharts sortis du chunk principal.
+   Chunk index : 1908 kB → 1081 kB (571 → 314 kB gzip).
+5. **Backup automatique DB** : `src/services/db-backup.ts` — copie horaire de
+   `agent_culinaire.db` dans `backups/`, rotation 5 derniers.
+6. **Health check enrichi** : `/health` renvoie maintenant `dbSize` (Ko),
+   `diskFree` (Go), `memUsed` (Mo) en plus des champs Ollama.
+
+### Optionnel (si on veut aller plus loin)
+- Durcir `noImplicitAny: true` et dépiler les ~176 `: any` restants.
+- Ajouter des tests e2e sur les routes restantes (backup, admin, ai, robots).
+- Code-splitting plus fin : dynamic import des vues lourdes (MenuAnalysis,
+  FichesTechniques) pour ne les charger qu'à l'ouverture du tab.
 
 ## 🔙 Points de retour (Git)
 - `a701e70` = état **original** (avant toutes modifs)

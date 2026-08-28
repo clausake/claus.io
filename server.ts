@@ -15,9 +15,11 @@ import fs from "fs";
 
 import { initDatabase, LicenseState } from "./src/db/init.js";
 import { licenseMiddleware } from "./src/middleware/license.js";
+import httpLogger from "./src/middleware/http-logger.js";
 import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
 import { settingsStore } from "./src/services/settings.js";
 import { uploadsDir } from "./src/services/paths.js";
+import { startDbBackup } from "./src/services/db-backup.js";
 
 // --- Routeurs métier ---
 import settingsRouter from "./src/routes/settings.js";
@@ -50,6 +52,7 @@ async function startServer() {
   // Middlewares globaux
   app.use(helmet());
   app.use(express.json({ limit: "10mb" }));
+  app.use(httpLogger);
 
   // Rate-limit global sur /api (anti bruteforce / abuse)
   const apiLimiter = rateLimit({
@@ -64,6 +67,9 @@ async function startServer() {
   // --- Initialisation de la base + état licence ---
   const { db, storageDir, license } = await initDatabase();
   const licenseState: LicenseState = license;
+
+  // Backup automatique horaire de la base SQLite (rotation 5 backups).
+  startDbBackup(storageDir, path.join(storageDir, "agent_culinaire.db"));
 
   // Synchronise la référence partagée des settings (utilisée par le client Ollama
   // et les routes qui ont besoin de model_name/language sans dépendre de la base).

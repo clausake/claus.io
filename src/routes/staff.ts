@@ -1,6 +1,7 @@
 // Routes : Équipe (planning, duplication de semaine)
 import { Router } from "express";
 import type { Database } from "sqlite";
+import { requireString, optionalString } from "../middleware/validate.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -45,11 +46,14 @@ try {
 });
 router.post("/api/staff", async (req, res) => {
 try {
+  if (!requireString(req, res, "name", 100)) return;
   const { id, name, role, hourlyRate, schedule, datesObj } = req.body;
+  const roleVal = optionalString(req, "role", 100) || "";
+  const rateVal = typeof hourlyRate === "number" && Number.isFinite(hourlyRate) ? hourlyRate : 0;
   const staffId = id || Math.random().toString(36).substring(2, 9);
   await db.run(
     "INSERT OR REPLACE INTO staff (id, name, role, hourly_rate) VALUES (?, ?, ?, ?)",
-    [staffId, name, role, hourlyRate],
+    [staffId, name, roleVal, rateVal],
   );
   if (schedule) {
     if(datesObj) {
