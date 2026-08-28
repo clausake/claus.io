@@ -50,7 +50,7 @@ async function startServer() {
   let PORT = Number(process.env.PORT) || 3000;
 
   // Middlewares globaux
-  app.use(helmet());
+  app.use(helmet({ host: false }));
   app.use(express.json({ limit: "10mb" }));
   app.use(httpLogger);
 
@@ -115,7 +115,7 @@ async function startServer() {
       },
     );
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -127,9 +127,10 @@ async function startServer() {
     });
   }
 
+  const HOST = process.env.HOST || "127.0.0.1";
   const startListening = () => {
-    const server = app.listen(PORT, "127.0.0.1", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, HOST, () => {
+      console.log(`Server running on http://${HOST}:${PORT}`);
     });
     server.on("error", (err: any) => {
       if (err.code === "EADDRINUSE") {
