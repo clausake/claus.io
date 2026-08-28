@@ -1,6 +1,7 @@
 // Routes : Fournisseurs + prévisions/ordres d'achat
 import { Router } from "express";
 import type { Database } from "sqlite";
+import { requireString, optionalString, requireArray } from "../middleware/validate.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -50,10 +51,12 @@ try {
 });
 router.post("/api/purchasing/order", async (req, res) => {
 try {
+  if (!requireArray(req, res, "items")) return;
   const { items, supplier } = req.body;
+  const supplierVal = optionalString(req, "supplier", 200) || "";
   const documentId = Date.now().toString();
   const totalAmount = items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
+    (sum, item) => sum + (typeof item.quantity === "number" ? item.quantity : 0) * (typeof item.unit_price === "number" ? item.unit_price : 0),
     0,
   );
   await db.run(
@@ -61,7 +64,7 @@ try {
     [
       documentId,
       "COMMANDE",
-      supplier,
+      supplierVal,
       new Date().toISOString(),
       totalAmount,
       "PENDING",
@@ -89,17 +92,20 @@ try {
 });
 router.post("/api/suppliers", async (req, res) => {
 try {
-  const { name, email, phone } = req.body;
+  if (!requireString(req, res, "name", 200)) return;
+  const name = req.body.name;
+  const email = optionalString(req, "email", 200) || "";
+  const phone = optionalString(req, "phone", 50) || "";
   const id = Date.now().toString();
   await db.run(
     "INSERT INTO suppliers (id, name, email, phone) VALUES (?, ?, ?, ?)",
-    [id, name, email || "", phone || ""],
+    [id, name, email, phone],
   );
   res.json({
     id,
     name,
-    email: email || "",
-    phone: phone || "",
+    email,
+    phone,
     status: "ACTIVE",
   });
 } catch (error) {
