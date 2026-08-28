@@ -98,18 +98,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Si on est sur smartphone et qu'on est sur un onglet interdit, on redirige vers HACCP
-    if (
-      isMobile &&
-      activeTab !== "documents" &&
-      activeTab !== "haccp" &&
-      activeTab !== "inventory"
-    ) {
-      setActiveTab("inventory");
-    }
-  }, [isMobile, activeTab]);
-
-  useEffect(() => {
     fetch("/api/trial-status")
       .then((res) => res.json())
       .then((data) => setTrialStatus(data))
@@ -410,7 +398,6 @@ export default function App() {
                 {t.principal}
               </p>
             )}
-            {!isMobile && (
               <NavItem
                 icon={<LayoutDashboard className="w-6 h-6" />}
                 label={t.dashboard}
@@ -421,7 +408,6 @@ export default function App() {
                 }}
                 isOpen={isSidebarOpen}
               />
-            )}
             <NavItem
               icon={<PackageSearch className="w-6 h-6" />}
               label={t.inventory}
@@ -439,7 +425,6 @@ export default function App() {
                 {t.operations}
               </p>
             )}
-            {!isMobile && (
               <>
                 <NavItem
                   icon={<BookOpen className="w-6 h-6" />}
@@ -482,7 +467,6 @@ export default function App() {
                   isOpen={isSidebarOpen}
                 />
               </>
-            )}
             <NavItem
               icon={<FileText className="w-6 h-6" />}
               label={t.documents}
@@ -493,7 +477,6 @@ export default function App() {
               }}
               isOpen={isSidebarOpen}
             />
-            {!isMobile && (
               <NavItem
                 icon={<Calendar className="w-6 h-6" />}
                 label={t.staffPlanning || "Gestion du Personnel"}
@@ -504,7 +487,6 @@ export default function App() {
                 }}
                 isOpen={isSidebarOpen}
               />
-            )}
             <NavItem
               icon={<Thermometer className="w-6 h-6" />}
               label={t.haccp}
@@ -515,7 +497,6 @@ export default function App() {
               }}
               isOpen={isSidebarOpen}
             />
-            {!isMobile && (
               <NavItem
                 icon={<Sparkles className="w-6 h-6" />}
                 label={t.antiWaste}
@@ -526,10 +507,8 @@ export default function App() {
                 }}
                 isOpen={isSidebarOpen}
               />
-            )}
           </div>
 
-          {!isMobile && (
             <div className="mb-2">
               {isSidebarOpen && (
                 <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">
@@ -567,7 +546,6 @@ export default function App() {
                 isOpen={isSidebarOpen}
               />
             </div>
-          )}
         </nav>
 
         {trialStatus &&
