@@ -8,6 +8,7 @@ import { safeJsonParse } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { requireString, optionalString } from "../middleware/validate.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -37,6 +38,7 @@ try {
 });
 router.post("/api/recipes", async (req, res) => {
 try {
+  if (!requireString(req, res, "name", 200)) return;
   const {
     name,
     category,
@@ -47,6 +49,10 @@ try {
     allergens,
     language
   } = req.body;
+  const categoryVal = optionalString(req, "category", 100) || "Général";
+  const dishTypeVal = optionalString(req, "dish_type", 50) || 'plat';
+  const prepSteps = optionalString(req, "preparation_steps", 50000) || "";
+  const srcImage = optionalString(req, "source_image_url", 500) || null;
   const recipeLang = language || ollamaSettingsRef.current.language || 'fr';
   const recipeId = Math.random().toString(36).substr(2, 9);
   await db.run(
@@ -54,10 +60,10 @@ try {
     [
       recipeId,
       name,
-      category,
-      dish_type || 'plat',
-      preparation_steps,
-      source_image_url,
+      categoryVal,
+      dishTypeVal,
+      prepSteps,
+      srcImage,
       allergens ? JSON.stringify(allergens) : "[]",
       recipeLang,
     ],

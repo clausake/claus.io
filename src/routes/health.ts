@@ -1,5 +1,8 @@
 // Routes : Santé (statut du modèle Ollama + modèle installé)
 import { Router } from "express";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { getOllamaHost } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 
@@ -36,6 +39,41 @@ const messages = {
 const pick = (key: "ok" | "unreachable" | "missing") =>
   messages[key][lang as keyof (typeof messages)["ok"]] || messages[key].en;
 
+// Champs additionnels : taille DB, disque libre, mémoire processus
+const resolveDataDir = (): string => {
+  let storageDir = process.env.USER_DATA_PATH;
+  if (!storageDir) {
+    const home = os.homedir();
+    if (process.platform === "win32") {
+      storageDir = path.join(home, "AppData", "Roaming", "ClausIO");
+    } else {
+      storageDir = path.join(home, ".clausio");
+    }
+  }
+  return storageDir;
+};
+const dataDir = resolveDataDir();
+const dbPath = path.join(dataDir, "agent_culinaire.db");
+let dbSize = 0;
+try {
+  if (fs.existsSync(dbPath)) {
+    dbSize = Math.round(fs.statSync(dbPath).size / 1024);
+  }
+} catch {
+  dbSize = 0;
+}
+let diskFree = -1;
+try {
+  const statfsFn = (fs as any).statfs;
+  if (typeof statfsFn === "function") {
+    const stats = statfsFn.sync(dataDir);
+    diskFree = Math.round((stats.bavail * stats.bsize) / 1e9);
+  }
+} catch {
+  diskFree = -1;
+}
+const memUsed = Math.round((process.memoryUsage().rss / 1024 / 1024) * 10) / 10;
+
 try {
   const list = await ollama.list();
   const installed = (list.models || []).map((m: any) => m.name || m.model || "");
@@ -49,6 +87,9 @@ try {
     model,
     host,
     installedModels: installed,
+    dbSize,
+    diskFree,
+    memUsed,
     message: pick(modelInstalled ? "ok" : "missing"),
   });
 } catch (error) {
@@ -59,6 +100,9 @@ try {
     model,
     host,
     installedModels: [],
+    dbSize,
+    diskFree,
+    memUsed,
     message: pick("unreachable"),
   });
 }
