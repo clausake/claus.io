@@ -10,6 +10,7 @@ import { upload } from "../shared/upload.js";
 import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import { uploadsDir } from "../services/paths.js";
 import { settingsPath } from "../services/settings.js";
+import { requireString, optionalString } from "../middleware/validate.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -296,11 +297,14 @@ async (req, res) => {
 );
 router.post("/api/haccp/documents", async (req, res) => {
 try {
+  const type = optionalString(req, "type", 100) || "AUTRE";
+  const name = optionalString(req, "name", 200) || "Document";
+  const fileUrl = optionalString(req, "file_url", 500) || null;
   const id =
     Date.now().toString() + Math.random().toString(36).substring(2);
   await db.run(
     "INSERT INTO haccp_documents (id, type, name, file_url) VALUES (?, ?, ?, ?)",
-    [id, req.body.type, req.body.name, req.body.file_url || null],
+    [id, type, name, fileUrl],
   );
   res.json({ status: "success", id });
 } catch (error) {

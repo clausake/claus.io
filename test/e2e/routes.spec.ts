@@ -109,3 +109,89 @@ test("GET /api/haccp/iot-sensors", async ({ request }) => {
   const arr = await res.json();
   expect(Array.isArray(arr)).toBe(true);
 });
+
+test("CRUD recettes", async ({ request }) => {
+  // create
+  let res = await request.post(`${BASE}/api/recipes`, {
+    data: { name: "Test Recipe", category: "Plat", dish_type: "plat", ingredients: [], preparation_steps: "test" },
+  });
+  expect(res.status()).toBe(200);
+  const item = await res.json();
+  expect(typeof item.id).toBe("string");
+
+  // read
+  res = await request.get(`${BASE}/api/recipes`);
+  expect(res.status()).toBe(200);
+  const list = await res.json();
+  expect(list.find((r: any) => r.id === item.id)).toBeTruthy();
+
+  // delete
+  res = await request.delete(`${BASE}/api/recipes/${item.id}`);
+  expect(res.status()).toBe(200);
+});
+
+test("CRUD staff", async ({ request }) => {
+  // create
+  let res = await request.post(`${BASE}/api/staff`, {
+    data: { name: "Chef Test", role: "Chef", hourlyRate: 25 },
+  });
+  expect(res.status()).toBe(200);
+  const item = await res.json();
+  expect(typeof item.id).toBe("string");
+
+  // read
+  res = await request.get(`${BASE}/api/staff`);
+  expect(res.status()).toBe(200);
+  const list = await res.json();
+  const found = list.find((s: any) => s.id === item.id);
+  expect(found).toBeTruthy();
+  expect(found.name).toBe("Chef Test");
+  expect(found.hourlyRate).toBe(25);
+
+  // delete
+  res = await request.delete(`${BASE}/api/staff/${item.id}`);
+  expect(res.status()).toBe(200);
+});
+
+test("GET /api/search?q=carotte", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/search?q=carotte`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(Array.isArray(body.results)).toBe(true);
+});
+
+test("GET /api/anti-waste/critical", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/anti-waste/critical`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(Array.isArray(body.inventory)).toBe(true);
+  expect(Array.isArray(body.expiringBatches)).toBe(true);
+});
+
+test("GET /api/epicure/recommendations", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/epicure/recommendations?ingredient=carotte`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.ingredient).toBe("carotte");
+  expect(Array.isArray(body.recommendations)).toBe(true);
+});
+
+test("CRUD menu-planning", async ({ request }) => {
+  // create
+  let res = await request.post(`${BASE}/api/menu-planning`, {
+    data: { date: "2025-08-28", meal_type: "lunch", title: "Test Meal", recipe_json: {} },
+  });
+  expect(res.status()).toBe(200);
+  const item = await res.json();
+  expect(typeof item.id).toBe("string");
+
+  // read
+  res = await request.get(`${BASE}/api/menu-planning`);
+  expect(res.status()).toBe(200);
+  const list = await res.json();
+  expect(list.find((p: any) => p.id === item.id)).toBeTruthy();
+
+  // delete
+  res = await request.delete(`${BASE}/api/menu-planning/${item.id}`);
+  expect(res.status()).toBe(200);
+});
