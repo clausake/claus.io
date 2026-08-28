@@ -641,12 +641,6 @@ export default function App() {
                       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
                       .join(" ")}
               </h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className="w-1 h-1 rounded-full bg-brand-500 animate-pulse"></div>
-                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest leading-none">
-                  {t.systemOperational} • {settings.model_name}
-                </span>
-              </div>
             </div>
           </div>
 
