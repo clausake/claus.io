@@ -1,8 +1,17 @@
 # CI GitLab - verification lint + build
+# L'image node:22 est une variante slim sans outils de build. On les ajoute
+# pour que les déps natives (sqlite3, sharp, tesseract.js) soient compilées
+# si leur binaire pre-build n'est pas disponible sur la version Node du runner.
 image: node:22
 
 stages:
   - verify
+
+default:
+  before_script:
+    - apt-get update -y
+    - apt-get install -y --no-install-recommends build-essential python3 g++ ca-certificates
+    - npm config set cache .npm
 
 cache:
   key:
@@ -15,13 +24,13 @@ lint:
   stage: verify
   allow_failure: true
   script:
-    - npm ci --cache .npm --prefer-offline
+    - npm ci --prefer-offline --no-audit --no-fund
     - npx tsc --noEmit
 
 build:
   stage: verify
   script:
-    - npm ci --cache .npm --prefer-offline
+    - npm ci --prefer-offline --no-audit --no-fund
     - npm run build
   artifacts:
     paths:
