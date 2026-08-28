@@ -381,7 +381,7 @@ export default function App() {
                 className="flex flex-col"
               >
                 <span className="text-xl font-black text-white tracking-tighter leading-none">
-                  Restauration IO
+                  CLAUS
                 </span>
                 <span className="text-[10px] font-mono text-brand-500 uppercase tracking-widest mt-1">
                   Logiciel de Gestion
