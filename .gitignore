@@ -32,6 +32,12 @@ instruction_creation_logiciel.txt
 backup.zip
 *.backup
 
+# Artefacts de test (Playwright / vitest) et WAL de SQLite
+test-results/
+test/tmp-data/
+*.db-wal
+*.db-shm
+
 # Clés de licence (jamais commitées — elles contiennent la clé privée)
 license_private.pem
 *.pem
