@@ -26,11 +26,13 @@ export default defineConfig(({mode}) => {
     },
     build: {
       rollupOptions: {
+        // html2canvas : dépd optionnelle de jspdf (lazy import), jamais appelée
+        // dans ce projet → on l'exclut du bundle pour économiser ~202 kB.
+        external: ["html2canvas"],
         output: {
           manualChunks: {
             'vendor-charts': ['recharts'],
             'vendor-pdf': ['jspdf', 'jspdf-autotable'],
-            'vendor-html2canvas': ['html2canvas'],
           },
         },
       },
