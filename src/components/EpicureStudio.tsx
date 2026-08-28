@@ -616,7 +616,7 @@ export function EpicureStudio({ t, settings }: EpicureStudioProps) {
                                   className="px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-full text-xs font-bold text-emerald-400 transition-all flex items-center gap-1.5"
                                 >
                                   {s.localizedName}
-                                  <span className="text-[9px] font-mono text-emerald-500">{(s.score * 100).toFixed(0)}%</span>
+                                  <span className="text-caption font-mono text-emerald-500">{(s.score * 100).toFixed(0)}%</span>
                                 </button>
                               ))}
                             </div>

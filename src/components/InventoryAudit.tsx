@@ -1080,12 +1080,12 @@ export function InventoryAudit({
                         {getCatTranslation(cat)}
                       </h3>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-500 bg-white/5 px-3 py-1 rounded-full border border-white/5 tracking-widest uppercase">
+                    <span className="text-caption font-bold text-slate-500 bg-white/5 px-3 py-1 rounded-full border border-white/5 tracking-widest uppercase">
                       {groupedInventory[cat].length} {t.batches || "LOTS"}
                     </span>
                   </div>
                   <table className="w-full text-sm text-left">
-                    <thead className="text-[9px] text-slate-500 uppercase font-black tracking-widest bg-black/20 border-b border-white/5">
+                    <thead className="text-caption text-slate-500 uppercase font-black tracking-widest bg-black/20 border-b border-white/5">
                       <tr>
                         <th className="px-8 py-4">{t.id || "ID"}</th>
                         <th className="px-8 py-4">{t.name || "DÉSIGNATION"}</th>
@@ -1104,7 +1104,7 @@ export function InventoryAudit({
                           key={item.id}
                           className="hover:bg-white/[0.01] transition-colors group"
                         >
-                          <td className="px-8 py-6 text-slate-600 font-mono text-[9px]">
+                          <td className="px-8 py-6 text-slate-600 font-mono text-caption">
                             #{item.id}
                           </td>
                           <td className="px-8 py-6">
@@ -1112,7 +1112,7 @@ export function InventoryAudit({
                               {translateIngredientHelper(item.name, t.language)}
                             </div>
                             {item.dlc && (
-                              <div className="mt-1 text-[9px] font-black uppercase text-slate-500">
+                              <div className="mt-1 text-caption font-black uppercase text-slate-500">
                                 DLC: {new Date(item.dlc).toLocaleDateString()}
                               </div>
                             )}
@@ -1131,7 +1131,7 @@ export function InventoryAudit({
                                   </span>
                                 </div>
                                 <span
-                                  className={`text-[9px] font-black tracking-widest uppercase ${
+                                  className={`text-caption font-black tracking-widest uppercase ${
                                     item.status === "ok"
                                       ? "text-emerald-500"
                                       : item.status === "low"
