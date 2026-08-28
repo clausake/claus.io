@@ -127,8 +127,42 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   (unit-test vitest + e2e-test playwright).
 
 ## 🚧 Prochaine étape (pour le prochain chat)
-> **Phase 2 + 6 améliorations post-Phase 2 terminées** (28 août).
-> La CI est verte (lint, build, unit, e2e). Le code est maintenable et testé.
+> **Phase 2 + 6 améliorations post-Phase 2 + UI/UX Sprint 1 terminés** (28 août).
+> La CI est verte. Le code est maintenable, testé, et le design system est formalisé.
+
+### UI/UX Sprint 1 (commit `6fe1c44`)
+1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
+   statut (ok/warn/danger/info), catégories menu, ombres (3 niveaux).
+   `brand-*` = alias d'`accent-*` (migration progressive).
+2. **Lazy loading** : 11 vues en `React.lazy` + `Suspense`.
+   Chunk index : 1081 → 860 kB (314 → 266 kB gzip). 11 chunks de vues séparés.
+3. **A11y fixes** : `text-slate-550` (inexistant) → `text-text-faint`,
+   plancher typographique 10px (`.text-caption`), focus ring global `:focus-visible`,
+   `prefers-reduced-motion: reduce`.
+4. **LED unique** : 4× `card-active-*` (120 lignes) → 1× `.card-led` via
+   CSS variable `--led` + `color-mix()`. Variantes amber/blue/purple en 1 ligne.
+
+### UI/UX Sprint 2 (à faire)
+Selon `UI-UX-PROPOSALS.md` (section 3, propositions UX-2 à UX-8) :
+1. **Toasts empilables + ConfirmDialog** (UX-2) : remplacer les 64 `alert()`
+   et 5 `confirm()` natifs. `ToastProvider` dans `src/components/ui/Toast.tsx`.
+   Effort : 2-3 jours (migration vue par vue).
+2. **Composants `ui/`** (UX-8) : `Button.tsx`, `Modal.tsx`, `Input.tsx`,
+   `Badge.tsx`, `Skeleton.tsx`, `Table.tsx` dans `src/components/ui/`.
+   Précondition des autres améliorations. Effort : 2-3 jours.
+3. **Skeleton screens** (UX-3) : `<Skeleton>` + squelettes par vue
+   (dashboard 4 KPI + 2 charts, inventaire 6 lignes, fiches 4 cartes). Effort : 1 jour.
+4. **Ctrl+K + raccourcis** (UX-4) : `Meta/Control+K` = focus recherche,
+   `Alt+1-9` = onglet sidebar, `Esc` = fermer. Effort : 1 jour.
+5. **Réduction glassmorphism** (UX-6) : 3 surfaces floutées max par écran,
+   `duration-500` → `duration-150`, retirer `whileHover y:-5` sur les KPI. Effort : 0,5 jour.
+6. **Modales/tableaux fenêtre étroite** (UX-7) : `overflow-x-auto` + `min-w-[640px]`,
+   modal plein écran sur < 640px. Effort : 0,5 jour.
+
+### Optionnel (si on veut aller plus loin)
+- Durcir `noImplicitAny: true` et dépiler les ~175 `: any` restants.
+- Tests e2e sur les routes restantes (admin, ai, voice, agent/command).
+- Code-splitting plus fin : dynamic import des sous-vues dans MenuAnalysis/FichesTechniques.
 
 ### Améliorations post-Phase 2 (commits `9332e80` → `???`)
 1. **Tests e2e étendus** : 7 → 13 tests (recettes, staff, search, anti-waste,
