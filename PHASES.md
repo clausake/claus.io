@@ -142,22 +142,23 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
 4. **LED unique** : 4× `card-active-*` (120 lignes) → 1× `.card-led` via
    CSS variable `--led` + `color-mix()`. Variantes amber/blue/purple en 1 ligne.
 
-### UI/UX Sprint 2 (à faire)
+### UI/UX Sprint 2 (✅ FAIT)
 Selon `UI-UX-PROPOSALS.md` (section 3, propositions UX-2 à UX-8) :
-1. **Toasts empilables + ConfirmDialog** (UX-2) : remplacer les 64 `alert()`
-   et 5 `confirm()` natifs. `ToastProvider` dans `src/components/ui/Toast.tsx`.
-   Effort : 2-3 jours (migration vue par vue).
-2. **Composants `ui/`** (UX-8) : `Button.tsx`, `Modal.tsx`, `Input.tsx`,
-   `Badge.tsx`, `Skeleton.tsx`, `Table.tsx` dans `src/components/ui/`.
-   Précondition des autres améliorations. Effort : 2-3 jours.
-3. **Skeleton screens** (UX-3) : `<Skeleton>` + squelettes par vue
-   (dashboard 4 KPI + 2 charts, inventaire 6 lignes, fiches 4 cartes). Effort : 1 jour.
-4. **Ctrl+K + raccourcis** (UX-4) : `Meta/Control+K` = focus recherche,
-   `Alt+1-9` = onglet sidebar, `Esc` = fermer. Effort : 1 jour.
-5. **Réduction glassmorphism** (UX-6) : 3 surfaces floutées max par écran,
-   `duration-500` → `duration-150`, retirer `whileHover y:-5` sur les KPI. Effort : 0,5 jour.
-6. **Modales/tableaux fenêtre étroite** (UX-7) : `overflow-x-auto` + `min-w-[640px]`,
-   modal plein écran sur < 640px. Effort : 0,5 jour.
+1. **Toasts empilables + ConfirmDialog** (UX-2) : ✅ 51 `alert()` + 4 `confirm()`
+   remplacés. `ToastProvider` dans `src/components/ui/Toast.tsx`,
+   `ConfirmDialog` pour les suppressions (inventaire, fiches, capteurs, tarifs, docs).
+2. **Composants `ui/`** (UX-8) : ✅ `Button.tsx`, `Modal.tsx`, `Input.tsx`,
+   `Badge.tsx`, `Skeleton.tsx`, `Table.tsx`, `Toast.tsx` dans `src/components/ui/`.
+   Barrel `index.ts` pour les imports centralisés.
+3. **Skeleton screens** (UX-3) : ✅ `<Skeleton>`, `<SkeletonTable>`, `<SkeletonCard>`
+   dans `ui/Skeleton.tsx`. Inventaire : spinner → SkeletonTable.
+4. **Ctrl+K + raccourcis** (UX-4) : ✅ `Ctrl/Cmd+K` = focus recherche,
+   `Alt+1-9` = onglet sidebar, `Esc` = fermer dropdowns.
+5. **Réduction glassmorphism** (UX-6) : ✅ `whileHover y:-5` retiré (KPI + cartes menu),
+   `duration-500` → `duration-150` (19 occurrences), `backdrop-blur-xl/2xl` → `-md`.
+6. **Modales/tableaux fenêtre étroite** (UX-7) : ✅ `Modal` responsive (max-w-3xl,
+   max-h-90vh, plein écran <640px). `Table` avec `overflow-x-auto` + `min-width: 640px`.
+   Header : recherche déjà `hidden md:block` (icône sur mobile).
 
 ### Optionnel (si on veut aller plus loin)
 - Durcir `noImplicitAny: true` et dépiler les ~175 `: any` restants.

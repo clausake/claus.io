@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { translateIngredientHelper } from "../lib/helpers";
+import { useToast } from "./ui/Toast";
 
 export function ProductionPlan({
   cartItems = [],
@@ -24,6 +25,7 @@ export function ProductionPlan({
   showNotification: (m: string, type?: any) => void;
   isActive?: boolean;
 }) {
+  const toast = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [consumed, setConsumed] = useState(false);
   const [dailyLaborCost, setDailyLaborCost] = useState(0);
@@ -85,7 +87,7 @@ export function ProductionPlan({
 
   const handleRejectCarts = () => {
     if (setCartItems) setCartItems([]);
-    alert(t.prodPlanReset);
+    toast(t.prodPlanReset, "success");
   };
 
   const handleConsumeStock = async () => {
@@ -150,7 +152,7 @@ export function ProductionPlan({
   );
 
   return (
-    <div className="led-glow-container p-8 animate-in fade-in duration-500">
+    <div className="led-glow-container p-8 animate-in fade-in duration-150">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">

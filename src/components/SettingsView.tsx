@@ -15,6 +15,7 @@ import {
 import { motion } from "motion/react";
 import { jsPDF } from "jspdf";
 import { QRCodeSVG } from "qrcode.react";
+import { useToast } from "./ui/Toast";
 
 export function SettingsView({
   settings,
@@ -29,6 +30,7 @@ export function SettingsView({
   trialStatus: any;
   setTrialStatus: any;
 }) {
+  const toast = useToast();
   const [ollamaStatus, setOllamaStatus] = React.useState<
     "idle" | "checking" | "connected" | "error"
   >("idle");
@@ -75,13 +77,13 @@ export function SettingsView({
       });
       const data = await res.json();
       if (res.ok) {
-        alert("Licence activée avec succès !");
+        toast("Licence activée avec succès !", "success");
         fetchLicense();
       } else {
-        alert("Clé invalide.");
+        toast("Clé invalide.", "error");
       }
     } catch (e) {
-      alert("Erreur serveur.");
+      toast("Erreur serveur.", "error");
     }
   };
 
@@ -120,9 +122,9 @@ export function SettingsView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-      alert(t.saveSuccess);
+      toast(t.saveSuccess, "success");
     } catch (e) {
-      alert(t.syncError);
+      toast(t.syncError, "error");
     }
   };
 
@@ -131,13 +133,13 @@ export function SettingsView({
       const res = await fetch("/api/backup", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        alert(`✅ ${t.active}: ${data.message}`);
+        toast(`✅ ${t.active}: ${data.message}`, "success");
       } else {
         throw new Error(data.message || "Server error");
       }
     } catch (e) {
       console.error("Backup error:", e);
-      alert(t.syncError);
+      toast(t.syncError, "error");
     }
   };
 

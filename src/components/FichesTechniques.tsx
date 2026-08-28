@@ -27,6 +27,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { MediaDisplay, getCostModifier, getIngredientEffectivePrice, getSupplierForIngredient } from "../lib/helpers";
+import { useToast, ConfirmDialog } from "./ui/Toast";
 
 export function FichesTechniques({
   activeTab,
@@ -41,6 +42,8 @@ export function FichesTechniques({
   t: any;
   showNotification: (m: string, type?: any) => void;
 }) {
+  const toast = useToast();
+  const [pendingDeleteRecipe, setPendingDeleteRecipe] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [supplierComparison, setSupplierComparison] = useState<any[]>([]);
@@ -143,14 +146,14 @@ export function FichesTechniques({
           }
 
         } else {
-          alert(data.message || "Impossible de décoder la fiche technique. Assurez-vous que le document est lisible.");
+          toast(data.message || "Impossible de décoder la fiche technique. Assurez-vous que le document est lisible.", "error");
         }
       } else {
-        alert("Erreur serveur lors du scan IA.");
+        toast("Erreur serveur lors du scan IA.", "error");
       }
     } catch (error) {
       console.error("Recipe scan error:", error);
-      alert("Une erreur de connexion est survenue.");
+      toast("Une erreur de connexion est survenue.", "error");
     } finally {
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -361,7 +364,7 @@ export function FichesTechniques({
           }),
         });
         if (res.ok) {
-          alert(t.recipeSaved || "Fiche technique enregistrée !");
+          toast(t.recipeSaved || "Fiche technique enregistrée !", "success");
           setSelectedRecipeForModal(null);
           fetchRecipes();
         }
@@ -380,7 +383,7 @@ export function FichesTechniques({
           }),
         });
         if (res.ok) {
-          alert(t.recipeSaved || "Fiche technique enregistrée !");
+          toast(t.recipeSaved || "Fiche technique enregistrée !", "success");
           fetchRecipes();
         }
       }
@@ -551,7 +554,7 @@ export function FichesTechniques({
   ];
 
   return (
-    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-500 overflow-hidden relative">
+    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 overflow-hidden relative">
       <div className="p-6 border-b border-white/10 bg-[#0A0A0A] flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight flex items-center">
@@ -2343,6 +2346,22 @@ export function FichesTechniques({
           </div>
         )}
       </AnimatePresence>
-    </div>
+    
+      <ConfirmDialog
+        open={!!pendingDeleteRecipe}
+        title={t.confirmDeleteRecipe || "Supprimer cette fiche technique ?"}
+        description="Cette fiche sera définitivement supprimée."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={async () => {
+          if (pendingDeleteRecipe) {
+            await deleteRecipe(pendingDeleteRecipe);
+          }
+          setPendingDeleteRecipe(null);
+        }}
+        onCancel={() => setPendingDeleteRecipe(null)}
+      />
+</div>
   );
 }

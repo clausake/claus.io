@@ -32,6 +32,7 @@ import {
   LabelingModule,
 } from "./HaccpModules";
 import { DocumentUpload } from "./DocumentUpload";
+import { useToast, ConfirmDialog } from "./ui/Toast";
 
 export function Haccp({
   t,
@@ -40,6 +41,8 @@ export function Haccp({
   t: any;
   translateIngredient?: (name: string, lang: string) => string;
 }) {
+  const toast = useToast();
+  const [pendingDeleteSensor, setPendingDeleteSensor] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<
     "admission" | "controles" | "tracabilite" | "evidence" | "labeling"
   >("controles");
@@ -98,7 +101,7 @@ export function Haccp({
         fetchSensors();
       } else {
         const err = await res.json();
-        alert(err.error || "Erreur d'enregistrement");
+        toast(err.error || "Erreur d'enregistrement", "error");
       }
     } catch (err) {
       console.error(err);
@@ -136,7 +139,7 @@ export function Haccp({
         setTesterTemp((p) => ({ ...p, [id]: "" }));
       } else {
         const err = await res.json();
-        alert(err.error || "Erreur webhook");
+        toast(err.error || "Erreur webhook", "error");
       }
     } catch (err) {
       console.error(err);
@@ -590,7 +593,7 @@ export function Haccp({
                                 <span>{sensor.battery}%</span>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteSensor(sensor.id)}
+                                  onClick={() => setPendingDeleteSensor(sensor.id)}
                                   className="text-red-400 hover:text-red-300 p-0.5 ml-1 transition-colors"
                                   title="Supprimer le capteur"
                                 >
@@ -785,7 +788,7 @@ export function Haccp({
   };
 
   return (
-    <div className="led-glow-container flex flex-col animate-in fade-in duration-500 overflow-hidden relative">
+    <div className="led-glow-container flex flex-col animate-in fade-in duration-150 overflow-hidden relative">
       {/* Calendar Modal */}
       {showCalendar && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -898,6 +901,22 @@ export function Haccp({
           </div>
         </div>
       )}
-    </div>
+    
+      <ConfirmDialog
+        open={!!pendingDeleteSensor}
+        title="Supprimer ce capteur ?"
+        description="Le capteur et son historique seront supprimés."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={async () => {
+          if (pendingDeleteSensor) {
+            await handleDeleteSensor(pendingDeleteSensor);
+          }
+          setPendingDeleteSensor(null);
+        }}
+        onCancel={() => setPendingDeleteSensor(null)}
+      />
+</div>
   );
 }

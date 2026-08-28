@@ -136,9 +136,9 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-150">
       <div className="flex flex-wrap gap-4 items-center p-1">
-        <div className="glass-panel px-4 py-3 flex items-center gap-3 border border-white/5 rounded-2xl bg-black/40 backdrop-blur-md shadow-lg shadow-black/20 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all duration-500 group">
+        <div className="glass-panel px-4 py-3 flex items-center gap-3 border border-white/5 rounded-2xl bg-black/40 backdrop-blur-md shadow-lg shadow-black/20 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all duration-150 group">
           <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-emerald-400/70 transition-colors">
             {t.start}:
           </label>
@@ -151,7 +151,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
             className="bg-transparent text-slate-200 outline-none text-sm font-mono cursor-pointer [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert-[0.8]"
           />
         </div>
-        <div className="glass-panel px-4 py-3 flex items-center gap-3 border border-white/5 rounded-2xl bg-black/40 backdrop-blur-md shadow-lg shadow-black/20 hover:border-indigo-500/30 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all duration-500 group">
+        <div className="glass-panel px-4 py-3 flex items-center gap-3 border border-white/5 rounded-2xl bg-black/40 backdrop-blur-md shadow-lg shadow-black/20 hover:border-indigo-500/30 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)] transition-all duration-150 group">
           <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest group-hover:text-indigo-400/70 transition-colors">
             {t.end}:
           </label>
@@ -168,9 +168,8 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
       {/* Bento Grid Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <motion.div
-          whileHover={{ y: -5 }}
           onClick={() => setActiveCard("stock")}
-          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 ${
+          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "stock"
               ? "side-light-active border-brand-500/50"
               : "led-glow-emerald border-brand-500/30"
@@ -200,9 +199,8 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
         </motion.div>
 
         <motion.div
-          whileHover={{ y: -5 }}
           onClick={() => setActiveCard("alerts")}
-          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 ${
+          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "alerts"
               ? "side-light-active-amber border-amber-500/50"
               : "led-glow-amber border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.05)] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]"
@@ -244,9 +242,8 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
         </motion.div>
 
         <motion.div
-          whileHover={{ y: -5 }}
           onClick={() => setActiveCard("robots")}
-          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 ${
+          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "robots"
               ? "side-light-active-blue border-blue-500/50"
               : "led-glow-blue border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.05)] hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]"
@@ -288,9 +285,8 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
         </motion.div>
 
         <motion.div
-          whileHover={{ y: -5 }}
           onClick={() => setActiveCard("labor")}
-          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 ${
+          className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "labor"
               ? "side-light-active-purple border-purple-500/50"
               : "led-glow-purple border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.05)] hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]"
@@ -333,7 +329,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div
           onClick={() => setActiveCard("costs")}
-          className={`lg:col-span-2 glass-panel p-4 md:p-6 relative overflow-hidden cursor-pointer transition-all duration-500 ${
+          className={`lg:col-span-2 glass-panel p-4 md:p-6 relative overflow-hidden cursor-pointer transition-all duration-150 ${
             activeCard === "costs"
               ? "side-light-active border-brand-500/50"
               : ""
@@ -458,7 +454,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
 
         <div
           onClick={() => setActiveCard("distribution")}
-          className={`glass-panel p-4 md:p-6 relative overflow-hidden cursor-pointer transition-all duration-500 ${
+          className={`glass-panel p-4 md:p-6 relative overflow-hidden cursor-pointer transition-all duration-150 ${
             activeCard === "distribution"
               ? "side-light-active border-brand-500/50"
               : ""

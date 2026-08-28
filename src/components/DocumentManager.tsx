@@ -15,8 +15,10 @@ import {
 import { motion } from "motion/react";
 import { DocumentUpload } from "../components/DocumentUpload";
 import { MediaDisplay, translateIngredientHelper } from "../lib/helpers";
+import { useToast } from "./ui/Toast";
 
 export function DocumentManager({ t }: { t: any }) {
+  const toast = useToast();
   const [documents, setDocuments] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [suppliersList, setSuppliersList] = useState<any[]>([]);
@@ -271,11 +273,11 @@ export function DocumentManager({ t }: { t: any }) {
           setShowForm(true);
         }
       } else {
-        alert("Erreur lors de l'extraction IA");
+        toast("Erreur lors de l'extraction IA", "error");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur de connexion.");
+      toast("Erreur de connexion.", "error");
     } finally {
       setExtractingId(null);
     }
@@ -326,7 +328,7 @@ export function DocumentManager({ t }: { t: any }) {
   }, {});
 
   return (
-    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-500 overflow-hidden">
+    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 overflow-hidden">
       <div className="p-6 border-b border-white/10 bg-[#0A0A0A] flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight flex items-center">

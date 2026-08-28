@@ -6,8 +6,10 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { translateAlertMessage, translateIngredientHelper } from "../lib/helpers";
+import { useToast } from "./ui/Toast";
 
 export function QualityControl({ t }: { t: any }) {
+  const toast = useToast();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,14 +36,14 @@ export function QualityControl({ t }: { t: any }) {
         method: "POST",
       });
       if (res.ok) {
-        alert(`✅ ${t.resolve} : ${alertItem.message}`);
+        toast(`✅ ${t.resolve} : ${alertItem.message}`, "success");
         fetchAlerts();
       } else {
         throw new Error("Erreur serveur");
       }
     } catch (e) {
       console.error("Erreur traitement alerte:", e);
-      alert(t.updateError);
+      toast(t.updateError, "error");
     }
   };
 
@@ -51,19 +53,19 @@ export function QualityControl({ t }: { t: any }) {
         method: "POST",
       });
       if (res.ok) {
-        alert(`👁️ ${t.ignore}`);
+        toast(`👁️ ${t.ignore}`, "success");
         fetchAlerts();
       } else {
         throw new Error("Erreur serveur");
       }
     } catch (e) {
       console.error("Erreur ignorance alerte:", e);
-      alert(t.updateError);
+      toast(t.updateError, "error");
     }
   };
 
   return (
-    <div className="bg-black p-8 rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in duration-500">
+    <div className="bg-black p-8 rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10 animate-in fade-in duration-150">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">

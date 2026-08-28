@@ -3,8 +3,11 @@ import { ShoppingCart, RefreshCw, AlertTriangle, ChevronDown, ChevronUp, Printer
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
+import { useToast, ConfirmDialog } from "./ui/Toast";
 
 export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, translateIngredient?: (name: string, lang: string) => string, manualIds?: Set<string> }) {
+  const toast = useToast();
+  const [pendingDeletePrice, setPendingDeletePrice] = useState<string | null>(null);
   const [forecast, setForecast] = useState<any[]>([]);
   const [history, setHistory] = useState<Record<string, any[]>>({});
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -47,6 +50,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
       const data = await res.json();
       setSuppliers(data);
     } catch (error) {
+  const toast = useToast();
       console.error('Error fetching suppliers:', error);
     }
   };
@@ -284,7 +288,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         doc.save(`Bon_Commande_${supplier}.pdf`);
     }
 
-    alert((t.orderSimpleReportMsg || "{count} bons de commande générés et téléchargés !").replace('{count}', Object.keys(groupedOrders).length.toString()));
+    toast((t.orderSimpleReportMsg || "{count} bons de commande générés et téléchargés !", "success").replace('{count}', Object.keys(groupedOrders).length.toString()));
   };
 
   // CSV Import parsing logic
@@ -292,7 +296,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
     const file = event.target.files?.[0];
     if (!file) return;
     if (!importSupplierId) {
-      alert("Veuillez sélectionner un fournisseur d'abord !");
+      toast("Veuillez sélectionner un fournisseur d'abord !", "info");
       return;
     }
     
@@ -309,7 +313,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
           .filter(l => l.some(cell => cell !== ''));
         
         if (lines.length < 2) {
-          alert("Le fichier semble vide ou invalide !");
+          toast("Le fichier semble vide ou invalide !", "error");
           setIsAnalyzingImport(false);
           return;
         }
@@ -347,7 +351,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         }
 
         if (items.length === 0) {
-          alert("Aucune ligne de tarif valide trouvée. Vérifiez vos en-têtes (Produit, Prix, Unité).");
+          toast("Aucune ligne de tarif valide trouvée. Vérifiez vos en-têtes (Produit, Prix, Unité).", "info");
           setIsAnalyzingImport(false);
           return;
         }
@@ -362,11 +366,11 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         if (result.status === 'success') {
           setImportMatches(result.matches);
         } else {
-          alert("Erreur lors de l'analyse : " + result.message);
+          toast("Erreur lors de l'analyse : " + result.message, "error");
         }
       } catch (err) {
         console.error(err);
-        alert("Erreur de parsing");
+        toast("Erreur de parsing", "error");
       } finally {
         setIsAnalyzingImport(false);
       }
@@ -388,15 +392,15 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
       });
       const result = await res.json();
       if (result.status === 'success') {
-        alert("Mercuriale importée avec succès !");
+        toast("Mercuriale importée avec succès !", "success");
         setImportMatches(null);
         await fetchComparison();
       } else {
-        alert("Erreur: " + result.message);
+        toast("Erreur: " + result.message, "error");
       }
     } catch (error) {
       console.error(error);
-      alert("Échec de l'importation");
+      toast("Échec de l'importation", "error");
     } finally {
       setLoading(false);
     }
@@ -404,7 +408,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
 
   const handleAddManualPrice = async () => {
     if (!newPriceData.inventory_id || !newPriceData.supplier_id || !newPriceData.raw_unit_price) {
-      alert("Veuillez remplir tous les champs obligatoires (*) !");
+      toast("Veuillez remplir tous les champs obligatoires (*) !", "info");
       return;
     }
     try {
@@ -432,16 +436,15 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         });
         await fetchComparison();
       } else {
-        alert("Erreur: " + result.message);
+        toast("Erreur: " + result.message, "error");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur réseau");
+      toast("Erreur réseau", "error");
     }
   };
 
   const handleDeletePrice = async (priceId: string) => {
-    if (!confirm("Voulez-vous supprimer ce tarif ?")) return;
     try {
       const res = await fetch(`/api/supplier-prices/${priceId}`, {
         method: 'DELETE'
@@ -1087,7 +1090,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                                           <span className="block text-caption uppercase tracking-wider text-slate-600">Ramene au {g.inventory_unit}</span>
                                         </div>
                                         <button 
-                                          onClick={() => handleDeletePrice(p.id)}
+                                          onClick={() => setPendingDeletePrice(p.id)}
                                           className="text-slate-600 hover:text-red-500 p-2 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                         >
                                           <Trash2 className="w-4 h-4" />
@@ -1213,6 +1216,22 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
           </motion.div>
         </div>
       )}
-    </div>
+    
+      <ConfirmDialog
+        open={!!pendingDeletePrice}
+        title="Supprimer ce tarif ?"
+        description="Cette action est irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={async () => {
+          if (pendingDeletePrice) {
+            await handleDeletePrice(pendingDeletePrice);
+          }
+          setPendingDeletePrice(null);
+        }}
+        onCancel={() => setPendingDeletePrice(null)}
+      />
+</div>
   );
 }

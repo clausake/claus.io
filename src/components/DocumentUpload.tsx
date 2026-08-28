@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { useToast } from "./ui/Toast";
 
 export function DocumentUpload({ onUploadComplete, t }: { onUploadComplete: (data?: any) => void, t: any }) {
+  const toast = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [isDraft, setIsDraft] = useState(true); // Default to true (fast mobile upload)
 
@@ -24,11 +26,11 @@ export function DocumentUpload({ onUploadComplete, t }: { onUploadComplete: (dat
         onUploadComplete(data);
       } else {
         const err = await res.json();
-        alert(`${t.error || "Error"}: ${err.error || "Upload failed"}`);
+        toast(`${t.error || "Error"}: ${err.error || "Upload failed"}`, "error");
       }
     } catch (e) {
       console.error(e);
-      alert(t.connectionError || "Connection error.");
+      toast(t.connectionError || "Connection error.", "error");
     } finally {
       setIsUploading(false);
     }

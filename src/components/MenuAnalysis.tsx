@@ -15,9 +15,9 @@ import { MENU_ROTATION } from "../data/menuData";
 import { motion } from "motion/react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useToast } from "./ui/Toast";
 
 export function MenuAnalysis({
-  cartItems,
   setCartItems,
   setActiveTab,
   t,
@@ -31,6 +31,7 @@ export function MenuAnalysis({
   settings: any;
   showNotification: (m: string, type?: any) => void;
 }) {
+  const toast = useToast();
   const [analysisMode, setAnalysisMode] = useState<
     "decompose" | "creative" | "gastronomic" | "traditional" | null
   >(null);
@@ -163,10 +164,8 @@ export function MenuAnalysis({
         });
       }
       // Notification de synchronisation
-      alert(
-        t.syncFTSuccess ||
-          "✅ Fiches techniques synchronisées instantanément avec l'onglet dédié.",
-      );
+      toast(t.syncFTSuccess ||
+          "✅ Fiches techniques synchronisées instantanément avec l'onglet dédié.", "success");
     } catch (error) {
       console.error(
         "Erreur lors de la sauvegarde des fiches techniques:",
@@ -482,16 +481,13 @@ export function MenuAnalysis({
         });
         saveGeneratedRecipes(allRecipes);
       } else {
-        alert(
-          "Erreur lors de la création : " +
-            (data.error || data.message || "Erreur serveur ou IA"),
+        toast("Erreur lors de la création : " +
+            (data.error || data.message || "Erreur serveur ou IA", "error"),
         );
       }
     } catch (error) {
       console.error("Erreur backend:", error);
-      alert(
-        "Erreur de connexion au serveur IA (Ollama).",
-      );
+      toast("Erreur de connexion au serveur IA (Ollama).", "error");
     } finally {
       setIsAnalyzing(false);
     }
@@ -522,14 +518,13 @@ export function MenuAnalysis({
         });
         saveGeneratedRecipes(allRecipes);
       } else {
-        alert(
-          "Erreur lors de la création : " +
-            (data.error || data.message || "Erreur serveur ou IA"),
+        toast("Erreur lors de la création : " +
+            (data.error || data.message || "Erreur serveur ou IA", "error"),
         );
       }
     } catch (error) {
       console.error("Erreur backend:", error);
-      alert("Erreur de connexion au serveur de l'IA.");
+      toast("Erreur de connexion au serveur de l'IA.", "error");
     } finally {
       setIsAnalyzing(false);
     }
@@ -574,14 +569,13 @@ export function MenuAnalysis({
         });
         saveGeneratedRecipes(allRecipes);
       } else {
-        alert(
-          "Erreur lors de la création : " +
-            (data.error || data.message || "Erreur serveur ou IA"),
+        toast("Erreur lors de la création : " +
+            (data.error || data.message || "Erreur serveur ou IA", "error"),
         );
       }
     } catch (error) {
       console.error("Erreur backend:", error);
-      alert("Erreur de connexion au serveur de l'IA.");
+      toast("Erreur de connexion au serveur de l'IA.", "error");
     } finally {
       setIsAnalyzing(false);
     }
@@ -614,9 +608,8 @@ export function MenuAnalysis({
           setFichesTechniques(data.fiches_techniques);
           saveGeneratedRecipes(data.fiches_techniques);
         } else {
-          alert(
-            "Erreur lors de l'analyse : " +
-              (data.error || data.message || "Erreur serveur ou IA"),
+          toast("Erreur lors de l'analyse : " +
+              (data.error || data.message || "Erreur serveur ou IA", "error"),
           );
         }
       } else if (analysisMode === "creative") {
@@ -667,9 +660,8 @@ export function MenuAnalysis({
           });
           saveGeneratedRecipes(allRecipes);
         } else {
-          alert(
-            "Erreur lors de la création : " +
-              (data.error || data.message || "Erreur serveur ou IA"),
+          toast("Erreur lors de la création : " +
+              (data.error || data.message || "Erreur serveur ou IA", "error"),
           );
         }
       } else if (analysisMode === "gastronomic") {
@@ -688,9 +680,8 @@ export function MenuAnalysis({
           });
           saveGeneratedRecipes(allRecipes);
         } else {
-          alert(
-            "Erreur lors de la création : " +
-              (data.error || data.message || "Erreur serveur ou IA"),
+          toast("Erreur lors de la création : " +
+              (data.error || data.message || "Erreur serveur ou IA", "error"),
           );
         }
       } else {
@@ -710,17 +701,14 @@ export function MenuAnalysis({
           });
           saveGeneratedRecipes(allRecipes);
         } else {
-          alert(
-            "Erreur lors de la création : " +
-              (data.error || data.message || "Erreur serveur ou IA"),
+          toast("Erreur lors de la création : " +
+              (data.error || data.message || "Erreur serveur ou IA", "error"),
           );
         }
       }
     } catch (error) {
       console.error("Erreur backend:", error);
-      alert(
-        "Erreur de connexion au serveur IA (Ollama).",
-      );
+      toast("Erreur de connexion au serveur IA (Ollama).", "error");
     } finally {
       setIsAnalyzing(false);
     }
@@ -746,18 +734,18 @@ export function MenuAnalysis({
       });
 
       if (res.ok) {
-        alert("Fiche technique enregistrée dans le Livre de recettes !");
+        toast("Fiche technique enregistrée dans le Livre de recettes !", "success");
       } else {
-        alert("Erreur lors de l'enregistrement de la fiche.");
+        toast("Erreur lors de l'enregistrement de la fiche.", "error");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur de connexion.");
+      toast("Erreur de connexion.", "error");
     }
   };
 
   return (
-    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-500 relative overflow-hidden">
+    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none"></div>
 
       <div className="flex justify-between items-center mb-10 relative z-10 p-8">
@@ -792,15 +780,14 @@ export function MenuAnalysis({
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
             <motion.div
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => {
+                            onClick={() => {
                 setAnalysisMode("decompose");
                 setFichesTechniques(null);
                 setCreativeMenu(null);
                 setGastronomicMenu(null);
                 setTraditionalMenu(null);
               }}
-              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 led-glow-emerald border-brand-500/30 flex flex-col min-h-[280px] max-h-[350px]"
+              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 led-glow-emerald border-brand-500/30 flex flex-col min-h-[280px] max-h-[350px]"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <UploadCloud className="w-10 h-10 text-brand-500" />
@@ -824,15 +811,14 @@ export function MenuAnalysis({
             </motion.div>
 
             <motion.div
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => {
+                            onClick={() => {
                 setAnalysisMode("creative");
                 setFichesTechniques(null);
                 setCreativeMenu(null);
                 setGastronomicMenu(null);
                 setTraditionalMenu(null);
               }}
-              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 border-blue-500/30 hover:border-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
+              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 border-blue-500/30 hover:border-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <Clock className="w-10 h-10 text-blue-500" />
@@ -856,15 +842,14 @@ export function MenuAnalysis({
             </motion.div>
 
             <motion.div
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => {
+                            onClick={() => {
                 setAnalysisMode("gastronomic");
                 setFichesTechniques(null);
                 setCreativeMenu(null);
                 setGastronomicMenu(null);
                 setTraditionalMenu(null);
               }}
-              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 border-purple-500/30 hover:border-purple-500/50 shadow-[0_0_25px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
+              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 border-purple-500/30 hover:border-purple-500/50 shadow-[0_0_25px_rgba(168,85,247,0.15)] hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <Sparkles className="w-10 h-10 text-purple-500" />
@@ -888,15 +873,14 @@ export function MenuAnalysis({
             </motion.div>
 
             <motion.div
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => {
+                            onClick={() => {
                 setAnalysisMode("traditional");
                 setFichesTechniques(null);
                 setCreativeMenu(null);
                 setGastronomicMenu(null);
                 setTraditionalMenu(null);
               }}
-              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-500 border-amber-500/30 hover:border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.15)] hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
+              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 border-amber-500/30 hover:border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.15)] hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] flex flex-col min-h-[280px] max-h-[350px]"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
                 <ChefHat className="w-10 h-10 text-amber-500" />
@@ -935,7 +919,7 @@ export function MenuAnalysis({
                   analysisMode === "decompose" ? handleDragLeave : undefined
                 }
                 onDrop={analysisMode === "decompose" ? handleDrop : undefined}
-                className={`flex-1 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-500 relative group bg-black ${
+                className={`flex-1 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-150 relative group bg-black ${
                   isDragging && analysisMode === "decompose"
                     ? "border-brand-500 bg-brand-500/5 scale-[1.01]"
                     : "border-white/10 hover:border-white/20"
@@ -977,7 +961,7 @@ export function MenuAnalysis({
                 ) : analysisMode === "decompose" ? (
                   <div className="text-center p-10">
                     <div
-                      className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center transition-all duration-500 shadow-2xl ${isDragging ? "bg-brand-500 text-obsidian rotate-12" : "bg-white/5 text-slate-500 group-hover:text-brand-500 group-hover:scale-110"}`}
+                      className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center transition-all duration-150 shadow-2xl ${isDragging ? "bg-brand-500 text-obsidian rotate-12" : "bg-white/5 text-slate-500 group-hover:text-brand-500 group-hover:scale-110"}`}
                     >
                       <UploadCloud className="w-12 h-12" />
                     </div>
@@ -1230,7 +1214,7 @@ export function MenuAnalysis({
             </div>
           ) : analysisMode === "creative" && creativeMenu ? (
             <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-blue-subtle group hover:led-glow-blue transition-all duration-500">
+              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-blue-subtle group hover:led-glow-blue transition-all duration-150">
                 <div className="bg-blue-500/20 text-blue-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-blue-500/30">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
@@ -1530,7 +1514,7 @@ export function MenuAnalysis({
             </div>
           ) : analysisMode === "gastronomic" && gastronomicMenu ? (
             <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-purple-subtle group hover:led-glow-purple transition-all duration-500">
+              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-purple-subtle group hover:led-glow-purple transition-all duration-150">
                 <div className="bg-purple-500/20 text-purple-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-purple-500/30">
                   <Sparkles className="w-6 h-6" />
                 </div>
@@ -1641,7 +1625,7 @@ export function MenuAnalysis({
             </div>
           ) : analysisMode === "traditional" && traditionalMenu ? (
             <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-amber-subtle group hover:led-glow-amber transition-all duration-500">
+              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-amber-subtle group hover:led-glow-amber transition-all duration-150">
                 <div className="bg-amber-500/20 text-amber-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-amber-500/30">
                   <ChefHat className="w-6 h-6" />
                 </div>
