@@ -83,8 +83,8 @@ async function startServer() {
 
   // --- Routeurs ---
   // /api racine : settings, backup, network-info, ollama/status
-  app.use("/api", settingsRouter);
-  app.use("/api", backupRouter);
+  app.use(settingsRouter);
+  app.use(backupRouter);
   // Routeurs montés à la racine (leurs chemins commencent par /api/...)
   app.use(inventoryRouter(db));
   app.use(suppliersRouter(db));
