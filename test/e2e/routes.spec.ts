@@ -253,3 +253,103 @@ test("GET /api/network-info", async ({ request }) => {
   expect(typeof body.ip).toBe("string");
   expect(typeof body.url).toBe("string");
 });
+
+// --- Settings (router settings.ts) -------------------------------------
+test("CRUD settings : lecture, écriture, relecture", async ({ request }) => {
+  const before = await (await request.get(`${BASE}/api/settings`)).json();
+  expect(typeof before).toBe("object");
+
+  const probe = { ...(before ?? {}), language: "en" };
+  const put = await request.post(`${BASE}/api/settings`, { data: probe });
+  expect(put.status()).toBe(200);
+  const written = await put.json();
+  expect(written.status).toBe("success");
+
+  const after = await (await request.get(`${BASE}/api/settings`)).json();
+  expect(after.language).toBe("en");
+});
+
+test("GET /api/ollama/status répond connecte ou deconnecte (jamais 500 nu)", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/ollama/status`);
+  // Ollama peut etre absent sur le runner : le routeur doit repondre un statut
+  // explicite (200 connected | 500 disconnected) avec un corps exploitable.
+  expect([200, 500]).toContain(res.status());
+  const body = await res.json();
+  expect(["connected", "disconnected"]).toContain(body.status);
+});
+
+// --- Supplier prices (router supplierprices.ts) -------------------------
+test("CRUD supplier-prices : depend de inventory + calcul prix/ref", async ({ request }) => {
+  const inv = await request.post(`${BASE}/api/inventory`, {
+    data: { name: "Farine Test SP", quantity: 5, minStock: 1, unit: "kg", status: "active", category: "Épicerie", unit_price: 2 },
+  });
+  expect(inv.status()).toBe(200);
+  const invRow = await inv.json();
+  const invId = invRow.id;
+
+  const sup = await request.post(`${BASE}/api/suppliers`, {
+    data: { name: "Fournisseur Test SP", contact: "—", email: "t@t.fr", phone: "01", category: "Gros", delivery_time: "24h" },
+  });
+  expect(sup.status()).toBe(200);
+  const supId = (await sup.json()).id;
+
+  // 404 attendu si l'item d'inventaire n'existe pas (garde d'integrite)
+  const missing = await request.post(`${BASE}/api/supplier-prices`, {
+    data: { supplier_id: supId, inventory_id: "inexistant", raw_unit_price: 1.2, unit: "kg" },
+  });
+  expect(missing.status()).toBe(404);
+
+  const created = await request.post(`${BASE}/api/supplier-prices`, {
+    data: { supplier_id: supId, inventory_id: invId, raw_unit_price: 1.8, unit: "kg" },
+  });
+  expect(created.status()).toBe(200);
+
+  const list = await (await request.get(`${BASE}/api/supplier-prices`)).json();
+  expect(Array.isArray(list)).toBe(true);
+  const row = list.find((r: any) => r.inventory_id === invId);
+  expect(row).toBeTruthy();
+  expect(typeof row.calculated_price_per_ref).toBe("number");
+
+  const cmp = await (await request.get(`${BASE}/api/supplier-prices/comparison`)).json();
+  expect(Array.isArray(cmp)).toBe(true);
+  const grp = cmp.find((g: any) => g.inventory_id === invId);
+  expect(grp).toBeTruthy();
+  expect(typeof grp.savings_percent).toBe("number");
+
+  const del = await request.delete(`${BASE}/api/supplier-prices/${row.id}`);
+  expect(del.status()).toBe(200);
+  const after = await (await request.get(`${BASE}/api/supplier-prices`)).json();
+  expect(after.some((r: any) => r.id === row.id)).toBe(false);
+
+  await request.delete(`${BASE}/api/inventory/${invId}`);
+});
+
+// --- Admin (router admin.ts) -------------------------------------------
+// /api/agent/command n'est pas couvert : il lance un chromium headless:false
+// (impossible sur un runner sans display). A couvrir via un test d'integration
+// dedie avec xvfb, pas dans cette suite.
+test("GET /api/admin/db-download telecharge la base", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/admin/db-download`);
+  // la base existe (creee au demarrage) → 200 + en-tete d'attachment
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-disposition"] ?? "").toContain("agent_culinaire.db");
+});
+
+test("GET /api/admin/guide-download : 200 si guide présent, 404 sinon", async ({ request }) => {
+  const res = await request.get(`${BASE}/api/admin/guide-download`);
+  expect([200, 404]).toContain(res.status());
+  if (res.status() === 404) {
+    expect((await res.json()).error).toContain("Guide");
+  }
+});
+
+// --- IA (router ai.ts) : degrade gracefullent sans Ollama --------------
+test("POST /api/ai/chat : reponse textique dans les deux cas", async ({ request }) => {
+  const res = await request.post(`${BASE}/api/ai/chat`, {
+    data: { message: "Bonjour Chef" },
+  });
+  expect([200, 500]).toContain(res.status());
+  const body = await res.json();
+  expect(typeof body.response).toBe("string");
+  expect(body.response.length).toBeGreaterThan(0);
+});
