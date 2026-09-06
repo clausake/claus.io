@@ -30,10 +30,6 @@ import {
 import { INITIAL_CART } from "./data/menuData";
 import { TRANSLATIONS } from "./data/translations";
 import { AnimatePresence, motion } from "motion/react";
-import { EpicureStudio } from "./components/EpicureStudio";
-import { Haccp } from "./components/Haccp";
-import { PurchasingTab } from "./components/Purchasing";
-import { StaffPlanning } from "./components/StaffPlanning";
 import { LandingPage, NavItem } from "./components/views";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
@@ -880,12 +876,12 @@ export default function App() {
           )}
           {activeTab === "staff-planning" && (
             <div className="animate-in fade-in duration-200">
-              <StaffPlanning t={t} />
+              <LazyViews.StaffPlanning t={t} />
             </div>
           )}
           {activeTab === "purchasing" && (
             <div className="animate-in fade-in duration-200">
-              <PurchasingTab
+              <LazyViews.PurchasingTab
                 t={t}
                 translateIngredient={translateIngredientHelper}
                 manualIds={manualPurchaseIds}
@@ -899,7 +895,7 @@ export default function App() {
           )}
           {activeTab === "haccp" && (
             <div className="animate-in fade-in duration-200">
-              <Haccp t={t} translateIngredient={translateIngredientHelper} />
+              <LazyViews.Haccp t={t} translateIngredient={translateIngredientHelper} />
             </div>
           )}
           {activeTab === "anti-waste" && (
@@ -909,7 +905,7 @@ export default function App() {
           )}
           {activeTab === "epicure-studio" && (
             <div className="animate-in fade-in duration-200">
-              <EpicureStudio
+              <LazyViews.EpicureStudio
                 t={t}
                 settings={settings}
               />
