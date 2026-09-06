@@ -23,3 +23,13 @@ export const CulinaryChat = lazy(() =>
   import("./CulinaryChat").then(m => ({ default: m.CulinaryChat })));
 export const RobotManagement = lazy(() =>
   import("./RobotManagement").then(m => ({ default: m.RobotManagement })));
+export const StaffPlanning = lazy(() =>
+  import("./StaffPlanning").then(m => ({ default: m.StaffPlanning })));
+// PurchasingTab et Haccp tirent jspdf + date-fns : leur sortir du bundle principal
+// est ce qui fait baisser le chunk index (HaccpModules suit Haccp dans son chunk).
+export const PurchasingTab = lazy(() =>
+  import("./Purchasing").then(m => ({ default: m.PurchasingTab })));
+export const Haccp = lazy(() =>
+  import("./Haccp").then(m => ({ default: m.Haccp })));
+export const EpicureStudio = lazy(() =>
+  import("./EpicureStudio").then(m => ({ default: m.EpicureStudio })));
