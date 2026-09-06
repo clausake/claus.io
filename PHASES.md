@@ -111,6 +111,18 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
 - Données déjà dans `src/data/` : `translations.ts` (3676), `menuData.ts` (141),
   `ingredientTranslations.ts` (172).
 
+### 2 bis. Lazy loading des 4 vues restantes — ✅ FAIT (Sprint 3)
+`Haccp`, `Purchasing`, `EpicureStudio`, `StaffPlanning` étaient encore imports
+statiquement dans `App.tsx` (→ chunk principal). Passés dans
+`src/components/lazy-views.ts` comme les 11 autres.
+- Chunk `index` : **866 → 712 kB** (gzip 268 → 231 kB) puis **676 kB** (gzip 218)
+  apres extraction de `papaparse` + `qrcode.react` en chunks vendors.
+- 16/16 vues sont desormais code-splittees ; le chunk principal ne reste lourd
+  que de ses vendors (`react-dom` 525 kB, `motion-dom` 337 kB, `framer-motion`
+  120 kB) — pas de win possible sans changer de lib d'animation.
+- Outil ajoute : `scripts/build-analyze.mjs` (build avec sourcemaps) +
+  `scripts/analyze-bundle.mjs` (top 25 modules d'un chunk via le sourcemap).
+
 ### 3. `strict: true` — ✅ ACTIVÉ (relâché)
 - `tsconfig.json` : `"strict": true`. Mais `noImplicitAny: false` et
   `noImplicitThis: false` restent OFF : les `: any` existants (≈140 dans
@@ -127,8 +139,24 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   (unit-test vitest + e2e-test playwright).
 
 ## 🚧 Prochaine étape (pour le prochain chat)
-> **Phase 2 + 6 améliorations post-Phase 2 + UI/UX Sprint 1 terminés** (28 août).
+> **Phase 2 + 6 améliorations post-Phase 2 + UI/UX Sprint 1 & 2 + Sprint 3
+> (perf/coverage) terminés** (6 sept.).
 > La CI est verte. Le code est maintenable, testé, et le design system est formalisé.
+
+### UI/UX Sprint 3 — perf bundle + couverture API (6 sept.)
+1. **Lazy loading des vues restantes** (voir « 2 bis » ci-dessus) : chunk
+   principal 866 → 676 kB, gzip 268 → 218 kB.
+2. **Couverture e2e des 6 routeurs orphelins** : `settings`, `ollama/status`,
+   `supplier-prices` (CRUD + comparaison + garde 404), `admin/db-download`,
+   `admin/guide-download`, `ai/chat`. Suite e2e : **13 → 27 tests**, tous verts.
+   - ⚠️ `/api/agent/command` reste **non couvert** : il demarre un Chromium
+     `headless:false` (pas de display sur le runner). Le couvrir sous xvfb dans
+     un job dedie, pas dans cette suite.
+   - Les tests `ollama/status` et `ai/chat` acceptent les **deux** branches
+     (Ollama present ou absent) : le contrat verifie est « repond un statut
+     explicite + un corps exploitable », pas la presence du modele.
+3. **Dérive de doc corrigee** : le compte e2e etait annonce a 11 (reel 27), les
+   `:any` a ~176 (reel 183).
 
 ### UI/UX Sprint 1 (commit `6fe1c44`)
 1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
