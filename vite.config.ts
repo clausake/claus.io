@@ -30,9 +30,13 @@ export default defineConfig(({mode}) => {
         // dans ce projet → on l'exclut du bundle pour économiser ~202 kB.
         external: ["html2canvas"],
         output: {
+          // Vendors utilitaires : partages par plusieurs vues lazy, Rollup les
+          // hoistait dans le chunk principal. Ici ils ne chargent qu'a la demande.
           manualChunks: {
-            'vendor-charts': ['recharts'],
-            'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+            "vendor-charts": ["recharts"],
+            "vendor-pdf": ["jspdf", "jspdf-autotable"],
+            "vendor-csv": ["papaparse"],
+            "vendor-qrcode": ["qrcode.react"],
           },
         },
       },
