@@ -7,7 +7,6 @@
 
 import express from "express";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import "dotenv/config";
 import os from "os";
 import path from "path";
@@ -15,6 +14,7 @@ import fs from "fs";
 
 import { initDatabase, LicenseState } from "./src/db/init.js";
 import { licenseMiddleware } from "./src/middleware/license.js";
+import apiRateLimiter from "./src/middleware/api-rate-limiter.js";
 import httpLogger from "./src/middleware/http-logger.js";
 import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
 import { settingsStore } from "./src/services/settings.js";
@@ -57,15 +57,11 @@ async function startServer() {
   app.use(express.json({ limit: "10mb" }));
   app.use(httpLogger);
 
-  // Rate-limit global sur /api (anti bruteforce / abuse)
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 300,
-    standardHeaders: "draft-7",
-    legacyHeaders: false,
-    message: { error: "Trop de requêtes, réessaie dans quelques minutes." },
-  });
-  app.use("/api", apiLimiter);
+  // Rate-limit par categorie de surface (read / mutate / delete / auth / ai).
+  // L'ancien budget unique de 300/15 min faisait un 429 global sur le simple
+  // polling du tableau de bord HACCP (mesure : 429 a la 214e requete) tout en
+  // laissant 300 tentatives a /api/unlock. Voir src/middleware/api-rate-limiter.ts.
+  app.use("/api", apiRateLimiter());
 
   // --- Initialisation de la base + état licence ---
   const { db, storageDir, license } = await initDatabase();
