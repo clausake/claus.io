@@ -1,0 +1,80 @@
+// Verification terrain du rate-limit par categorie (chemin HTTP reel).
+// Prouve les DEUX directions de l'invariant :
+//   A. le polling legitime (lectures repetees) ne declenche PLUS de 429 global ;
+//   B. le brute-force de cle de licence (/api/unlock) est rattrape vite.
+// Usage: node scripts/verify-ratelimit.mjs
+import { spawn } from "node:child_process";
+import { join } from "node:path";
+import { rmSync, mkdirSync } from "node:fs";
+import process from "node:process";
+
+const PORT = 4126;
+const BASE = `http://127.0.0.1:${PORT}`;
+const DATA = join(process.cwd(), "test", "tmp-rl");
+rmSync(DATA, { recursive: true, force: true });
+mkdirSync(DATA, { recursive: true });
+
+const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
+const child = spawn(process.execPath, [tsx, "server.ts"], {
+  env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA },
+  stdio: "pipe",
+});
+child.stdout.on("data", () => {});
+child.stderr.on("data", () => {});
+for (let i = 0; i < 120; i++) {
+  try { const r = await fetch(`${BASE}/api/settings`); if (r.ok) break; } catch {}
+  await new Promise((r) => setTimeout(r, 250));
+}
+
+let fail = 0;
+const check = (label, cond, detail) => {
+  console.log(`${cond ? "PASS" : "ECHEC"}  ${label}${detail ? "   [" + detail + "]" : ""}`);
+  if (!cond) fail++;
+};
+
+// --- A. 500 lectures repetees (simule une journee de polling) ---
+let first429read = -1;
+let readHeaders = null;
+for (let i = 1; i <= 500; i++) {
+  const r = await fetch(`${BASE}/api/dashboard/stats`);
+  if (!readHeaders && i === 1) readHeaders = r.headers;
+  if (r.status === 429) { first429read = i; break; }
+}
+check("500 lectures : aucun 429 (le polling survit)", first429read === -1,
+  first429read > 0 ? "429 a la " + first429read : "ok");
+
+// --- en-tetes draft-7 presents et nommes par la categorie read ---
+// On agrege tous les en-tetes RateLimit* (le nom exact depend du format draft-7),
+// puis on verifie qu'ils portent a la fois la categorie et sa taille de budget.
+const rlHeaders = [];
+readHeaders?.forEach((v, k) => { if (k.toLowerCase().startsWith("ratelimit")) rlHeaders.push(`${k}=${v}`); });
+const rlAll = rlHeaders.join(" | ");
+check("en-tete RateLimit present sur une lecture", rlHeaders.length > 0, rlAll || "aucun");
+check("budget read announced = 600, taggue par categorie", /600/.test(rlAll) && /read/.test(rlAll), rlAll);
+
+// --- B. brute-force unlock : le budget auth (20) doit rattraper vite ---
+let first429auth = -1;
+for (let i = 1; i <= 40; i++) {
+  const r = await fetch(`${BASE}/api/unlock`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: "fausse-" + i }),
+  });
+  if (r.status === 429) { first429auth = i; break; }
+}
+check("brute-force unlock rattrape par le budget auth (<25 tentatives)",
+  first429auth > 0 && first429auth < 25, first429auth > 0 ? "429 a la " + first429auth : "jamais");
+
+// --- C. une mutations legitime (POST inventaire) n'est pas comptee comme read ---
+let mutate429 = -1;
+for (let i = 1; i <= 200; i++) {
+  const r = await fetch(`${BASE}/api/suppliers`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "F" + i, contact: "-", email: "a@b.c", phone: "0", category: "G", delivery_time: "24h" }),
+  });
+  if (r.status === 429) { mutate429 = i; break; }
+}
+check("budget mutate separe : plafonne vers 150 ecritures (150/5min)",
+  mutate429 > 0 && mutate429 <= 151, mutate429 > 0 ? "429 a la " + mutate429 : "jamais en 200");
+
+child.kill("SIGTERM");
+console.log(fail === 0 ? "\nVERIF RATELIMIT: TOUT PASS" : "\nVERIF RATELIMIT: " + fail + " ECHEC(S)");
+process.exit(fail === 0 ? 0 : 1);
