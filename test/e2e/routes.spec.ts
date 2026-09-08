@@ -353,3 +353,82 @@ test("POST /api/ai/chat : reponse textique dans les deux cas", async ({ request 
   expect(typeof body.response).toBe("string");
   expect(body.response.length).toBeGreaterThan(0);
 });
+
+// --- Flux SSE des capteurs (hub src/services/sensor-hub.ts) -------------
+// Le contrat de la diffusion : un webhook poste est Pousse au client, sans
+// attendre le tour d'un polling. Le flux streaming n'est pas dispo via le
+// fixture `request` de Playwright, donc on ouvre un vrai flux en fetch natif
+// sur le serveur deja demarre par la suite (port isole 3999, pas celui du dev).
+// La route est montee par Express avant le middleware Vite : le flux n'est pas
+// tamponne par le dev-server.
+test("flux SSE: un webhook poste est pousse au client (latence < 1s)", async ({ request }) => {
+  const nom = `Capteur e2e ${Date.now()}`;
+  const reg = await (await request.post(`${BASE}/api/haccp/iot-sensors`, {
+    data: { id: `e2e-${Date.now()}`, name: nom, type: "ambient", equipment_type: "Froid" },
+  })).json();
+  expect(typeof reg.token).toBe("string");
+  const capteurId = (await (await request.get(`${BASE}/api/haccp/iot-sensors`)).json())
+    .find((s: any) => s.name === nom)?.id;
+  expect(capteurId).toBeTruthy();
+
+  const ac = new AbortController();
+  const fluxOuvert = fetch(`${BASE}/api/sensors/stream`, {
+    signal: ac.signal,
+    headers: { Accept: "text/event-stream" },
+  });
+
+  // Collecte les frames "event:/data:" au fil de l'eau.
+  const evenements: Array<{ event: string; data: any; at: number }> = [];
+  let content = "";
+  const lecture = fluxOuvert.then(async (r) => {
+    content = r.headers.get("content-type") || "";
+    const lecteur = r.body!.getReader();
+    const dec = new TextDecoder();
+    let tampon = "";
+    for (;;) {
+      const { done, value } = await lecteur.read();
+      if (done) break;
+      tampon += dec.decode(value, { stream: true });
+      let coupe;
+      while ((coupe = tampon.indexOf("\n\n")) !== -1) {
+        const frame = tampon.slice(0, coupe);
+        tampon = tampon.slice(coupe + 2);
+        const nomEv = /event: *(.+)/.exec(frame)?.[1]?.trim();
+        const brut = /data: *(.+)/.exec(frame)?.[1];
+        if (nomEv && brut) {
+          try { evenements.push({ event: nomEv, data: JSON.parse(brut), at: Date.now() }); } catch { /* keepalive */ }
+        }
+      }
+    }
+  }).catch(() => { /* abort a la fermeture, normal */ });
+
+  // Patiente que le serveur accepte la connexion (le flux doit etre branche pour
+  // recevoir la prochain post).
+  const t0 = Date.now();
+  while (Date.now() - t0 < 4000 && evenements.length === 0 && content === "") {
+    await new Promise((r) => setTimeout(r, 25));
+  }
+
+  // Poste une releve et attend qu'elle ressorte en 'sensor'.
+  const tPost = Date.now();
+  const post = await request.post(`${BASE}/api/haccp/webhook/iot-report`, {
+    data: { id: capteurId, token: reg.token, temperature: 3.7, battery: 80 },
+  });
+  expect(post.status()).toBe(200);
+
+  const deadline = Date.now() + 4000;
+  let recu: { data: any; at: number } | null = null;
+  while (Date.now() < deadline) {
+    const hit = evenements.filter((e) => e.event === "sensor" && e.data?.id === capteurId);
+    if (hit.length) { recu = hit[hit.length - 1]; break; }
+    await new Promise((r) => setTimeout(r, 25));
+  }
+
+  ac.abort();
+  await lecture;
+
+  expect(content).toContain("text/event-stream");
+  expect(recu).not.toBeNull();
+  expect(recu!.data.temperature).toBe(3.7);
+  expect(recu!.at - tPost).toBeLessThan(1000); // le polling etait 4000
+});

@@ -61,6 +61,9 @@ export function Haccp({
   // --- IoT CONNECTED THERMOMETERS STATES & API (100% FUNCTIONAL) ---
   const [entryMode, setEntryMode] = useState<"manual" | "iot">("manual");
   const [sensors, setSensors] = useState<any[]>([]);
+  // Capteurs sans émission recente: le silence est l'alerte HACCP, il faut le
+  // rendre visible (un capteur a pile morte doit etre distinct d'une chambre ok).
+  const [staleIds, setStaleIds] = useState<Set<string>>(new Set());
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [newSensorId, setNewSensorId] = useState("");
   const [newSensorName, setNewSensorName] = useState("");
@@ -146,12 +149,61 @@ export function Haccp({
     }
   };
 
+  // Le serveur connait l'instant ou un capteur poste (le webhook): il pousse,
+  // on ne vient plus voler la base toutes les 4 s. Un seul GET initial + un
+  // flux SSE. Le EventSource se reconnecte seul (retry: 2500 cote serveur),
+  // mais il ne signale pas ses blancs: d'ou le filet de garde ci-dessous.
   useEffect(() => {
-    if (entryMode === "iot") {
-      fetchSensors();
-      const interval = setInterval(fetchSensors, 4000);
-      return () => clearInterval(interval);
+    if (entryMode !== "iot") return;
+    fetchSensors();
+    let lastPush = Date.now();
+
+    const patchSensor = (payload: any) => {
+      lastPush = Date.now();
+      setSensors((prev) => {
+        const idx = prev.findIndex((s) => s.id === payload?.id);
+        if (idx === -1) return prev;
+        const next = prev.slice();
+        next[idx] = { ...next[idx], ...payload };
+        return next;
+      });
+    };
+    const onData = (ev: Event) => {
+      try { return JSON.parse((ev as MessageEvent).data); } catch { return null; }
+    };
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/sensors/stream");
+      es.addEventListener("sensor", (ev) => patchSensor(onData(ev)));
+      es.addEventListener("sensors", (ev) => {
+        lastPush = Date.now();
+        const list = onData(ev);
+        if (Array.isArray(list)) setSensors(list);
+      });
+      es.addEventListener("stale", (ev) => {
+        lastPush = Date.now();
+        const list = onData(ev);
+        setStaleIds(new Set((Array.isArray(list) ? list : []).map((s: any) => s.id)));
+      });
+    } catch {
+      es = null; // EventSource indisponible (vieux navigateur): le filet prend.
     }
+
+    // Filet: aucun evenement depuis 20 s => on resynchronise en HTTP. Un proxy
+    // qui tamponne le flux ou un onglet en arriere-plan gelle ne peuvent plus
+    // laisser le tableau figer sur des mesures de la veille.
+    const guard = setInterval(() => {
+      if (Date.now() - lastPush > 20_000) {
+        lastPush = Date.now();
+        fetchSensors();
+      }
+    }, 20_000);
+
+    return () => {
+      if (es) es.close();
+      clearInterval(guard);
+    };
   }, [entryMode]);
 
   const saveCorrectiveAction = async (logId: string, action: string) => {
@@ -540,12 +592,18 @@ export function Haccp({
                       </p>
                     ) : (
                       sensors.map((sensor) => {
+                        // Silence du capteur = alerte HACCP a part entiere. Un
+                        // capteur muet ne doit surtout PAS passer pour une
+                        // chambre froide conforme: la LED se fige et ne pulse
+                        // plus (le pulsation mentirait sur une mesure fraiche).
+                        const isStale = staleIds.has(sensor.id);
                         const isAlert =
-                          (sensor.equipment_type === "Froid" &&
-                            sensor.temperature > 4) ||
-                          (sensor.equipment_type === "Chaud" &&
-                            sensor.temperature < 63 &&
-                            sensor.type === "probe");
+                          !isStale &&
+                          ((sensor.equipment_type === "Froid" &&
+                              sensor.temperature > 4) ||
+                            (sensor.equipment_type === "Chaud" &&
+                              sensor.temperature < 63 &&
+                              sensor.type === "probe"));
 
                         const webUrl =
                           window.location.origin +
@@ -610,7 +668,18 @@ export function Haccp({
                                 </label>
                                 <div className="flex items-center gap-1.5 font-sans">
                                   <span
-                                    className={`w-2 h-2 rounded-full ${isAlert ? "bg-red-500 animate-pulse" : "bg-emerald-500 animate-pulse"}`}
+                                    className={`w-2 h-2 rounded-full ${
+                                      isStale
+                                        ? "bg-amber-500"
+                                        : isAlert
+                                          ? "bg-red-500 animate-pulse"
+                                          : "bg-emerald-500 animate-pulse"
+                                    }`}
+                                    title={
+                                      isStale
+                                        ? "Capteur muet : plus aucune mesure recue (verifier pile/connexion)"
+                                        : undefined
+                                    }
                                   />
                                   <span
                                     className={`text-sm font-black tracking-tight ${isAlert ? "text-red-500" : "text-emerald-400"}`}
