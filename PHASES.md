@@ -214,17 +214,80 @@ Le serveur connait deja l'instant exact ou un capteur poste (le webhook
 - **Mesure** : latence capteur->ecran **13 ms** (contre 4000 ms de polling).
   Contrat grave en CI (Playwright n° 28) et en local (`scripts/verify-sse.mjs`).
 
+### 4.3 Instrumentation de latence par route (`/health/perf`)
+L'audit de perf devait se placer A L'EXTERIEUR pour obtenir des percentiles, parce
+que `/health` ne connait aucun percentile. Sans mesure interne, toute decision de
+perf est devinee ; avec elle, elle est mesuree dans l'app.
+
+- `src/services/perf.ts` : collecteur d'anneau circulaire (`RING_SIZE` 256) +
+  percentiles au rang exact (`rank = ceil(p/100*n)-1`). Trois invariants non
+  negociables, chacun grave en test unitaire :
+  1. mesure en `process.hrtime.bigint()` (microsecondes) et non `Date.now()` : sur
+     un endpoint a p50 reel de ~2 ms, l'echelle milliseconde noie tout ;
+  2. bucket par **motif** de route (`/api/inventory/:id`) et non par chemin brut :
+     une cle par id ferait une serie par id (cardinalite non bornee) ;
+  3. cardinalite BORNEE par construction (`MAX_ROUTES` 80, reste-agrege dans
+     `*overflow*`) : la limite memoire ne depend pas de la justesse de l'heuristique.
+- Le chemin chaud du logger reste O(1) : ni tri ni allocation par requete. Le tri
+  est dans `snapshot()`, a la demande.
+- SUBTILITE qui a fait echouer la premiere version : `http-logger` est monte
+  AVANT les routeurs, donc `req.route` est vide a l'entree de la requete. Le motif
+  n'est lisible que dans le callback `finish`. `req.route` porte aussi le prefixe
+  de montage : on ne le fait confiance qu'apres avoir verifie que sa regex teste
+  bien le chemin.
+- `/health/perf` est EXCLU du logger : sans ca, le poll de sante injecterait sa
+  propre mesure dans les stats qu'il est cense eclairer.
+- 16 tests d'invariant dans `test/unit/perf.test.ts` (16 de plus que la porte
+  precedente) + preuve terrain `node run verify:perf` (13/13 : percentiles coherents,
+  30 ids agglutines sous UN motif, 6 series pour ~160 requetes).
+
+### 4.4 Compression HTTP + cache des assets content-hashed
+Les deux dettes que `audit-perf` signalait sont soldees : `compression` etait absent
+de `package.json` et les assets haches etaient servis en `max-age=0`.
+
+- **gzip** (`compression` + `@types/compression`) : `threshold` 1 ko (sous ce plancher
+  le CPU coute plus cher que les octets economies), filtre delegue a
+  `compression.filter` pour ne pas dupliquer la liste des Content-Type compressibles.
+- ⚠ **LE POINT QUI FAIT MAL** : `text/event-stream` est exclu de la compression.
+  gzip met un flux en tampon ; sur le SSE des capteurs, cela reintroduirait la
+  latence que la phase 4.2 a supprime (4000 ms -> 13 ms). Le contrat est grave en CI
+  (Playwright) et en local (`verify:http`).
+- **Cache** : les assets Vite portent le hash de contenu dans leur nom, donc
+  `max-age=1 an + immutable` est sur. `index.html` reste `no-cache` (pas de hash dans
+  son nom) : c'est lui qui libere un nouveau bundle. `express.static` recoit
+  `maxAge`/`immutable` + un `setHeaders` qui force `no-cache` sur tout ce qui n'est
+  pas `/assets/`.
+- ⚠ Le `filter` de compression ne s'extrait PAS par `compression().filter` (le type
+  `RequestHandler` de @types ne l'expose pas) : c'est `compression.filter`, exporte
+  par le namespace. Erreur TS2339 a la premiere tentative.
+- Mesure reelle, sur socket BRUTE et non par `fetch` : `fetch` (undici) declare
+  `Accept-Encoding` et decompress tout seul, donc il masque le poids du fil et
+  transforme la mesure de compression en preuve creuse. Gain : **85 734 -> 18 783
+  octets** (ratio 0,219) sur `/api/epicure/vocab-list`, corps gzip verifie decodable
+  et identique a la variante `identity`.
+- `scripts/verify-http.mjs` (17 checks, dont la revalidation du HTML par `If-None-Match`
+  -> 304, l'absence de compression sur le SSE avec une vraie releve sortie en 4 ms, et
+  l'identite des en-tetes entre un client Electron et Chromium) est lance par
+  `npm run verify:http` — il exige `npm run build` prealable, car la suite e2e roule
+  en mode dev (middlewares Vite) et n'exerce donc jamais la branche `express.static`.
+
 ### Etat des portes (8 sept., HEAD Sprint 4)
-- `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **22** · `npx playwright test` :
-  **28** (dont le test SSE) · `npm run build` : chunk index **675.94 kB** / gzip
-  **217.99 kB**.
+- `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **38** · `npx playwright test` :
+  **30** (dont le test SSE + les 2 de compression) · `npm run build` : chunk index
+  **675.94 kB** / gzip **217.99 kB**.
+- Verify terrain : `verify:ratelimit` 5/5 · `verify:sse` · `verify:perf` 13/13 ·
+  `verify:http` 17/17.
 - Nouveaux fichiers : `src/middleware/api-rate-limiter.ts`,
-  `src/services/sensor-hub.ts`, `test/unit/rate-limiter.test.ts`,
-  `scripts/{verify-ratelimit,verify-sse,audit-perf}.mjs`.
-- ⚠ `scripts/audit-perf.mjs` est l'outil de mesure du temps reel : le lancer
-  (`node scripts/audit-perf.mjs`) avant de toucher au polling, au cache ou au
-  rate-limit. Il revele aussi ce qui reste : `cache-control: public, max-age=0`
-  sur des assets content-hashed et `compression` absent de `package.json`.
+  `src/services/sensor-hub.ts`, `src/services/perf.ts`,
+  `test/unit/{rate-limiter,perf}.test.ts`,
+  `scripts/{verify-ratelimit,verify-sse,verify-perf,verify-http,audit-perf}.mjs`.
+- Les 4 verify sont exposes en scripts npm (`verify:perf`, `verify:http`,
+  `verify:sse`, `verify:ratelimit`, `audit:perf`) : un reglage de perf se prouve
+  avec un de ces scripts, pas dans une conversation.
+- ⚠ `scripts/audit-perf.mjs` reste l'outil de mesure du temps reel : le lancer
+  avant de toucher au polling, au cache ou au rate-limit. Ce qu'il revele ENCORE :
+  le chunk index depasse 500 kB apres minification (vendors `react-dom`, `motion-dom`)
+  et les routes de scan sans index qui ressortent en p95.
 
 ### UI/UX Sprint 1 (commit `6fe1c44`)
 1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
