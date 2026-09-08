@@ -4,6 +4,9 @@ import { test, expect } from "@playwright/test";
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
+import { request as rawRequest } from "node:http";
+import { gunzipSync } from "node:zlib";
+import { Buffer } from "node:buffer";
 
 const PORT = 3999;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -431,4 +434,55 @@ test("flux SSE: un webhook poste est pousse au client (latence < 1s)", async ({ 
   expect(recu).not.toBeNull();
   expect(recu!.data.temperature).toBe(3.7);
   expect(recu!.at - tPost).toBeLessThan(1000); // le polling etait 4000
+});
+
+
+// --- Compression HTTP -------------------------------------------------
+// Le contrat : une reponse volumineuse sort compressee et le corps gzip se
+// decode a l'identique. On passe par un client http BRUT et non par le fixture
+// `request` : undici declare Accept-Encoding et decompress tout seul, ce qui
+// effacerait exactement ce qu'on veut mesurer (le poids sur le fil).
+// La taille de reference (identity) est prise dans le MEME test : affirmer un
+// gain sans comparer la meme ressource serait compter un en-tete comme un gain.
+test("compression: la reponse volumineuse est gzippee et decodable", async () => {
+  const call = (headers: Record<string, string>) =>
+    new Promise<{ enc: string; bytes: number; buf: Buffer }>((resolve, reject) => {
+      const req = rawRequest(`${BASE}/api/epicure/vocab-list`, { method: "GET", headers }, (res) => {
+        const chunks: Buffer[] = [];
+        let n = 0;
+        res.on("data", (c: Buffer) => { chunks.push(c); n += c.length; });
+        res.on("end", () => resolve({
+          enc: String(res.headers["content-encoding"] ?? ""),
+          bytes: n,
+          buf: Buffer.concat(chunks),
+        }));
+      });
+      req.on("error", reject);
+      req.end();
+    });
+
+  const plain = await call({ "Accept-Encoding": "identity" });
+  const gz = await call({ "Accept-Encoding": "gzip" });
+
+  expect(plain.bytes).toBeGreaterThan(1024); // la route est bien au-dessus du seuil
+  expect(gz.enc).toBe("gzip");
+  expect(gz.bytes).toBeLessThan(plain.bytes * 0.5);
+  // Un Content-Encoding mensonger (corps en fait pas compresse) casserait ici.
+  const decoded = JSON.parse(gunzipSync(gz.buf).toString("utf8"));
+  expect(decoded.length).toBe(JSON.parse(plain.buf.toString("utf8")).length);
+});
+
+test("compression: sous le seuil de 1 ko, pas de compression", async () => {
+  const r = await new Promise<{ enc: string | undefined; len: number }>((resolve, reject) => {
+    const req = rawRequest(`${BASE}/api/trial-status`, { method: "GET", headers: { "Accept-Encoding": "gzip" } }, (res) => {
+      let n = 0;
+      res.on("data", (c: Buffer) => (n += c.length));
+      res.on("end", () => resolve({ enc: res.headers["content-encoding"] as string | undefined, len: n }));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+  expect(r.len).toBeGreaterThan(0);
+  expect(r.len).toBeLessThan(1024);
+  expect(r.enc).toBeUndefined();
 });

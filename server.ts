@@ -7,6 +7,7 @@
 
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
 import "dotenv/config";
 import os from "os";
 import path from "path";
@@ -55,6 +56,31 @@ async function startServer() {
   // Tailscale, reverse proxy) — le Host externe doit être accepté.
   app.use(helmet({ host: false } as Parameters<typeof helmet>[0]));
   app.use(express.json({ limit: "10mb" }));
+  // Compression HTTP (gzip). L'audit relevait que `compression` etait absent de
+  // package.json : le chunk index (676 kB, 218 kB gzip) partait en texte brut sur
+  // le LAN. Seuil a 1 ko : sous ce plancher le CPU coute plus cher que les octets
+  // economises (la plupart des reponses API font moins de 1 ko).
+  //
+  // Le point qui compte: on exclut text/event-stream. compression ne s'arme qu'au
+  // premier write(), mais gzip met en tampon jusqu'a la fin de la reponse; sur un
+  // flux SSE qui emet un evenement a la fois, cela reintroduirait la latence que la
+  // phase SSE a supprimee (4000 ms -> 13 ms mesure). Le contrat de latence est
+  // grave dans le test e2e, donc cette exclusion est protegee en CI.
+  //
+  // Le fallback delegue a compression.filter (le filtre par defaut de la lib):
+  // on ne duplique pas la liste des Content-Type compressibles, et les formats
+  // deja compresses (png, jpg, woff2, safetensors) restent exclus par la lib.
+  const compressionFilter = compression.filter;
+  app.use(
+    compression({
+      threshold: 1024,
+      filter: (req, res) => {
+        const ct = String(res.getHeader("Content-Type") ?? "");
+        if (ct.includes("text/event-stream")) return false;
+        return compressionFilter(req, res);
+      },
+    }),
+  );
   app.use(httpLogger);
 
   // Rate-limit par categorie de surface (read / mutate / delete / auth / ai).
@@ -120,7 +146,26 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    // Assets Vite: le nom de fichier porte le hash de contenu (index-CUpTgUSW.js),
+    // donc l'URL change des que le contenu change: on peut declarer
+    // max-age=1 an + immutable sans risquer de servir un vieux bundle.
+    // L'audit mesurait cache-control: public, max-age=0 (express.static ne pose
+    // que l'ETag par defaut): chaque rechargement re-telechargeait les assets.
+    // index.html, lui, n'a pas de hash dans son nom: il garde la revalidation par
+    // ETag (no-cache), et c'est elle qui libere le nouveau bundle.
+    app.use(
+      express.static(distPath, {
+        etag: true,
+        maxAge: "1y",
+        immutable: true,
+        setHeaders(res, filePath) {
+          if (!filePath.includes("/assets/")) {
+            // Tout ce qui n'est pas content-hashed doit etre revalide.
+            res.setHeader("Cache-Control", "no-cache");
+          }
+        },
+      }),
+    );
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

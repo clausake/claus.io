@@ -1,12 +1,22 @@
-// Routes : Santé (statut du modèle Ollama + modèle installé)
+// Routes : Sante (statut du modele Ollama + modele installe) + perf par route.
 import { Router } from "express";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { getOllamaHost } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { perf } from "../services/perf.js";
 
 const router = Router();
+
+// GET /health/perf -- instantane des latences par route (percentiles mesures
+// dans l'app par le middleware http-logger). La lecture de cette route n'est
+// pas elle-meme mesuree (exclue du logger) : sinon le poll auto-mesurerait sa
+// propre lecture et fausserait les stats qu'il est cense eclairer.
+router.get("/health/perf", (_req, res) => {
+  const snap = perf.snapshot(20);
+  res.json({ ok: true, ...snap });
+});
 
 router.get("/health", async (_req, res) => {
 const lang = ollamaSettingsRef.current.language || "fr";
@@ -39,7 +49,7 @@ const messages = {
 const pick = (key: "ok" | "unreachable" | "missing") =>
   messages[key][lang as keyof (typeof messages)["ok"]] || messages[key].en;
 
-// Champs additionnels : taille DB, disque libre, mémoire processus
+// Champs additionnels : taille DB, disque libre, memoire processus
 const resolveDataDir = (): string => {
   let storageDir = process.env.USER_DATA_PATH;
   if (!storageDir) {
