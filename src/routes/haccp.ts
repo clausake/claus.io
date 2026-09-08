@@ -11,9 +11,49 @@ import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollam
 import { uploadsDir } from "../services/paths.js";
 import { settingsPath } from "../services/settings.js";
 import { requireString, optionalString } from "../middleware/validate.js";
+import { sensorHub } from "../services/sensor-hub.js";
+
+// Le timer de maintenance du flux SSE est module-level : createRouter() est
+// appele une fois par demarrage, mais les tests le reinstancient; une variable
+// locale ne empecherait pas l'accumulation de timers.
+let sensorStreamTimer: NodeJS.Timeout | undefined;
 
 export default function createRouter(db: Database) {
   const router = Router();
+
+  // Maintenance du flux SSE : heartbeat (traverse les proxies sans devenir un
+  // evenement) + recherche des capteurs qui n'emettent plus. C'est L'ALERTE
+  // HACCP : un capteur a pile morte doit etre visible comme "muet", sinon son
+  // absence de mesure est indiscernable d'une chambre froide conforme le jour
+  // d'un controle. Garde idempotente (createRouter peut etre rappele par les
+  // tests) et unref() pour qu'aucun timer ne retient le process en vie.
+  if (!sensorStreamTimer) {
+    const STALE_AFTER_S = 120;
+    sensorStreamTimer = setInterval(async () => {
+      if (sensorHub.size() === 0) return; // personne a ecouter : pas de scan base
+      sensorHub.heartbeat();
+      try {
+        const rows = await db.all(
+          "SELECT id, name, last_reading_at FROM iot_sensors WHERE last_reading_at IS NOT NULL",
+        );
+        const nowMs = Date.now();
+        const stale = rows
+          .map((s: any) => {
+            const t = Date.parse(s.last_reading_at);
+            if (Number.isNaN(t)) return null;
+            const silence_seconds = Math.round((nowMs - t) / 1000);
+            return silence_seconds > STALE_AFTER_S
+              ? { id: s.id, name: s.name, last_reading_at: s.last_reading_at, silence_seconds }
+              : null;
+          })
+          .filter((x: any): x is any => x !== null);
+        sensorHub.publishStale(stale);
+      } catch (err) {
+        console.error("[SSE] scan capteurs muets:", err);
+      }
+    }, 25_000);
+    sensorStreamTimer.unref?.();
+  }
 
 router.post("/api/haccp/scan", upload.single("image"), async (req, res) => {
 console.log("[OLLAMA] Re\xE7u une demande de scan HACCP...");
@@ -158,6 +198,19 @@ Verlassen Sie die Menge NIEMALS bei 0, wenn das Gewicht sichtbar ist.`
 }
 });
 
+// Flux SSE des capteurs : le client s'enregistre une fois et recoit chaque
+// releve poussee par le webhook. Le budget "read" du rate-limit est deja
+// consacre, et une connexion longue compte comme une seule requete.
+router.get("/api/sensors/stream", (req, res) => {
+  try {
+    sensorHub.attach(req, res);
+  } catch (err) {
+    console.error("SSE attach error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Stream unavailable" });
+    else res.end();
+  }
+});
+
 router.get("/api/haccp/iot-sensors", async (req, res) => {
 try {
   const list = await db.all("SELECT * FROM iot_sensors");
@@ -190,6 +243,17 @@ try {
     [id, name, type || "ambient", equipment_type || "Froid", new Date().toISOString(), token]
   );
   res.json({ status: "success", token });
+  // Un onglet HACCP deja ouvert doit voir le capteur sans rafraichissement.
+  try {
+    const list = await db.all("SELECT * FROM iot_sensors");
+    sensorHub.publishList(list.map((s: any) => ({
+      id: s.id, name: s.name, type: s.type, equipment_type: s.equipment_type,
+      temperature: s.last_reading ?? 20.0, battery: s.battery ?? 100,
+      last_reading_at: s.last_reading_at,
+    })));
+  } catch (pushErr) {
+    console.error("[SSE] diffusion liste ignoree:", pushErr);
+  }
 } catch (err) {
   res.status(500).json({ error: "Failed to register sensor. May already exist." });
 }
@@ -199,6 +263,18 @@ router.delete("/api/haccp/iot-sensors/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM iot_sensors WHERE id = ?", [req.params.id]);
   res.json({ status: "success" });
+  // Le tableau de bord doit retirer la ligne sans attendre un rafraichissement.
+  try {
+    sensorHub.publishList(
+      (await db.all("SELECT * FROM iot_sensors")).map((s: any) => ({
+        id: s.id, name: s.name, type: s.type, equipment_type: s.equipment_type,
+        temperature: s.last_reading ?? 20.0, battery: s.battery ?? 100,
+        last_reading_at: s.last_reading_at,
+      })),
+    );
+  } catch (pushErr) {
+    console.error("[SSE] diffusion liste ignoree:", pushErr);
+  }
 } catch (err) {
   res.status(500).json({ error: "Failed to delete sensor" });
 }
@@ -231,6 +307,23 @@ try {
     "INSERT INTO temperature_logs (id, equipment_name, temperature, user, recorded_at, entry_type, sensor_mode, sensor_id) VALUES (?, ?, ?, ?, ?, 'iot', 'online', ?)",
     [logId, `[IoT] ${sensor.name}`, tempVal, "CAPTEUR IoT Webhook", now, id]
   );
+
+  // Le capteur vient de poster : on reveille les tablettes ouvertes plutot que
+  // de les attendre sur leur polling. L'echec de diffusion ne doit jamais
+  // faire echouer l'ingestion (la releve HACCP est deja en base, conforme).
+  try {
+    sensorHub.publishReading({
+      id,
+      name: sensor.name,
+      type: sensor.type,
+      equipment_type: sensor.equipment_type,
+      temperature: tempVal,
+      battery: batVal,
+      last_reading_at: now,
+    });
+  } catch (pushErr) {
+    console.error("[SSE] diffusion capteur ignoree:", pushErr);
+  }
 
   res.json({ status: "success", message: `Data compiled for ${sensor.name}. Log logged to HACCP table.`, temperature: tempVal });
 } catch (err) {

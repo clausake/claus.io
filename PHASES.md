@@ -158,6 +158,74 @@ statiquement dans `App.tsx` (→ chunk principal). Passés dans
 3. **Dérive de doc corrigee** : le compte e2e etait annonce a 11 (reel 27), les
    `:any` a ~176 (reel 183).
 
+## Sprint 4 — Fiabilite du temps reel (8 sept.)
+
+### 4.1 Rate-limit par categorie de surface (commit `aa83fb2`)
+L'heritage (300 req / 15 min, un seul budget pour tout `/api`) etait un defaut de
+conception, pas un reglage. **Mesure** : une tablette laisse sur l'onglet HACCP
+emet ~29 req/min (capteurs 4 s + robots 5 s + alertes 30 s) et declenchait un 429
+**GLOBAL** au bout d'environ 10 min, sans autre activite. Dans une cuisine,
+l'app "mourait" pendant le service. Et a l'inverse, `/api/unlock` (la cle de
+licence, signee RSA) disposait de 300 tentatives par fenetre.
+
+- `src/middleware/api-rate-limiter.ts` : 5 budgets independants, une instance de
+  `MemoryStore` par categorie (donc **aucune double comptabilite** : une requete
+  traverse exactement un budget) :
+  `read 600/5min`, `mutate 150/5min`, `delete 40/5min`, `auth 20/15min`,
+  `ai 60/5min`. Exempts : `/api/sensors/stream`, `/api/trial-status`.
+- En-tetes **draft-8** : le seul format qui publie le NOM du quota. Un 429 est
+  donc diagnostiquable depuis le client sans interrogater le serveur.
+  ⚠ `draft-7` ne publie PAS le nom — c'est ce qui a fait rougir la premiere
+  verification de ce fichier.
+- Invariant grave en test unitaire : `auth.limit < mutate.limit` (le brute-force
+  de cle ne doit jamais couter moins cher qu'une saisie normale).
+- ⚠ `express-rate-limit` n'est plus importe que dans ce middleware : l'import
+  devenu mort a ete retire de `server.ts` (le projet a deja eu un incident de
+  dead-import sur le loader CJS de tsx avec `undici`).
+- Prouve par `scripts/verify-ratelimit.mjs` (5/5) : 500 lectures sans 429, 429 a
+  la 21e tentative d'unlock, 429 a la 151e ecriture. 7 tests unitaires.
+
+### 4.2 Push SSE des capteurs HACCP (remplace le polling 4 s)
+Le serveur connait deja l'instant exact ou un capteur poste (le webhook
+`/api/haccp/webhook/iot-report`) : il n'a pas besoin qu'on le lui demande.
+
+- `src/services/sensor-hub.ts` : hub unique, `attach/publishReading/publishList/
+  publishStale/heartbeat`. Reconnu au niveau du protocole (le header `Connection`
+  est un header *hop-by-hop* que Node tient lui-meme et qu'un reverse proxy ne
+  relai jamais : l'ecrire a la main etait un anti-pattern, retire).
+- `GET /api/sensors/stream` (monte par Express **avant** le middleware Vite : le
+  dev-server ne tamponne donc pas le flux) + instrumentation du webhook, du
+  register et du delete de capteur.
+- Le scan des capteurs **muets** (silence > 120 s, tour de 25 s) est l'alerte
+  HACCP qui manquait : un capteur a pile morte etait indiscernable d'une chambre
+  froide conforme. La LED devient ambre et **ne pulse plus** (le pulsation
+  mentirait sur une mesure fraiche).
+- **Pas de deduplication a l'emission** : un webhook poste est un fait HACCP, il
+  est toujours diffuse (une chambre qui reste a 3.4 degres doit pouvoir
+  rafraichir son horodatage). La premiere version avait une garde `lastHash`
+  speculente qui, de plus, incluait `last_reading_at` (toujours nouveau) : elle
+  n'absorbait jamais rien de legitime et pouvait masquer la releve d'un AUTRE
+  capteur. Retiree. De meme, `publishStale([])` est publie : "plus aucun capteur
+  muet" est un changement d'etat qui doit pouvoir de-fanionner le precedent.
+- Cote client (`Haccp.tsx`) : un `EventSource` + un **filet** (re-synchronisation
+  HTTP si aucun evenement depuis 20 s). `EventSource` se reconnecte seul mais ne
+  signale pas ses blancs : sans le filet, un proxy qui tamponne gellerait le
+  tableau sur des mesures de la veille.
+- **Mesure** : latence capteur->ecran **13 ms** (contre 4000 ms de polling).
+  Contrat grave en CI (Playwright n° 28) et en local (`scripts/verify-sse.mjs`).
+
+### Etat des portes (8 sept., HEAD Sprint 4)
+- `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **22** · `npx playwright test` :
+  **28** (dont le test SSE) · `npm run build` : chunk index **675.94 kB** / gzip
+  **217.99 kB**.
+- Nouveaux fichiers : `src/middleware/api-rate-limiter.ts`,
+  `src/services/sensor-hub.ts`, `test/unit/rate-limiter.test.ts`,
+  `scripts/{verify-ratelimit,verify-sse,audit-perf}.mjs`.
+- ⚠ `scripts/audit-perf.mjs` est l'outil de mesure du temps reel : le lancer
+  (`node scripts/audit-perf.mjs`) avant de toucher au polling, au cache ou au
+  rate-limit. Il revele aussi ce qui reste : `cache-control: public, max-age=0`
+  sur des assets content-hashed et `compression` absent de `package.json`.
+
 ### UI/UX Sprint 1 (commit `6fe1c44`)
 1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
    statut (ok/warn/danger/info), catégories menu, ombres (3 niveaux).
