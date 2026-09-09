@@ -34,7 +34,12 @@ backup.zip
 
 # Artefacts de test (Playwright / vitest) et WAL de SQLite
 test-results/
-test/tmp-data/
+# Chaque suite cree SON repetoire isole (tmp-data, tmp-perf, tmp-http, tmp-motion,
+# tmp-shots) et le supprime a l'entree du run: aucun ne doit etre versionne. Le
+# motif exact 'tmp-data/' en laissait echapper un (test/tmp-motion/settings.json
+# est entre dans un commit). D'ou le joker.
+test/tmp-*/
+test/shots/
 *.db-wal
 *.db-shm
 

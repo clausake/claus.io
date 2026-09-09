@@ -12,7 +12,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { DocumentUpload } from "../components/DocumentUpload";
 import { MediaDisplay, translateIngredientHelper } from "../lib/helpers";
 import { useToast } from "./ui/Toast";
@@ -1106,7 +1107,7 @@ export function DocumentManager({ t }: { t: any }) {
 
       {showProductQuickAdd && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <motion.div
+          <motionSlim.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="glass-panel w-full max-w-lg p-8 space-y-6"
@@ -1232,7 +1233,7 @@ export function DocumentManager({ t }: { t: any }) {
                 Confirmer l'ajout
               </button>
             </form>
-          </motion.div>
+          </motionSlim.div>
         </div>
       )}
     </div>

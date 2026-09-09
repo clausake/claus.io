@@ -12,7 +12,8 @@ import {
   X,
 } from "lucide-react";
 import { MENU_ROTATION } from "../data/menuData";
-import { motion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "./ui/Toast";
@@ -779,7 +780,7 @@ export function MenuAnalysis({
       {!analysisMode ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
-            <motion.div
+            <motionSlim.div
                             onClick={() => {
                 setAnalysisMode("decompose");
                 setFichesTechniques(null);
@@ -808,9 +809,9 @@ export function MenuAnalysis({
                   {t.aiAnalysisActive || "IA Analyse Active"}
                 </span>
               </div>
-            </motion.div>
+            </motionSlim.div>
 
-            <motion.div
+            <motionSlim.div
                             onClick={() => {
                 setAnalysisMode("creative");
                 setFichesTechniques(null);
@@ -839,9 +840,9 @@ export function MenuAnalysis({
                   {t.creativeConcept || "Concept Créatif"}
                 </span>
               </div>
-            </motion.div>
+            </motionSlim.div>
 
-            <motion.div
+            <motionSlim.div
                             onClick={() => {
                 setAnalysisMode("gastronomic");
                 setFichesTechniques(null);
@@ -870,9 +871,9 @@ export function MenuAnalysis({
                   {t.highGastronomy || "Haute Gastronomie"}
                 </span>
               </div>
-            </motion.div>
+            </motionSlim.div>
 
-            <motion.div
+            <motionSlim.div
                             onClick={() => {
                 setAnalysisMode("traditional");
                 setFichesTechniques(null);
@@ -901,7 +902,7 @@ export function MenuAnalysis({
                   {t.traditionalCooking || "Cuisine Bistro Chic"}
                 </span>
               </div>
-            </motion.div>
+            </motionSlim.div>
           </div>
         </div>
       ) : (

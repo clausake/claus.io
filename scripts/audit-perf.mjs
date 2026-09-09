@@ -1,14 +1,17 @@
 // Mesures de terrain pour l'audit perf (chemin HTTP reel = chemin de prod).
-//  1. debit de polling du front vs rate-limit global 300/15min
+//  1. debit de polling du front vs budgets de rate-limit (lus dans le module)
+//     ⚠ ce bloc etait mesongeur depuis le rate-limit par categorie : il
+//     recopiait les chiffres au lieu de les lire. Voir section 4.
 //  2. headers de cache HTTP des assets (ETag / Cache-Control)
 //  3. latence des endpoints lourds (scans sans index, agregats recalculs)
 //  4. poids reel du chargement d'EpicureModel + des embeddings
 // Usage: node scripts/audit-perf.mjs
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { rmSync, mkdirSync, statSync } from "node:fs";
+import { rmSync, mkdirSync, statSync, readFileSync } from "node:fs";
 import process from "node:process";
 
+const root = process.cwd();
 const PORT = 4125;
 const BASE = `http://127.0.0.1:${PORT}`;
 const DATA = join(process.cwd(), "test", "tmp-perf");
@@ -74,16 +77,116 @@ if (jsName) {
   console.log(`GET ${jsName.slice(0, 24)}…: ${a.status}  cache-control=${a.headers.get("cache-control") ?? "AUCUN"}`);
 }
 
+// Les budgets sont LUS dans src/middleware/api-rate-limiter.ts : un audit qui les
+// recopie est deja faux (c'est ce qui est arrive a ce bloc). On les relit donc a la
+// source a chaque tour, et un retrait de la constante ferait echouer le script.
+const srcLimiter = readFileSync(join(root, "src/middleware/api-rate-limiter.ts"), "utf8");
+const parseBudgets = (src) => {
+  const blk = /const BUDGETS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src);
+  if (!blk) return null;
+  // Les fenetres s'ecrivent `5 * MIN` : sans la constante resolve, windowMs
+  // sortait a 5 ms et le script annoncait un budget absurde (720 000 req/min).
+  // On la relit dans le module, la aussi, au lieu de la recopier.
+  const minDef = /const MIN\s*=\s*([0-9_]+)/.exec(src);
+  const MIN = minDef ? Number(minDef[1].replace(/_/g, "")) : 60_000;
+  const num = (tok) => Number(String(tok).replace(/_/g, ""));
+  const mult = (expr) => {
+    const m = /^\s*([0-9_]+)\s*(?:\*\s*(MIN|60))\s*$/.exec(expr);
+    if (m) return num(m[1]) * (m[2] === "60" ? 60 : MIN);
+    const b = /^\s*([0-9_]+)\s*$/.exec(expr);
+    return b ? num(b[1]) : null;
+  };
+  const out = {};
+  const re = /(\w+)\s*:\s*\{\s*windowMs\s*:\s*([^,}]+),\s*limit\s*:\s*([0-9_]+)\s*\}/g;
+  for (const m of blk[1].matchAll(re)) {
+    const [, nom, w, lim] = m;
+    const wm = mult(w);
+    if (wm === null) return null; // forme inconnue : on echoue, on ne devine pas
+    out[nom] = { windowMs: wm, limit: num(lim) };
+  }
+  return Object.keys(out).length ? out : null;
+};
+const BUDGETS = parseBudgets(srcLimiter);
+if (!BUDGETS) {
+  console.log("ECHEC  BUDGETS relus dans api-rate-limiter.ts : forme non reconnue (le script doit suivre le module, pas le deviner)");
+  child.kill("SIGTERM");
+  process.exit(1);
+}
 console.log(`\n=== 4. budget rate-limit vs polling reel du front ===`);
-const perMin = (ms) => 60000 / ms;
-const haccp = perMin(4000), robots = perMin(5000), alerts = perMin(30000);
-const sim = haccp + robots + alerts;
-console.log(`front onglet HACCP ouvert : capteurs ${haccp}/min + robots ${robots}/min + alertes ${alerts}/min = ${sim.toFixed(1)} req/min`);
-console.log(`rate-limit global         : 300 / 15 min = 20.0 req/min soutenable`);
-console.log(`=> verrou (429) declenche au bout de ~${(300 / sim).toFixed(1)} min d'onglet laisse ouvert, sans autre activite`);
-let first429 = -1;
-for (let i = 1; i <= 340; i++) { const r = await fetch(`${BASE}/api/dashboard/stats`); if (r.status === 429) { first429 = i; break; } }
-console.log(`429 observe reellement a la ${first429 > 0 ? first429 + "e requete" : "(non atteint en 340)"} `);
+// ⚠ CE BLOC AVAIT ETE LAISSE MESONGER par le passage au rate-limit par categorie
+// (commit aa83fb2) : il recalculait encore avec l'ancien budget global de
+// 300/15 min et annoncait un 429 au bout de ~10 min d'onglet HACCP ouvert.
+// C'etait exactement le genre de verdict faux qui fait perdre une journee a une
+// decision de perf. Depuis, la verite vient du MODULE (BUDGETS), pas du script.
+// Le polling est lu dans le code du front (setInterval / filet SSE), et non
+// devine. Ce qui ne vient pas d'une mesure est marque 'hypothese'.
+const perMin = (ms) => 60_000 / ms;
+const readSource = (rel) => {
+  try { return readFileSync(join(root, rel), "utf8"); } catch { return ""; }
+};
+// Fréquence reelle des emetteurs periodiques du front.
+const srcRobot = readSource("src/components/RobotManagement.tsx");
+const srcHaccp = readSource("src/components/Haccp.tsx");
+const msOf = (src, fn) => {
+  const m = new RegExp(`setInterval\\s*\\(\\s*${fn}\\s*,\\s*([0-9]+)\\s*\\)`).exec(src);
+  return m ? Number(m[1]) : null;
+};
+const robotMs = msOf(srcRobot, "fetchRobots");
+// Le filet du client SSE: re-synchronisation HTTP quand aucun evenement ne vient.
+const guardMs = (() => {
+  const m = /const guard = setInterval\s*\(\s*\(\) =>\s*\{[\s\S]{0,200}?([0-9_]{2,})\s*\)/.exec(srcHaccp);
+  if (!m) return null;
+  const lit = m[1].replace(/_/g, "");
+  return /^\d+$/.test(lit) ? Number(lit) : null;
+})();
+const sseActif = /new EventSource\(/.test(srcHaccp);
+const emetteurs = [];
+if (sseActif && guardMs) emetteurs.push({ quoi: "filet SSE (garde, 1 seule route)", ms: guardMs });
+else if (!sseActif) emetteurs.push({ quoi: "capteurs (polling herite)", ms: 4000 });
+if (robotMs) emetteurs.push({ quoi: "robots (setInterval fetchRobots)", ms: robotMs });
+const sim = emetteurs.reduce((a, e) => a + perMin(e.ms), 0);
+console.log(`emetteurs periodiques du front : ` + emetteurs.map((e) => `${e.quoi} 1/${e.ms}ms`).join(" + ") + ` = ${sim.toFixed(2)} req/min`);
+for (const [nom, b] of Object.entries(BUDGETS)) {
+  console.log(`  budget ${nom.padEnd(6)} : ${b.limit} / ${Math.round(b.windowMs / 60000)} min = ${(b.limit / (b.windowMs / 60000)).toFixed(1)} req/min soutenable`);
+}
+const read = BUDGETS.read;
+// ⚠ Le calcul est par FENETRE glissante figee, pas accumule sur la journee : a
+// sim req/min, une fenetre de windowMs consomme sim * (windowMs/60000) requetes et
+// se reinitialise. Comparer ce chiffre a limit est la seule question qui a du sens.
+const win = read.windowMs / 60000;
+const parFenetre = sim * win;
+const marge = parFenetre > 0 ? read.limit / parFenetre : Infinity;
+console.log(`=> une tablette passee sur l'onglet consomme ${parFenetre.toFixed(1)} req par fenetre de ${win} min, budget ${read.limit} : ${marge >= 1 ? `le verrou ne se declenchera JAMAIS en passif (${marge.toFixed(1)}x de marge, il faudrait ~${(read.limit / win).toFixed(0)} req/min pour l'atteindre)` : `VERROU ATTEINT en passif (${(1 / marge).toFixed(1)}x le budget)`}`);
+console.log(`   (hypothese explicitee : 1 seule origine de lecture periodique ; chaque onglet ouvert de plus ajoute son debit)`);
+// Le verrou doit etre OBSERVE, pas calcule : on frappe la categorie 'read' jusqu'a
+// 429 (ou 3x le budget, preuve que le quota tient) et on verifie la forme du 429.
+let first429 = -1, limitHeader = null, first429Headers = null;
+for (let i = 1; i <= read.limit * 3; i++) {
+  const r = await fetch(`${BASE}/api/dashboard/stats`);
+  if (r.status === 429) { first429 = i; first429Headers = { draft8: r.headers.get("ratelimit") ?? r.headers.get("ratelimit-policy"), draft7: r.headers.get("ratelimit-limit") }; limitHeader = first429Headers.draft8; break; }
+}
+// Le 429 ne peut PAS se lire brut : les sections 2 et 3 ont deja consomme le meme
+// quota 'read' sur la MEMME cle IP (le limiteur ne connaft que la boucle locale).
+// C'est ce qui faisait passer la 528e requete pour un budget de 600 mal applique.
+const dejaVu = 12 * 6 /* section 2 */ + 2 /* section 3 (GET / + asset) */;
+const net = first429 > 0 ? first429 + dejaVu : -1;
+const netOk = net > 0 && Math.abs(net - read.limit) <= read.limit * 0.15;
+console.log(`429 observe a la ${first429 > 0 ? first429 + "e requete de la section 4" : `NON atteint en ${read.limit * 3}`} ; + ${dejaVu} deja consommes par les sections 2-3 = ${net} vs budget ${read.limit} -> ${net > 0 ? (netOk ? "COHERENT" : "ECART INEXPLIQUE") : "-"}`);
+if (first429 > 0) {
+  // draft-8 (choisi deliberatement): le NOM du quota est publie dans RateLimit /
+  // RateLimit-Policy. draft-7 ne le publie pas -- c'est ce qui a fait rougir la
+  // verification du module. On ne verifie donc pas un chiffre lu au hasard.
+  console.log(`  en-tetes du 429 : draft-8=${first429Headers.draft8 ?? "AUCUN"}`);
+  // draft-8 publie le NOM du quota (identifier) + le restant (r) + le temps avant
+  // remise a zero (t). Le QUOTA absolu, lui, n'est publie que par les en-tetes
+  // herites draft-7, volontairement desactives (legacyHeaders: false). On verifie
+  // donc le contrat reel : nom + restant + temps.
+  const d8 = String(first429Headers.draft8 ?? "");
+  const publie = /read/.test(d8) && /r=\d+/.test(d8) && /t=\d+/.test(d8);
+  console.log(`  ${publie ? "OK" : "ECHEC"}  le 429 publie le nom du quota ('read'), le restant et le delai : le client se regule sans interrogater le serveur`);
+} else {
+  console.log(`  ${first429 < 0 ? "OK" : "INFO"}  aucun verrou avant 3x le budget : le quota de lecture tient la journee d'une tablette`);
+}
 
 child.kill("SIGTERM");
 process.exit(0);

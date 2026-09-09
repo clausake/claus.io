@@ -29,7 +29,8 @@ import {
 } from "recharts";
 import { INITIAL_CART } from "./data/menuData";
 import { TRANSLATIONS } from "./data/translations";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { LandingPage, NavItem } from "./components/views";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
@@ -371,7 +372,7 @@ export default function App() {
               <ChefHat className="w-6 h-6 md:w-7 md:h-7 text-obsidian" />
             </div>
             {isSidebarOpen && (
-              <motion.div
+              <motionSlim.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="flex flex-col"
@@ -382,7 +383,7 @@ export default function App() {
                 <span className="text-[10px] font-mono text-brand-500 uppercase tracking-widest mt-1">
                   Logiciel de Gestion
                 </span>
-              </motion.div>
+              </motionSlim.div>
             )}
           </div>
         </div>
@@ -599,7 +600,7 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden bg-obsidian">
         <AnimatePresence>
           {notification && (
-            <motion.div
+            <motionSlim.div
               initial={{ opacity: 0, y: -20, x: "-50%" }}
               animate={{ opacity: 1, y: 100, x: "-50%" }}
               exit={{ opacity: 0, y: -20, x: "-50%" }}
@@ -615,7 +616,7 @@ export default function App() {
                 <AlertTriangle className="w-4 h-4" />
               )}
               {notification.message}
-            </motion.div>
+            </motionSlim.div>
           )}
         </AnimatePresence>
         {/* Header */}
@@ -659,7 +660,7 @@ export default function App() {
 
               <AnimatePresence>
                 {showSearchDropdown && searchResults.length > 0 && (
-                  <motion.div
+                  <motionSlim.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
@@ -700,7 +701,7 @@ export default function App() {
                         </button>
                       ))}
                     </div>
-                  </motion.div>
+                  </motionSlim.div>
                 )}
               </AnimatePresence>
             </div>
@@ -719,7 +720,7 @@ export default function App() {
 
                 <AnimatePresence>
                   {showAlerts && (
-                    <motion.div
+                    <motionSlim.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -768,7 +769,7 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                    </motion.div>
+                    </motionSlim.div>
                   )}
                 </AnimatePresence>
               </div>
@@ -783,7 +784,7 @@ export default function App() {
 
                 <AnimatePresence>
                   {showProfileMenu && (
-                    <motion.div
+                    <motionSlim.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -810,7 +811,7 @@ export default function App() {
                           {t.logout}
                         </button>
                       </div>
-                    </motion.div>
+                    </motionSlim.div>
                   )}
                 </AnimatePresence>
               </div>

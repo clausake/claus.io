@@ -12,7 +12,8 @@ import {
 import {
   Line,
 } from "recharts";
-import { motion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "./ui/Toast";
@@ -539,7 +540,7 @@ export function SettingsView({
   };
 
   return (
-    <motion.div
+    <motionSlim.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="w-full"
@@ -942,6 +943,6 @@ export function SettingsView({
           </button>
         </div>
       </div>
-    </motion.div>
+    </motionSlim.div>
   );
 }

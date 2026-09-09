@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, RefreshCw, AlertTriangle, ChevronDown, ChevronUp, Printer, Mail, Trash2, Edit2, RotateCcw, Plus, Sparkles, Users, X, HelpCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { useToast, ConfirmDialog } from "./ui/Toast";
 
 export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, translateIngredient?: (name: string, lang: string) => string, manualIds?: Set<string> }) {
@@ -531,7 +532,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
 
       <AnimatePresence mode="wait">
         {activeTab === 'validation' ? (
-          <motion.div 
+          <motionSlim.div 
             key="validation"
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -561,7 +562,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                   <tbody className="relative">
                     <AnimatePresence mode="popLayout">
                       {forecast.filter(f => !ignoredIds.has(f.inventory_id)).flatMap(item => [
-                        <motion.tr 
+                        <motionSlim.tr 
                           key={item.inventory_id}
                           layout
                           initial={{ opacity: 0, x: -10 }}
@@ -636,9 +637,9 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                               {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                             </select>
                           </td>
-                        </motion.tr>,
+                        </motionSlim.tr>,
                         expanded === item.inventory_id && (
-                          <motion.tr
+                          <motionSlim.tr
                             key={`${item.inventory_id}-expanded`}
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
@@ -674,7 +675,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                                 <span className="text-slate-500 text-sm italic">{t.noHistory || "Aucun historique disponible"}</span>
                               )}
                             </td>
-                          </motion.tr>
+                          </motionSlim.tr>
                         )
                       ].filter(Boolean))}
                     </AnimatePresence>
@@ -689,9 +690,9 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                 </button>
               </div>
             )}
-          </motion.div>
+          </motionSlim.div>
         ) : activeTab === 'suppliers' ? (
-          <motion.div 
+          <motionSlim.div 
             key="suppliers"
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -811,10 +812,10 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
             <div className="p-4 mt-4 bg-black/20 border border-white/5 rounded-2xl text-center text-[10px] uppercase tracking-[0.3em] text-slate-600 font-black">
               Restauration IO — Database
             </div>
-          </motion.div>
+          </motionSlim.div>
         ) : (
           /* COMPARATEUR DE PRIX & MERCURIALES TAB */
-          <motion.div 
+          <motionSlim.div 
             key="prices"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -906,7 +907,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
 
             {/* Mercuriale Matched Preview Rows Panel (Interactive verification) */}
             {importMatches && (
-              <motion.div 
+              <motionSlim.div 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="p-6 bg-gradient-to-r from-amber-500/5 to-transparent border border-amber-500/20 rounded-3xl space-y-4"
@@ -990,7 +991,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                     </tbody>
                   </table>
                 </div>
-              </motion.div>
+              </motionSlim.div>
             )}
 
             {/* General Price Comparison Table List */}
@@ -1109,14 +1110,14 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                 </div>
               )}
             </div>
-          </motion.div>
+          </motionSlim.div>
         )}
       </AnimatePresence>
 
       {/* Manual Price Addition Modal */}
       {showAddPriceModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <motion.div 
+          <motionSlim.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-[#181818] border border-white/15 rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl relative"
@@ -1213,7 +1214,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                 </button>
               </div>
             </div>
-          </motion.div>
+          </motionSlim.div>
         </div>
       )}
     

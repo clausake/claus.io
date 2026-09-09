@@ -271,16 +271,73 @@ de `package.json` et les assets haches etaient servis en `max-age=0`.
   `npm run verify:http` — il exige `npm run build` prealable, car la suite e2e roule
   en mode dev (middlewares Vite) et n'exerce donc jamais la branche `express.static`.
 
+### 4.5 Audit de perf mesongeur (le bloc rate-limit)
+Le bloc n° 4 d'`audit-perf.mjs` avait ete **laisse faux** par le passage au
+rate-limit par categorie (commit `aa83fb2`) : il recalculait encore avec le vieux
+budget global de 300/15 min et annoncait un 429 au bout de ~10 min d'onglet HACCP
+ouvert. Decision de perf prise sur ce chiffre = une journee perdue. Trois defauts
+corrignes, chacun avec sa raison :
+- les budgets et les frequences sont **dus dans le module**, pas recopies (un
+  audit qui recopie est deja faux ; `parseBudgets` echoue des que la forme change
+  au lieu de deviner). Le `const MIN = 60_000` doit etre resolu : lu comme 5, il
+  faisait annoncer un budget de 720 000 req/min.
+- le debit des sections precedentes est **retire** du rang du 429 : le limiteur ne
+  connaft qu'une cle IP, les sections 2-3 ont deja consomme le meme quota. Lu brut,
+  le 429 a la 528e passait pour un budget de 600 mal applique (528 + 74 = 602 ~ 600).
+- le calcul « temps avant verrou » etait une **erreur de raisonnement** : une
+  fenetre glissante se reinitialise, donc on compare `debit x fenetre` a `limit`,
+  et non `limit / debit`. Reponse reelle : 75 req par fenetre de 5 min pour 600 ->
+  **le verrou ne se declenchera jamais en passif** (8x de marge).
+- l'en-tete attendu etait faux : `draft-8` publie le **nom** du quota + le restant
+  + le delai (`"read-in-300000"; r=0; t=299`), pas le quota absolu (celui-la est
+  draft-7, desactive par `legacyHeaders: false`).
+
+### 4.6 Poids du bundle d'entree (-84 823 octets)
+- Passage de la variante lourde a la variante legere (`m`) sur les 8 fichiers qui
+  animaient, + `LazyMotion` dans `src/main.tsx` avec un **loader asynchrone**
+  (`src/motion-features.ts`). Conformement a la doc officielle Motion : la
+  version lourde ne peut pas etre allegee par le bundler au-dela de ~34 ko.
+- Aucun geste lourd dans l'app (recherche verifiee : aucun `whileHover`, `drag`,
+  `layout`, `LayoutGroup`) : `domAnimation` suffit. Le DnD de `MenuAnalysis` est
+  du DnD HTML5 natif (`React.DragEvent`), pas un geste Motion -> `domMax` etait
+  inutile.
+- ⚠ **DEFAUT SILENCIEUX attrape par le harnais, pas par le build** : la 1ere
+  version (remplacer la balise sans enrouler l'arbre dans le fournisseur) laissait
+  l'element anime **fige a `opacity: 0`** — `tsc` vert, build vert, les 30 tests de
+  `routes.spec` verts, et un ecran partiellement vide pour l'utilisateur. Seul
+  Chromium l'a vu (le harnais a rougi avant le commit)
+  (`test/e2e/motion-animation.spec.ts`, mesure l'opacite calculee du reel `dist`).
+- ⚠ **FAUX GAIN refuse** : une regle `manualChunks: { "vendor-motion":
+  ["motion/react", ...] }` rassemblait les features dans un chunk rendu
+  statiquement accessible -> cite dans `index.html`, donc charge au demarrage : le
+  gain tombait a ~40 ko. La regle est retiree, avec sa raison ecrite dans
+  `vite.config.ts` : c'est Rollup qui doit decider.
+- **Mesure avant/apres sur le meme harnais** (git stash + rebuild + relle) :
+  chunk d'entree **675 935 -> 591 112 octets**, total du chargement initial
+  identiquement **-84 823** (les vendors lourds etaient deja separe). Le chunk des
+  features (`motion-features-*.js`, 38 ko / 14 ko gzip) n'est PAS dans `index.html`.
+- ⚠ **Le controle visuel etait indispensable et n'allait pas de soi** : captures
+  avant/apres comparrees, 4 zones differentes (max 234/255). En portan le delai de
+  stabilisation a 4x, le delta tombe a **0,000 % (max 11)** : c'etaient des
+  animations saisies en cours de jeu. Sans ce contre-echantillon, on aurait either
+  signale une fausse regression, either laisse passer une vraie.
+- `scripts/verify-bundle.mjs` (`npm run verify:bundle`, 6 checks) verrouille :
+  plafond du chunk d'entree, existence du chunk de features, absence de son
+  chargement initial, presence de son import dynamique, et absence de tout import
+  de la variante lourde dans `src/` (un import oublie annule le gain pour toute
+  l'app sans rien casser de visible).
+
 ### Etat des portes (8 sept., HEAD Sprint 4)
 - `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **38** · `npx playwright test` :
-  **30** (dont le test SSE + les 2 de compression) · `npm run build` : chunk index
-  **675.94 kB** / gzip **217.99 kB**.
+  **32** (SSE + 2 compression + 2 opacite Motion) · `npm run build` : chunk d'entree
+  **591.11 kB** (591 112 octets) / les vendors lourds restent en chunk separe.
 - Verify terrain : `verify:ratelimit` 5/5 · `verify:sse` · `verify:perf` 13/13 ·
-  `verify:http` 17/17.
+  `verify:http` 17/17 · `verify:bundle` 6/6.
 - Nouveaux fichiers : `src/middleware/api-rate-limiter.ts`,
   `src/services/sensor-hub.ts`, `src/services/perf.ts`,
   `test/unit/{rate-limiter,perf}.test.ts`,
-  `scripts/{verify-ratelimit,verify-sse,verify-perf,verify-http,audit-perf}.mjs`.
+  `test/e2e/motion-animation.spec.ts`, `src/motion-features.ts`,
+  `scripts/{verify-ratelimit,verify-sse,verify-perf,verify-http,verify-bundle,audit-perf}.mjs`.
 - Les 4 verify sont exposes en scripts npm (`verify:perf`, `verify:http`,
   `verify:sse`, `verify:ratelimit`, `audit:perf`) : un reglage de perf se prouve
   avec un de ces scripts, pas dans une conversation.

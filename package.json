@@ -27,7 +27,8 @@
     "verify:http": "node scripts/verify-http.mjs",
     "verify:sse": "node scripts/verify-sse.mjs",
     "verify:ratelimit": "node scripts/verify-ratelimit.mjs",
-    "audit:perf": "node scripts/audit-perf.mjs"
+    "audit:perf": "node scripts/audit-perf.mjs",
+    "verify:bundle": "node scripts/verify-bundle.mjs"
   },
   "build": {
     "appId": "com.agentculinaire.os",

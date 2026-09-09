@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
@@ -42,7 +43,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 w-full max-w-md pointer-events-none px-4">
         <AnimatePresence>
           {toasts.map((t) => (
-            <motion.div
+            <motionSlim.div
               key={t.id}
               role="status"
               initial={{ opacity: 0, y: -16 }}
@@ -60,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               >
                 <X className="w-4 h-4 opacity-60 hover:opacity-100" />
               </button>
-            </motion.div>
+            </motionSlim.div>
           ))}
         </AnimatePresence>
       </div>
