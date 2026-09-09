@@ -89,6 +89,45 @@ function loadYamlParser() {
 
 // --- Extraction des jobs depuis l'arbre parse --------------------------------
 
+// Deux dependances INVISIBLES localement, chacune prouvable seulement par
+// lecture du lockfile :
+//   (a) le parseur YAML doit etre DECLARE dans package.json. Le resoudre par
+//       essais ne suffit pas : tant qu'il etait un emprunt a l'arbre transitive
+//       d'un autre paquet, `npm ci` l'installait par chance, pas par contrat,
+//       et il suffisait qu'un de ces paquets devienne optional pour que le job
+//       rougisse sans qu'aucun test local ne puisse le voir.
+//   (b) les binaires natifs x64 des outils de build. Le lockfile est genere sur
+//       ARM64 ; si une de ces entrees disparait, `vite build` casse en CI avec
+//       MODULE_NOT_FOUND alors que tout est vert ici.
+function auditLockfile(pkg, lock) {
+  const declared = { ...(pkg.devDependencies || {}), ...(pkg.dependencies || {}) };
+  const inDev = Object.prototype.hasOwnProperty.call(declared, 'js-yaml');
+  check('parseur YAML DECLARE dans package.json', inDev,
+    inDev ? 'js-yaml = ' + declared['js-yaml'] + ' (plus un emprunt transitive)'
+          : "present dans node_modules mais NON DECLARE : 'npm ci' ne le doit pas. " +
+            "Fix: npm install --save-dev --save-exact js-yaml@<version>");
+
+  const pkgs = (lock && lock.packages) || {};
+  const X64 = [
+    '@esbuild/linux-x64',
+    '@rollup/rollup-linux-x64-gnu',
+    '@tailwindcss/oxide-linux-x64-gnu',
+    'lightningcss-linux-x64-gnu',
+    '@napi-rs/canvas-linux-x64-gnu',
+  ];
+  const missing = X64.filter((n) => !(('node_modules/' + n) in pkgs));
+  const opt = Object.keys(pkg.optionalDependencies || {});
+  const notDeclared = X64.filter((n) => !opt.includes(n));
+  const lockOk = missing.length === 0;
+  const optOk = notDeclared.length === 0;
+  check('lockfile: binaires natifs x64 presents', lockOk,
+    lockOk ? X64.length + ' entrees x64 verifiees dans package-lock.json'
+           : 'absentes du lockfile (le runner est x86_64, la machine est ARM64) : ' + missing.join(', '));
+  check('package.json: x64 en optionalDependencies', optOk,
+    optOk ? 'les memes declarees en optionalDependencies'
+          : 'non declarees (MODULE_NOT_FOUND en CI) : ' + notDeclared.join(', '));
+}
+
 function readJobs(load, text) {
   const doc = load(text);
   if (!doc || typeof doc !== 'object') return null;
@@ -166,6 +205,16 @@ function main() {
   }
   check('parseur YAML reel disponible', true,
     parser.name + ' (essais : ' + (parser.tried.join(', ') || 'aucun') + ')');
+
+  // Audit du lockfile : ne bloque pas la suite (le YAML reste le contrat),
+  // mais rend visible un regression d'install que le local ne peut pas voir.
+  try {
+    auditLockfile(
+      JSON.parse(readFileSync(repoRoot + '/package.json', 'utf8')),
+      JSON.parse(readFileSync(repoRoot + '/package-lock.json', 'utf8')));
+  } catch (err) {
+    check('package-lock.json lisible', false, 'lecture impossible : ' + (err && err.message));
+  }
 
   let jobs;
   try {
