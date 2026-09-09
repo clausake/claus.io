@@ -327,12 +327,69 @@ corrignes, chacun avec sa raison :
   de la variante lourde dans `src/` (un import oublie annule le gain pour toute
   l'app sans rien casser de visible).
 
+### 4.7 Les routes « lentes » n'etaient PAS un probleme d'index (1 index sur 6 retenu)
+Aucun `CREATE INDEX` n'existait dans `src/db/init.ts` et six routes sortaient en
+p95 de 3 a 8 ms. L'intuition (« pas d'index donc c'est lent ») etait FAUSSE, et
+l'affirmer sans mesure aurait ajoute 6 index payants a l'ecriture pour rien.
+`scripts/ab-indices.py` (`npm run verify:indices`) tranche l'affaire :
+
+- **Volume d'abord, verdict ensuite.** Sur la base de demarrage (2 lignes
+  versionnees), un scan de table coute des microsecondes : la mesure ne pouvait
+  rien dire. Le harnais seede donc un volume de resto (180 articles, 6000 tarifs,
+  4000 plannings, 2500 factures, 3000 releves) et **verifie ses propres
+  compteurs en base** : `id TEXT PRIMARY KEY` n'est pas auto-incremente, donc un
+  `INSERT` qui omet `id` REUSSIT et ne seme RIEN. Sans ce garde, tout le verdict
+  portait sur une base vide.
+- ⚠ **Le p95 HTTP ne peut pas trancher.** Le bruit inter-bloc y est de 9 a 11 ms
+  pour un effet d'index attendu de ~10 ms : trois reglages differents du nombre
+  de passages y changeaient le verdict (une fois "GAIN REEL", une fois "NON
+  CONCLUANT" sur la MEME route). La decision est donc prise sur la **couche SQL
+  pure** (`sql_bench`, hors HTTP), ou le bruit tombe a la resolution de l'horloge.
+  Le p95 HTTP est quand meme rapporte, comme contexte, avec sa marge de bruit.
+- Deux pieges de harnais corriges en route, chacun grave en commentaire dans le
+  script : (a) `tsx` est lance par **node** et non par `sys.executable` — lance
+  par python, le shim shell meurt d'un `SyntaxError` qui se lit « serveur pas
+  pret » ; (b) chaque bloc demarre un processus NEUF, donc sans echauffement
+  (statements prepares + cache de pages froids) le verdict depend de l'ordre des
+  bras et non de l'index.
+- Trois passes de suite, meme classement : un seul candidat depasse le seuil de
+  15 % de gain SQL.
+
+| index candidat | p95 SQL sans | avec | gain | decision |
+| --- | --- | --- | --- | --- |
+| `temperature_logs(recorded_at DESC)` | 0,171 ms | 0,031 ms | **+82 %** | **RETENU** |
+| `supplier_prices(inventory_id)` | 5,796 | 5,792 | +0,1 % | refuse |
+| `staff_schedule(day)` | 0,094 | 0,094 | +0,4 % | refuse |
+| `staff(active)` | 0,015 | 0,015 | -0,5 % | refuse |
+| `documents(date)` | 0,351 | 0,376 | -7,0 % | refuse |
+| `supplier_prices(supplier_id)` | (idem jointure) | | | refuse |
+
+- Seul le gagnant est installe, dans `src/db/init.ts` : `SELECT * ... ORDER BY
+  recorded_at DESC LIMIT 50` etait un scan complet + tri temporaire
+  (`USE TEMP B-TREE`); l'index donne un parcours deja trie et le `LIMIT 50`
+  arrete la lecture apres 50 clefs. Verifie sur **base neuve** et sur **base
+  existante** (le cas des clients deja installes) : l'index reapparait apres un
+  redemarrage ou on l'a supprime, et le plan de la route dit `SCAN temperature_logs
+  USING INDEX ix_temperature_logs_recorded`.
+- ⚠ `CREATE INDEX IF NOT EXISTS` est ici une **obligation** et non une comfort :
+  `initDatabase()` tourne a chaque demarrage sur la base du client. Le `try/catch`
+  ne fait pas echouer le demarrage si le moteur est trop vieux pour un index DESC :
+  la requete reste correcte, seulement plus lente.
+- Les 5 refuses sont **la decision**, pas un oubli : un index non prouve est une
+  dette de plus a chaque ecriture (le webhook IoT des capteurs HACCP ecrit en
+  continu), et le cout d'ecriture des 6 etait deja mesure (sous la resolution de
+  l'horloge, +23 % sur un nombre trop petit pour etre significatif).
+
 ### Etat des portes (8 sept., HEAD Sprint 4)
 - `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **38** · `npx playwright test` :
   **32** (SSE + 2 compression + 2 opacite Motion) · `npm run build` : chunk d'entree
   **591.11 kB** (591 112 octets) / les vendors lourds restent en chunk separe.
 - Verify terrain : `verify:ratelimit` 5/5 · `verify:sse` · `verify:perf` 13/13 ·
-  `verify:http` 17/17 · `verify:bundle` 6/6.
+  `verify:http` 17/17 · `verify:bundle` 6/6 · `verify:indices` (A/B + plan).
+- Prochaine cible reelle (mesuree, pas supposee) : `/api/dashboard/stats` fait
+  **12 appels `db.all/get` par tour** (dont 7 agregats) et c'est ce qui fait son
+  p95, pas les scans. La reduction du nombre d'appels — ou la mise en cache de
+  l'agregat — est le levier, pas un index.
 - Nouveaux fichiers : `src/middleware/api-rate-limiter.ts`,
   `src/services/sensor-hub.ts`, `src/services/perf.ts`,
   `test/unit/{rate-limiter,perf}.test.ts`,
@@ -343,8 +400,8 @@ corrignes, chacun avec sa raison :
   avec un de ces scripts, pas dans une conversation.
 - ⚠ `scripts/audit-perf.mjs` reste l'outil de mesure du temps reel : le lancer
   avant de toucher au polling, au cache ou au rate-limit. Ce qu'il revele ENCORE :
-  le chunk index depasse 500 kB apres minification (vendors `react-dom`, `motion-dom`)
-  et les routes de scan sans index qui ressortent en p95.
+  le chunk d'entree a 591 kB (vendors `react-dom` surtout) et le p95 de
+  `/api/dashboard/stats` (voir 4.7 : il n'etait PAS du aux index).
 
 ### UI/UX Sprint 1 (commit `6fe1c44`)
 1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
