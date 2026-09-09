@@ -33,6 +33,15 @@ export default defineConfig(({mode}) => {
           // Vendors utilitaires : partages par plusieurs vues lazy, Rollup les
           // hoistait dans le chunk principal. Ici ils ne chargent qu'a la demande.
           manualChunks: {
+            // ⚠ Pas de regle pour Motion : une entree ["motion/react", ...] a
+            // deja ete testee et FAISAIT ECHEC la separation. Elle rassemble tous
+            // les modules du paquet dans un seul chunk, y compris les features
+            // lourdes que `LazyMotion` est cense charger a la demande ; comme
+            // l'enveloppe legere (`m` + `LazyMotion`) est importee statiquement,
+            // le chunk fusionne devient statiquement accessible et se retrouve
+            // cite dans index.html — les features se chargedaient donc au
+            // chargement initial, et le gain se reduisait a peines rien (~40 ko).
+            // Laisser Rollup decider produit le chunk asynchrone attendu.
             "vendor-charts": ["recharts"],
             "vendor-pdf": ["jspdf", "jspdf-autotable"],
             "vendor-csv": ["papaparse"],

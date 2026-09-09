@@ -44,3 +44,24 @@ e2e-test:
   script:
     - npm ci --cache .npm --prefer-offline
     - npx playwright test
+
+# Preuves terrain (verify:*). Ces scripts ne testent pas une fonction, ils
+# empechent un REGRESSION de contrat : latence par route, gzip + cache des assets,
+# diffusion SSE, budgets de rate-limit, et poids du chunk d'entree. Ils demarrent
+# leur propre serveur sur un port isole (comme la suite e2e) et exigent le `dist`
+# reel pour ceux qui exercent la branche `NODE_ENV=production` -> artifacts dist/.
+# Un reglage de perf qui change sans passer par la est un reglage non verifie.
+verify-test:
+  stage: test
+  needs: [build]
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run verify:bundle
+    - npm run verify:http
+    - npm run verify:perf
+    - npm run verify:sse
+    - npm run verify:ratelimit
+  artifacts:
+    paths:
+      - dist/
+    when: always

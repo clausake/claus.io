@@ -23,7 +23,8 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { MediaDisplay, getCostModifier, getIngredientEffectivePrice, getSupplierForIngredient } from "../lib/helpers";
@@ -1541,7 +1542,7 @@ export function FichesTechniques({
             ref={outerModalScrollRef}
             className={`fixed inset-0 z-[100] flex items-start md:items-center justify-center overflow-y-auto custom-scrollbar bg-black/80 backdrop-blur-md ${isRecipeModalFullScreen ? "p-0" : "p-4 md:p-12"}`}
           >
-            <motion.div
+            <motionSlim.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1551,7 +1552,7 @@ export function FichesTechniques({
               }}
               className="fixed inset-0"
             />
-            <motion.div
+            <motionSlim.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2342,7 +2343,7 @@ export function FichesTechniques({
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </motionSlim.div>
           </div>
         )}
       </AnimatePresence>
