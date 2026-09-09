@@ -408,7 +408,7 @@ Deux dependances du runner portaient le pipeline, connues seulement par des
 commentaires dans `.gitlab-ci.yml`. Un contrat ecrit en prose se perd : le
 commentaire de `needs: [build]` avait deja ete reecrit trois fois, et chaque
 reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
-(`npm run verify:ci`, 14 checks) le verrouille desormais par execution.
+(`npm run verify:ci`, 17 checks) le verrouille desormais par execution.
 
 - ⚠ **Une regex sur le YAML donnait un faux vert.** Les commentaires de
   documentation contiennent deja les mots `needs` et `build` : un test textuel
@@ -438,6 +438,31 @@ reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
   `needs: [build]`, retirer `--with-deps`, falsifier l'artefact `dist/`,
   debrancher `verify:ci` du YAML. Les 4 → `rc=1` avec le check fautif nomme.
   Un garde jamais essaye en faute est une decoration.
+- ⚠ **Deux dependances invisibles localement, desormais verrouillees par le garde**
+  (lecture du lockfile, pas de lintention) :
+  1. `js-yaml` etait un **emprunt a l'arbre transitive** d'`electron-builder`
+     (via `app-builder-lib`/`builder-util`/`dmg-builder`, tout en `dev`).
+     `npm ci` l'installait par chance et non par contrat : il suffisait qu'un
+     ancetre devienne `optional` pour que le job `lint` rougisse sur
+     `npm run verify:ci` sans qu'AUCUN test local ne puisse le voir. Corrige
+     pour de vrai : `js-yaml` est declare en `devDependencies` (`4.3.2`, la
+     meme revision que le lockfile) et le garde verifie desormais qu'il est
+     **declare**, pas seulement qu'il est present dans `node_modules`.
+     Prouve par test negatif : retirer la declaration => `rc=1` sur le check
+     `parseur YAML DECLARE dans package.json`.
+  2. les **binaires natifs x64** du build. Le `package-lock.json` est genere sur
+     ARM64 ; si une entrees `*-linux-x64*` disparait, `vite build` casse en CI
+     (`MODULE_NOT_FOUND`) alors que tout est vert ici. Le garde recense les 5
+     entrees du lockfile ET les 5 declarations en `optionalDependencies`. Prouve
+     par test negatif : supprimer `lightningcss-linux-x64-gnu` du lockfile =>
+     `rc=1` sur le check `lockfile: binaires natifs x64 presents`.
+  Piege rencontre en ecrivant ces checks : `!('node_modules/' + n) in pkgs`
+  n'est PAS `!(cle in pkgs)` -- la precedance fait de `!chaine` un booleen puis
+  le compare par `in`, donc le check etait **toujours vert** (un PASS creux,
+  exactement ce que ce projet refuse). La forme correcte parente l'expression
+  ENTIERE : `!(('node_modules/' + n) in pkgs)`. Seul le test negatif revele un
+  check creux -- `node --check` ne voit pas la precedance.
+
 - Le garde tourne dans le job **`lint`** (et non `e2e-test`) : il doit pouvoir
   rougir **avant** qu'on paie l'install des navigateurs. Choix verifie par probe
   et non suppose : `npx playwright test --list` rend `rc=0` et enumere les 32
