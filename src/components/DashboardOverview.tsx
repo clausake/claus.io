@@ -18,7 +18,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { motion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
+import * as motionSlim from "motion/react-m";
 
 export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
   const [stats, setStats] = useState({
@@ -167,7 +168,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
       </div>
       {/* Bento Grid Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <motion.div
+        <motionSlim.div
           onClick={() => setActiveCard("stock")}
           className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "stock"
@@ -196,9 +197,9 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
               {t.liveActive || "Actif en direct"}
             </span>
           </div>
-        </motion.div>
+        </motionSlim.div>
 
-        <motion.div
+        <motionSlim.div
           onClick={() => setActiveCard("alerts")}
           className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "alerts"
@@ -239,9 +240,9 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
               {stats.criticalItems} {t.shortages || "Ruptures"}
             </span>
           </div>
-        </motion.div>
+        </motionSlim.div>
 
-        <motion.div
+        <motionSlim.div
           onClick={() => setActiveCard("robots")}
           className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "robots"
@@ -282,9 +283,9 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
               {t.connected || "Connectés"}
             </span>
           </div>
-        </motion.div>
+        </motionSlim.div>
 
-        <motion.div
+        <motionSlim.div
           onClick={() => setActiveCard("labor")}
           className={`glass-panel p-4 md:p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 ${
             activeCard === "labor"
@@ -323,7 +324,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
               {t.today || "Aujourd'hui"}
             </span>
           </div>
-        </motion.div>
+        </motionSlim.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
