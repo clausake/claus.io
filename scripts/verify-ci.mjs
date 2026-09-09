@@ -128,6 +128,43 @@ function auditLockfile(pkg, lock) {
           : 'non declarees (MODULE_NOT_FOUND en CI) : ' + notDeclared.join(', '));
 }
 
+// La preuve d'un job rouge se verrouille comme le reste. Le pipeline
+// #2833166731 a eu un job e2e ROUGE sans aucune trace exploitable : e2e-test
+// ne declarait pas d'artefact, donc GitLab a jete test-results/, le seul cas
+// ou il servait. La cause a du etre devinee par reproduction locale.
+//
+// Deux mots decident tout, et aucun n'est visible dans un test local :
+//   - 'when: always' sur l'artefact. Par defaut GitLab ne collecte PAS quand
+//     le job rougit : le defaut est donc exactement l'inverse de ce qui sert.
+//   - les reglages du config qui PRODUISENT la preuve. Verifie par sonde (un
+//     test volontairement faux sur le fixture 'page') : avec eux un echec
+//     laisse test-failed.png + trace.zip + error-context.md ; sans eux, seul
+//     error-context.md survit et rien de visuel.
+function auditPreuveE2E(job) {
+  const art = job.artifacts || {};
+  const paths = JSON.stringify(art.paths || []);
+  const collecte = paths.indexOf('test-results') >= 0;
+  check('e2e-test collecte test-results/', collecte,
+    collecte ? 'paths = ' + paths : 'AUCUN artefact : un job rouge est AVEUGLE');
+    check('artefact e2e en when: always', art.when === 'always',
+      art.when === 'always'
+        ? 'GitLab collecte meme quand le job rougit'
+        : ('when=' + String(art.when) + ' : GitLab ne collecte RIEN sur un job rouge,',
+          'or cest le seul cas ou la preuve sert'));
+}
+
+function auditConfigPlaywright(src) {
+  const want = [
+    ['screenshot', /screenshot\s*:\s*["']only-on-failure["']/],
+    ['trace', /trace\s*:\s*["']retain-on-failure["']/],
+    ['outputDir', /outputDir\s*:\s*["']test-results["']/],
+  ];
+  const missing = want.filter((w) => !w[1].test(src)).map((w) => w[0]);
+  check('playwright.config produit la preuve', missing.length === 0,
+    missing.length ? 'manquant(s) : ' + missing.join(', ') + ' (verifie par sonde)'
+                   : 'capture + trace + outputDir');
+}
+
 function readJobs(load, text) {
   const doc = load(text);
   if (!doc || typeof doc !== 'object') return null;
@@ -272,6 +309,14 @@ function main() {
     check('--with-deps obligatoire (un fixture page est exerce)', installWithDeps,
       browserSpecs.map((f) => f.slice(repoRoot.length + 1)).join(', ') +
       ' -> sans les libs systeme, le job rougit sur le lancement de Chromium');
+  }
+
+  // Le contrat de preuve : un job rouge doit LAISSER une trace collectee.
+  auditPreuveE2E(e2e);
+  {
+    const cfg = repoRoot + '/playwright.config.ts';
+    if (existsSync(cfg)) auditConfigPlaywright(readFileSync(cfg, 'utf8'));
+    else check('playwright.config.ts present', false, cfg);
   }
 
   // Regle 3 -- les preuves de contrat ne doivent pas rester muettes.
