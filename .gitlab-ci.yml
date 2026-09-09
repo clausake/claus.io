@@ -41,6 +41,20 @@ unit-test:
 # Le runner doit permettre les ports locaux (pas de problème sur runner docker).
 e2e-test:
   stage: test
+  # ⚠ `needs: [build]` est une OBLIGATION depuis que test/e2e/motion-animation
+  # .spec.ts existe, et le pipeline #2831926289 l'a prouve en rougissant : la
+  # suite e2e est lancee sans le `dist/` du job `build`, or ce harnais (a) exige
+  # dist/index.html et (b) demarre le serveur en NODE_ENV=production, la seule
+  # branche qui sert le vrai bundle. Sans l'artefact, le job echoue sur
+  # « dist/ absent » et n'execute meme pas le reste de la suite.
+  #
+  # Le piege etait total en local : `dist/` traine dans l'arborescence de
+  # developpement, donc la suite passait ici et rougissait la haut. La legon
+  # (consigne utile, du manuel des pipelines): un test qui depend d'un
+  # artefact doit declarer le job qui le produit, et on le VERIFIE en
+  # supprimant l'artefact (make dist-reproduce dist/rm), pas en le laissant
+  # trainer dans l'arbre.
+  needs: [build]
   script:
     - npm ci --cache .npm --prefer-offline
     - npx playwright test
