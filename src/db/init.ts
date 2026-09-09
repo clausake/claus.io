@@ -305,6 +305,38 @@ export async function initDatabase(): Promise<DbInitResult> {
   await ensureColumn("temperature_logs", "entry_type", "TEXT DEFAULT 'manuel'");
   await ensureColumn("temperature_logs", "sensor_mode", "TEXT DEFAULT 'online'");
   await ensureColumn("temperature_logs", "sensor_id", "TEXT");
+  // Index de temperature_logs(recorded_at).
+  //
+  // Le SEUL index ajoute dans ce fichier, et il est ajoute parce qu'il a ete
+  // MESURE, pas parce que la table lui a paru devoir en avoir un. Le harnais
+  // `scripts/ab-indices.py` compare, sur une base seedee a volume de resto
+  // (3000 relevements), la requete de /api/haccp/production-history :
+  //   p95 SQL 0,171 ms SANS index  ->  0,031 ms AVEC  (gain 82 %)
+  // et montre que les 5 autres candidats (supplier_prices x2, staff.active,
+  // documents.date, staff_schedule.day) restent sous le bruit : le plan SQLite
+  // les garde en 'SCAN' et le gain mesure est <= 1 %. Ils ont donc ete REFUSES.
+  //
+  // Pourquoi c'est celui-la qui gagne la: `SELECT * FROM temperature_logs
+  // ORDER BY recorded_at DESC LIMIT 50` est un scan complet + tri temporaire
+  // (USE TEMP B-TREE) ; l'index donne un parcours deja trie et le LIMIT 50
+  // arrete la lecture apres 50 clefs au lieu de lire toute la table.
+  //
+  // ⚠ CREATE INDEX IF NOT EXISTS est ici une obligation, pas une comfort : la
+  // base des clients deja installees contient cette table sans index, et cette
+  // migration tourne a chaque demarrage (initDatabase). IF NOT EXISTS la rend
+  // idempotente et donc relancable sans effet de bord sur les donnees.
+  try {
+    await db.exec(
+      "CREATE INDEX IF NOT EXISTS ix_temperature_logs_recorded ON temperature_logs(recorded_at DESC)",
+    );
+  } catch (e) {
+    // Un index DESC n'est pas supporte par les tres vieux moteur SQLite. Si la
+    // création echoue, l'application doit quand meme demarrer : la requete reste
+    // correcte (SQLite trie alors lui-meme), elle est seulement plus lente.
+    // Le tag [SCHEMA] reprend la convention des autres migrations de ce fichier.
+    console.error(`[SCHEMA] Failed to create index on temperature_logs(recorded_at):`, e);
+  }
+
   // NOTE Phase 0 : l'ancienne logique "shadow files" a été supprimée.
   // La date d'installation vit désormais uniquement dans SQLite (app_license).
   await db.exec(`
