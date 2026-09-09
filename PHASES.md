@@ -403,6 +403,62 @@ l'affirmer sans mesure aurait ajoute 6 index payants a l'ecriture pour rien.
   le chunk d'entree a 591 kB (vendors `react-dom` surtout) et le p95 de
   `/api/dashboard/stats` (voir 4.7 : il n'etait PAS du aux index).
 
+### 4.8 Le contrat du pipeline est VERIFIE par un script, plus raconte (Sprint 4.8)
+Deux dependances du runner portaient le pipeline, connues seulement par des
+commentaires dans `.gitlab-ci.yml`. Un contrat ecrit en prose se perd : le
+commentaire de `needs: [build]` avait deja ete reecrit trois fois, et chaque
+reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
+(`npm run verify:ci`, 14 checks) le verrouille desormais par execution.
+
+- ⚠ **Une regex sur le YAML donnait un faux vert.** Les commentaires de
+  documentation contiennent deja les mots `needs` et `build` : un test textuel
+  « le YAML mentionne-t-il needs ? » annoncait un contrat tenu qu'il ne
+  verifiait pas. Le garde ne lit donc QUE l'arbre reellement parse, par un
+  **parseur YAML reel** (`js-yaml`, resolu par essais et non recopie a la main :
+  le nom affiche dans une console peut mentir sur le nom installe), et il
+  **rougit au lieu de simuler** si aucun parseur exploitable n'est disponible.
+- Les deux regles verrouillees, chacune acquise par MESURE et non par
+  supposition (motifs graves dans l'en-tete du script) :
+  1. `e2e-test.needs: [build]` — le harnais d'opacite Motion lit
+     `dist/index.html` et demarre en `NODE_ENV=production`. Prouve en RETIRANT
+     l'artefact (`mv dist .hold && npx playwright test` → rougit sur
+     « dist/ absent »), pas en le laissant trainer dans l'arbre local.
+  2. `npx playwright install --with-deps` — seul `motion-animation.spec.ts`
+     exerce le fixture `page` (la suite historique n'utilise que `request`, qui
+     ne lance **aucun** navigateur). Mesure dans un conteneur `node:22`,
+     `dist/` construit sur place pour ne pas confondre les deux causes :
+     sans install `rc=1` · `install` seul `rc=0` **puis le spec `rc=1`** ← le
+     point qui compte, `install --with-deps` `rc=0` et les 32 tests passent.
+- La regle 2 n'est pas applinee aveuglement : le garde **detecte les fixtures
+  reellement destructures** (`page`/`browser`/`context` vs `request`). Renommer
+  un spec ne peut donc pas faire disparaitre la dependance, et un suite 100 %
+  `request` n'exigerait pas l'install des navigateurs.
+- ⚠ **Un garde qui ne mord pas ne vaut rien.** Test negatif, 4 fautes injectees
+  dans des copies isolees (`/tmp`, `node_modules` symlinke) : retirer
+  `needs: [build]`, retirer `--with-deps`, falsifier l'artefact `dist/`,
+  debrancher `verify:ci` du YAML. Les 4 → `rc=1` avec le check fautif nomme.
+  Un garde jamais essaye en faute est une decoration.
+- Le garde tourne dans le job **`lint`** (et non `e2e-test`) : il doit pouvoir
+  rougir **avant** qu'on paie l'install des navigateurs. Choix verifie par probe
+  et non suppose : `npx playwright test --list` rend `rc=0` et enumere les 32
+  tests meme avec `PLAYWRIGHT_BROWSERS_PATH` pointe sur un repertoire vide —
+  l'enumcration des specs ne lance pas de navigateur.
+
+### Etat des portes (9 sept., HEAD Sprint 4.8)
+- `npx tsc --noEmit` : 0 erreur · `vitest` : **38** · `playwright` : **32** ·
+  `npm run build` : chunk d'entree **591.11 kB**.
+- 7/7 preuves de contrat vertes : `verify:bundle` · `verify:http` ·
+  `verify:perf` · `verify:sse` · `verify:ratelimit` · `verify:indices` ·
+  **`verify:ci` 14/14** (nouveau, expose en script npm et branche dans `lint`).
+- ⚠ Piege d'outillage rencontre pendant cette phase : les literals d'octets
+  Python `b'...\xe9'` ne sont **pas** de l'UTF-8 (`\xe9` est l'octet latin-1
+  isol de « é » ; l'UTF-8 est `\xc3\xa9`). Un tel octet rend le YAML
+  **illisible** par tout parseur et par `git diff`, et l'erreur ne se voit ni a
+  l'ecran, ni dans l'editeur : seul `bytes.decode('utf-8')` (ou le launch du
+  job) la revele. Les fichiers contenant des accents sont donc ecrits par
+  l'interpreteur en texte UTF-8 (`open(..., encoding='utf-8')`) et **verifies
+  par re-decodage**, jamais par un literal d'octets.
+
 ### UI/UX Sprint 1 (commit `6fe1c44`)
 1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
    statut (ok/warn/danger/info), catégories menu, ombres (3 niveaux).

@@ -17,6 +17,11 @@ lint:
   script:
     - npm ci --cache .npm --prefer-offline
     - npx tsc --noEmit
+    # Le contrat du pipeline est VERIFIE, pas raconte : voir scripts/verify-ci.mjs.
+    # Placici et non dans e2e-test : le job doit pouvoir rougir avant qu'on paie
+    # l'install des navigateurs, et l'enumcration des specs ne les exige pas (mesuré
+    # rc=0 avec PLAYWRIGHT_BROWSERS_PATH vide).
+    - npm run verify:ci
 
 build:
   stage: verify
@@ -41,24 +46,38 @@ unit-test:
 # Le runner doit permettre les ports locaux (pas de problème sur runner docker).
 e2e-test:
   stage: test
-  # ⚠ `needs: [build]` est une OBLIGATION depuis que test/e2e/motion-animation
-  # .spec.ts existe, et le pipeline #2831926289 l'a prouve en rougissant : la
-  # suite e2e est lancee sans le `dist/` du job `build`, or ce harnais (a) exige
-  # dist/index.html et (b) demarre le serveur en NODE_ENV=production, la seule
-  # branche qui sert le vrai bundle. Sans l'artefact, le job echoue sur
-  # « dist/ absent » et n'execute meme pas le reste de la suite.
-  #
-  # Le piege etait total en local : `dist/` traine dans l'arborescence de
-  # developpement, donc la suite passait ici et rougissait la haut. La legon
-  # (consigne utile, du manuel des pipelines): un test qui depend d'un
-  # artefact doit declarer le job qui le produit, et on le VERIFIE en
-  # supprimant l'artefact (make dist-reproduce dist/rm), pas en le laissant
-  # trainer dans l'arbre.
+  # ⚠ Deux dependances du runner, chacune acquise par une MESURE et non par
+  # supposition. Le pipeline #2831926289 a rougi sur la premiere; la seconde au
+  # aurait fait rougir le pipeline suivant.
+
+  # 1) needs: [build] -- test/e2e/motion-animation.spec.ts lit dist/index.html et
+  #    demarre en NODE_ENV=production, la seule branche qui sert le vrai bundle.
+  #    Sans l'artefact du job build, son beforeAll jette « dist/ absent » et le
+  #    reste de la suite ne s'execute meme pas. Le piege etait total en local:
+  #    dist/ traine dans l'arbre de developpement, donc la suite etait verte ici
+  #    et rouge la haut. On le verifie en RETIRANT l'artefact:
+  #      mv dist .hold && npx playwright test   # doit rougir sur 'dist/ absent'
+
+  # 2) playwright install --with-deps -- seul ce spec utilise le fixture 'page'
+  #    (la suite historique n'utilise que le fixture 'request', qui ne lance
+  #    aucun navigateur), et l'image node:22 n'embarque NI les navigateurs NI
+  #    leurs bibliotheques systeme. Mesure dans un conteneur node:22 -- la meme
+  #    image que la CI -- en construisant dist/ dans le conteneur pour ne pas
+  #    confondre les deux causes (la 1ere campagne, sans dist/, etait contaminee):
+  #      sans install              rc=1  'Executable does not exist'
+  #      install                   rc=0  PUIS le spec: rc=1  <-- NE SUFFIT PAS
+  #      install --with-deps       rc=0  PUIS le spec: rc=0
+  #      suite complete            rc=0  (32 tests)
+  #    Le 'rc=1' du milieu est le point qui compte: sans --with-deps les libs
+  #    systeme de Chromium manquent et le job reste ROUGE. scripts/verify-ci.mjs
+  #    verrouille desormais cette regle pour qu'elle ne se perde plus en silence.
   needs: [build]
   script:
     - npm ci --cache .npm --prefer-offline
+    # --with-deps installe les libs systeme que Chromium exige. Verifie dans le
+    # conteneur: uid=0 et /usr/bin/apt-get presents dans node:22.
+    - npx playwright install --with-deps
     - npx playwright test
-
 # Preuves terrain (verify:*). Ces scripts ne testent pas une fonction, ils
 # empechent un REGRESSION de contrat : latence par route, gzip + cache des assets,
 # diffusion SSE, budgets de rate-limit, et poids du chunk d'entree. Ils demarrent
