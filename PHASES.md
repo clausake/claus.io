@@ -408,7 +408,7 @@ Deux dependances du runner portaient le pipeline, connues seulement par des
 commentaires dans `.gitlab-ci.yml`. Un contrat ecrit en prose se perd : le
 commentaire de `needs: [build]` avait deja ete reecrit trois fois, et chaque
 reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
-(`npm run verify:ci`, 17 checks) le verrouille desormais par execution.
+(`npm run verify:ci`, 20 checks) le verrouille desormais par execution.
 
 - ⚠ **Une regex sur le YAML donnait un faux vert.** Les commentaires de
   documentation contiennent deja les mots `needs` et `build` : un test textuel
@@ -468,6 +468,37 @@ reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
   et non suppose : `npx playwright test --list` rend `rc=0` et enumere les 32
   tests meme avec `PLAYWRIGHT_BROWSERS_PATH` pointe sur un repertoire vide —
   l'enumcration des specs ne lance pas de navigateur.
+
+### 4.10 Un job e2e rouge etait AVEUGLE : la preuve n'etait pas collectee
+Le pipeline #2833166731 a rendu un job en echec **sans aucune trace
+exploitable** : impossible de dire pourquoi sans reproduire. Cause structurelle,
+et non un hasard : `e2e-test` ne declarait **aucun** `artifacts`, donc GitLab
+jetait `test-results/` au moment meme ou il devenait utile.
+
+- **Le mot qui decide est `when: always`.** Par defaut GitLab ne collecte les
+  artefacts que si le job reussit — le defaut est donc exactement l'inverse de
+  ce qui sert. Sans lui, declarer `test-results/` ne change rien sur un rouge.
+- **Encore faut-il que Playwright PRODUISE quelque chose.** Verifie par sonde
+  (un test volontairement faux, une fois sur `request`, une fois sur `page`) :
+  sans reglages, un echec ne laisse qu'`error-context.md` (799 o) et **rien de
+  visuel** ; avec `screenshot: 'only-on-failure'` + `trace: 'retain-on-failure'`
+  + `outputDir: 'test-results'`, un echec du fixture `page` laisse
+  `test-failed.png` (4 254 o) + `trace.zip` (4 394 o, rejouable) + `error-context.md`.
+  La trace se rejoue ensuite hors GitLab, ce qui rend le debuggage possible sans
+  acces au runner.
+- Ces reglages ne coutent rien a la suite historique : elle n'utilise que le
+  fixture `request`, qui ne lance **aucun** navigateur, donc ni capture ni trace.
+  Le seul spec qui paie est celui du harnais Motion — celui dont on a besoin.
+- Les trois regles sont desormais **verrouillees par le garde** (`verify:ci`,
+  17 → 20 checks) et les trois **mordent** (test negatif : retirer `when: always`
+  du YAML, retirer les `paths`, retirer les reglages du config → `rc=1` avec le
+  check fautif nomme a chaque fois).
+- ⚠ Le garde a failli etre **creux** a l'ecriture : `!('node_modules/' + n) in pkgs`
+  n'est pas `!(cle in pkgs)` — la precedance fait un booleen puis un `in` sur
+  autre chose, donc le check etait **toujours vert**. `node --check` ne voit pas
+  ca (syntaxe seule). Un PASS qui ne peut pas etre un FAIL n'est pas une mesure.
+
+### 4.9 Le parseur YAML etait un emprunt transitive (dependance invisible)
 
 ### Etat des portes (9 sept., HEAD Sprint 4.8)
 - `npx tsc --noEmit` : 0 erreur · `vitest` : **38** · `playwright` : **32** ·

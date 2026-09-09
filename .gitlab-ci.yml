@@ -78,6 +78,17 @@ e2e-test:
     # conteneur: uid=0 et /usr/bin/apt-get presents dans node:22.
     - npx playwright install --with-deps
     - npx playwright test
+  # ⚠ `when: always` est le MOT QUI COMPTE. Sans lui GitLab ne collecte rien
+  # quand le job rougit : or c'est exactement le seul cas ou la preuve sert.
+  # Le pipeline #2833166731 a eu un job rouge SANS aucune trace exploitable
+  # (aucun artifact declare) : la cause a du etre devinee par reproduction
+  # locale au lieu d'etre lue. test-results/ porte, pour chaque test en
+  # echec, error-context.md + la capture + la trace rejouable.
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - test-results/
 # Preuves terrain (verify:*). Ces scripts ne testent pas une fonction, ils
 # empechent un REGRESSION de contrat : latence par route, gzip + cache des assets,
 # diffusion SSE, budgets de rate-limit, et poids du chunk d'entree. Ils demarrent
