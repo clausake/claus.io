@@ -305,26 +305,57 @@ export async function initDatabase(): Promise<DbInitResult> {
   await ensureColumn("temperature_logs", "entry_type", "TEXT DEFAULT 'manuel'");
   await ensureColumn("temperature_logs", "sensor_mode", "TEXT DEFAULT 'online'");
   await ensureColumn("temperature_logs", "sensor_id", "TEXT");
-  // Index de temperature_logs(recorded_at).
+  // Index de temperature_logs(recorded_at) et de staff_schedule(staff_id, day).
   //
-  // Le SEUL index ajoute dans ce fichier, et il est ajoute parce qu'il a ete
-  // MESURE, pas parce que la table lui a paru devoir en avoir un. Le harnais
-  // `scripts/ab-indices.py` compare, sur une base seedee a volume de resto
-  // (3000 relevements), la requete de /api/haccp/production-history :
-  //   p95 SQL 0,171 ms SANS index  ->  0,031 ms AVEC  (gain 82 %)
-  // et montre que les 5 autres candidats (supplier_prices x2, staff.active,
-  // documents.date, staff_schedule.day) restent sous le bruit : le plan SQLite
-  // les garde en 'SCAN' et le gain mesure est <= 1 %. Ils ont donc ete REFUSES.
+  // Deux index dans ce fichier, et DEUX parce qu'ils ont ete MESURES chacun,
+  // jamais parce que la table leur a paru devoir en porter un. Un index non
+  // prouve est une dette payee a chaque ecriture (le webhook HACCP ecrit en
+  // continu), donc la regle est : on ne l'installe que si le plan SQLite dit
+  // SCAN et que la mesure descend le p50/p95 au-dessus du seuil de 15 %.
   //
-  // Pourquoi c'est celui-la qui gagne la: `SELECT * FROM temperature_logs
-  // ORDER BY recorded_at DESC LIMIT 50` est un scan complet + tri temporaire
-  // (USE TEMP B-TREE) ; l'index donne un parcours deja trie et le LIMIT 50
-  // arrete la lecture apres 50 clefs au lieu de lire toute la table.
+  // 1) temperature_logs(recorded_at DESC) -- harnais scripts/ab-indices.py,
+  //    base seedee a volume de resto (3000 releves), requete de
+  //    /api/haccp/production-history : p95 SQL 0,171 ms SANS -> 0,031 ms AVEC
+  //    (gain 82 %). `SELECT * ... ORDER BY recorded_at DESC LIMIT 50` etait un
+  //    scan complet + tri temporaire (USE TEMP B-TREE) ; l'index donne un
+  //    parcours deja trie et le LIMIT 50 arrete la lecture apres 50 clefs.
+  //
+  // 2) staff_schedule(staff_id, day) -- harnais scripts/probe-index-staffday.py,
+  //    150 560 lignes de planning, 537 lignes par (membre, jour), ABBA echauffe,
+  //    en rejouant le tour COMPLET de /api/dashboard/stats (une requete par
+  //    membre actif, soit 40 requetes par tour) :
+  //      sans index        p50 303,6 ms   plan: SCAN staff_schedule
+  //      (staff_id) seul   p50 138,7 ms   gain +54,3 %  SEARCH USING INDEX
+  //      (staff_id, day)   p50  38,5 ms   gain +87,3 %  SEARCH ... (staff_id=? AND day=?)
+  //    Cout a l'ecriture mesure : +41,6 % sur une INSERT dans CETTE seule table
+  //    (le webhook HACCP n'y ecrit pas), accepte pour 87 % de latence retiree a
+  //    chaque rafraichissement du tableau de bord.
+  //
+  //    ⚠ Pourquoi ce candidat avait ete MAL JUGES, et la legon qui compte.
+  //    scripts/ab-indices.py listait `staff_schedule(day)` comme « refuse par
+  //    mesure (+0,4 %) ». C'etait un refus par ARTEFACT et non par mesure : son
+  //    seed remplit la colonne `date` (dates ISO) alors que la route filtre
+  //    `WHERE staff_id = ? AND day = ?` avec un NOM DE JOUR ("thursday"). La
+  //    requete du bench ne rapportait DONC AUCUNE ligne : on chronometrait un
+  //    scan au resultat vide, et le plan lisait « SCAN » sans que personne n'y
+  //    voie une selection vide. Deux regles s'imposent desormais :
+  //      (a) un A/B doit rejouer le FILTRE REEL de la route et en verifier le
+  //          compte de lignes rapportees -- si zero, la mesure est vaine ;
+  //      (b) juger sur le volume de la TABLE, pas sur celui du seed : un scan de
+  //          quelques centaines de lignes ne se distingue pas d'un index, le
+  //          bench ne mesurant alors que la resolution de l'horloge.
+  //
+  //    ⚠ Le COMPOSITE et non `day` seul : `day` seul laisse les 40 requetes
+  //    scanner toute la tranchee du jour (~18 000 lignes), alors que la cle
+  //    composee (staff_id, day) les borne a 537 lignes chacune. C'est la
+  //    conjonction des DEUX predicats dans la cle qui fait le gain -- un index
+  //    sur une seule des deux colonnes ne rattrape que la moitie du chemin.
   //
   // ⚠ CREATE INDEX IF NOT EXISTS est ici une obligation, pas une comfort : la
-  // base des clients deja installees contient cette table sans index, et cette
-  // migration tourne a chaque demarrage (initDatabase). IF NOT EXISTS la rend
-  // idempotente et donc relancable sans effet de bord sur les donnees.
+  // base des clients deja installees contient ces tables SANS index, et ces
+  // migrations tournent a chaque demarrage (initDatabase). IF NOT EXISTS les
+  // rend idempotentes et donc relancables sans aucun effet de bord sur les
+  // donnees.
   try {
     await db.exec(
       "CREATE INDEX IF NOT EXISTS ix_temperature_logs_recorded ON temperature_logs(recorded_at DESC)",
@@ -335,6 +366,61 @@ export async function initDatabase(): Promise<DbInitResult> {
     // correcte (SQLite trie alors lui-meme), elle est seulement plus lente.
     // Le tag [SCHEMA] reprend la convention des autres migrations de ce fichier.
     console.error(`[SCHEMA] Failed to create index on temperature_logs(recorded_at):`, e);
+  }
+
+  // Meme tolerance, meme convention que ci-dessus : un echec de creation ne
+  // doit JAMAIS empecher le demarrage. Sans ces index, /api/dashboard/stats
+  // reste strictement correcte et seulement plus lente (chiffres ci-dessous).
+  //
+  // ⚠ DEUX index et non un seul, et c'est MESURE (scripts/probe-index-reel.py,
+  // table de 150 001 rangees, 40 membres, tour COMPLET de la route, ABBA
+  // echauffe, couche SQL pure hors HTTP). La requete du tableau de bord est un
+  // UNION ALL a DEUX branches, chacune avec SON predicat (c'est le UNION ALL qui
+  // les laisse exploitables: un (a OR b) faisait tomber le second predicat du
+  // plan, voir src/routes/dashboard.ts) :
+  //     branche 1 (chaude)  staff_id = ? AND date = ?
+  //     branche 2 (heritee) staff_id = ? AND day = ? AND (date IS NULL OR '')
+  // Un index composite n'est PLEINEMENT exploite que par la branche dont il
+  // porte les DEUX predicats ; l'autre retombe a `staff_id = ?` seul et re-teste
+  // rangee par rangee :
+  //     aucun index              p50  548,6 ms   les deux branches en SCAN
+  //     (staff_id, day) SEUL     p50   83,7 ms   branche 1 seulement `staff_id=?`
+  //     (staff_id, date) SEUL    p50    6,9 ms   branche 2 seulement `staff_id=?`
+  //     LES DEUX                 p50    0,159 ms  les deux branches PLEINES
+  // Les QUATRE etats ont rendu le MEME compte de lignes (81), donc ce n'est pas
+  // un arbitrage de justesse: pur choix de perf, a ce point 527 fois le tour.
+  //
+  // ⚠ LE CONSIGNE DU 09/09 (« staff_schedule(staff_id, day), +86,7 % ») etait
+  // MOITIE FAUX, et c'est la legon qui compte. Sa sonde semait `day` avec des
+  // NOMS DE JOUR, la ou l'app ecrit `day = date = "<ISO>"` (POST /api/staff, et
+  // verifie dans la base reelle du client: 0 range sur un nom de jour). Elle a
+  // donc installe un index sur la colonne de la branche RARE en laissant la
+  // branche CHAUDE sans index — 84 % de gain annonces, 527 fois moins bien que
+  // l'etat correct. La legon, generalisee: un A/B d'index doit rejouer la
+  // requete que le CODE EMET (les deux branches d'un UNION ALL comprises), sur
+  // des donnes dans la forme que l'ECRITURE de l'app produit, et verifier que
+  // chaque branche obtient bien un plan PLEIN — un `SEARCH USING INDEX
+  // (col=?)` sans le second predicat n'est pas « indexe », c'est un scan filtre.
+  //
+  // Cout a l'ecriture mesure (3 000 INSERT): 0,0009 ms sans index -> 0,0018 avec
+  // les DEUX, soit +0,0009 ms/insertion. Le planning ne s'ecrit que quand un
+  // humain sauvegarde une semaine: ignoreable devant 527x de latence retiree a
+  // chaque rafraichissement du tableau de bord.
+  for (const [ddl, label] of [
+    [
+      "CREATE INDEX IF NOT EXISTS ix_staff_schedule_staff_day ON staff_schedule(staff_id, day)",
+      "staff_schedule(staff_id, day)",
+    ],
+    [
+      "CREATE INDEX IF NOT EXISTS ix_staff_schedule_staff_date ON staff_schedule(staff_id, date)",
+      "staff_schedule(staff_id, date)",
+    ],
+  ]) {
+    try {
+      await db.exec(ddl);
+    } catch (e) {
+      console.error(`[SCHEMA] Failed to create index on ${label}:`, e);
+    }
   }
 
   // NOTE Phase 0 : l'ancienne logique "shadow files" a été supprimée.

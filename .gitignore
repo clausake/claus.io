@@ -50,3 +50,7 @@ license_private.pem
 
 # Artefacts LFS déjà couverts par .gitattributes, mais on ignore les caches
 .lfs_cache/
+
+# Cache d'octets des harnais de mesure Python (scripts/probe-*.py). Genere a
+# chaque execution, jamais une source.
+__pycache__/

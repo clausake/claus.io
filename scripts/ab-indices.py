@@ -162,10 +162,29 @@ def seed(data_dir):
                     [("st-%d" % i, "Employe %d" % i,
                       ["Chef", "Sous-chef", "Commis", "Plongeur"][i % 4],
                       round(12 + (i % 9) * 1.5, 2), 1) for i in range(40)])
-    cur.executemany("insert into staff_schedule (id,staff_id,day,start_time,end_time) values (?,?,?,?,?)",
-                    [("sc-%d" % i, "st-%d" % (i % 40),
-                      "2026-%02d-%02d" % ((i % 12) + 1, (i % 28) + 1), "09:00", "17:00")
-                     for i in range(4000)])
+    # ⚠ Le seed staff_schedule porte DESORMAIS les DEUX formes que l'app produit,
+    # avec ses COLONNES NOMMEES (jamais positionnelles: la colonne `date` est
+    # AJOUTEE par ensureColumn dans src/db/init.ts, un INSERT sans noms y permute
+    # silencieusement start_time et date et le bench chronometre alors des donnes
+    # impossibles sans jamais crierer).
+    # La version precedente semait `day` = date ISO en laissant `date` NULL. Or:
+    #   - POST /api/staff ecrit `day = date = "<ISO>"` (StaffPlanning envoie des
+    #     dates ISO), donc la forme d'aujourd'hui est ISO/ISO ;
+    #   - la branche heritee du tableau de bord filtre `day = <nom de jour> AND
+    #     date IS NULL`, donc la forme ancienne est NOM/NULL.
+    # Aucune des deux n'etait semee: le « staff_schedule(day) refuse par mesure
+    # (+0,4 %) » consign du 09/09 etait un refus par ARTEFACT, pas une mesure --
+    # la requete du bench ne pouvait rien rapporter sur la colonne juge.
+    JOURS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    cur.executemany(
+        "insert into staff_schedule (id, staff_id, day, start_time, end_time, date) "
+        "values (?,?,?,?,?,?)",
+        [("sc-%d" % i, "st-%d" % (i % 40),
+          "2026-%02d-%02d" % ((i % 12) + 1, (i % 28) + 1), "09:00", "17:00",
+          "2026-%02d-%02d" % ((i % 12) + 1, (i % 28) + 1))
+         for i in range(3600)]                                   # la forme du jour
+        + [("sc-her-%d" % i, "st-%d" % (i % 40),
+            JOURS[i % 7], "09:00", "17:00", None) for i in range(400)])  # l'heritee
     cur.executemany(
         "insert into documents (id,type,supplier,date,total_amount,source_image_url,status,"
         "rawDataJson,created_at) values (?,?,?,?,?,?,?,?,?)",
@@ -183,12 +202,41 @@ def seed(data_dir):
     attendu = {"inventory": 180, "suppliers": 12, "supplier_prices": 6000, "staff": 40, "staff_schedule": 4000,
                "documents": 2500, "temperature_logs": 3000}
     reel = {t: cur.execute("select count(*) from " + t).fetchone()[0] for t in attendu}
-    c.close()
+    # (le c.close() qui etait ici est descendu sous le garde des filtres: ce
+    # garde a besoin de la connexion ouverte)
     manq = {t: (attendu[t], reel[t]) for t in attendu if reel[t] < attendu[t]}
     if manq:
         raise SystemExit("ECHEC  seed incomplet (attendu, reel) : %r" % manq)
     print("volume mesure :", reel)
 
+    # ⚠ LE GARDE QUI A MANQUE le 09/09. Chaque requete du bench doit RAPPORTER
+    # des lignes: une requete qui n'en rapporte aucune chronometre un scan vide,
+    # et son "gain" (ici +0,4 %) ne dit rien de l'index juge. C'est exactement
+    # comment `staff_schedule(day)` a ete consigne « refuse par mesure » alors que
+    # le seed ne remplissait pas la colonne que le filtre regardait : la mesure
+    # etait lisible, parfaite, et creuse. Un verdict d'index ne vaut que si la
+    # requete jugée selectionne reellement quelque chose.
+    # (Sa 1ere version etait placee APRES c.close() et rougissait sur « closed
+    # database »: le garde fonctionnait -- il a refuse de passer un bilan qu'il ne
+    # pouvait pas produire -- mais il etait mal place. Un garde doit rougir pour
+    # la faute qu'il surveille, pas pour sa propre facture.)
+    vides = []
+    for label, q, args in QUERIES:
+        n_sel = -1
+        try:
+            n_sel = len(cur.execute(q, args).fetchall())
+        except Exception as e:
+            vides.append("%s (erreur: %s)" % (label, str(e)[:40]))
+            continue
+        if n_sel == 0:
+            vides.append(label)
+    if vides:
+        c.close()
+        raise SystemExit("ECHEC  requetes du bench qui ne rapportent AUCUNE ligne "
+                         "(mesure vaine, seed qui ne correspond pas au filtre):\n   "
+                         + "\n   ".join(vides))
+    print("controle des filtres : les %d requetes du bench rapportent des lignes" % len(QUERIES))
+    c.close()
 
 def plan(data_dir):
     c = sqlite3.connect(os.path.join(data_dir, "agent_culinaire.db"))
