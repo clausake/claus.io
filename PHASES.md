@@ -498,7 +498,112 @@ jetait `test-results/` au moment meme ou il devenait utile.
   autre chose, donc le check etait **toujours vert**. `node --check` ne voit pas
   ca (syntaxe seule). Un PASS qui ne peut pas etre un FAIL n'est pas une mesure.
 
+### Etat des portes (10 sept., HEAD Sprint 4.11)
+- `npx tsc --noEmit` : **0 erreur** · `npx vitest run` : **38** ·
+  `npx playwright test` : **33** (le KPI de main d'oeuvre est entre) ·
+  `npm run build` : ok (chunk d'entree inchangé).
+- 6/6 preuves de contrat vertes : `verify:perf` 13/13 (**p95 stats = 4,6 ms**, la
+  route corrige est reste sous le seuil) · `verify:http` 17/17 · `verify:sse` ·
+  `verify:ratelimit` 5/5 · `verify:bundle` 6/6 · `verify:ci` **20/20**.
+- Preuves propres a la phase (hors suite, lancees a la main) :
+  `scripts/probe-labor-cost-zero.py` (ROUGE avant le correctif / VERT apres),
+  `scripts/mutation-test-labor.py` (5/5 mutations mordent),
+  `scripts/probe-index-installe.py` (les DEUX index posés, chaque branche PLEINE),
+  `scripts/negative-test-verify-indices.py` (le nouveau garde du harnais d'index
+  mord : rc=1 en nommant la requete fautive).
+- Nouveaux fichiers : `test/e2e/kpi-labor-cost.spec.ts`,
+  `scripts/{probe-labor-cost-zero,mutation-test-labor,probe-forme-filtre,
+  probe-index-reel,probe-join-stats,negative-test-verify-indices}.py`.
+  `scripts/__pycache__/` est desormais gitignoré.
+- ⚠ Deux sondes (`probe-index-staffday.py`, `probe-nplus1.py`) portent desormais
+  un bandeau « NE PAS SE FIER AU VERDICT » en tete : elles sont gardees comme
+  preuve de la faute de methode, pas comme reference. La regle qui en sort, et
+  qui vaut pour toute future decision d'index : rejouer la requete que le CODE
+  EMET (branches d'un UNION ALL comprises) sur des donnes dans la forme que
+  l'ECRITURE de l'app produit, et exiger un plan PLEIN par branche.
+
 ### 4.9 Le parseur YAML etait un emprunt transitive (dependance invisible)
+
+### 4.11 Le KPI « cout journalier » etait faux chez le client (et l'index
+### instalé en payait la moitie)
+
+**Le defaut, prouvé par execution et non par lecture.** Le tableau de bord rend
+`dailyLaborCost: 0` en permanence. Sonde sur le serveur REEL du client (port 4173,
+base `promo_resto/udata`, le 2026-09-10) : **6 vacations saisies pour ce jour**
+dans `staff_schedule`, reponse `{"dailyLaborCost":0}`. La cause est un desaccord
+de cle entre l'ecriture et la lecture :
+
+- `POST /api/staff` (`src/routes/staff.ts:72`) ecrit `day = dayOrDate` **et**
+  `date = dayOrDate` avec la MEME valeur, et l'appelant (`StaffPlanning.tsx`,
+  `UI_TO_EXACT_DATE`) lui passe des **dates ISO** → la base du client a
+  `day='2026-09-16'`, `date='2026-09-16'`, et **0 rangee** portant un nom de jour ;
+- `src/routes/dashboard.ts` filtrait `WHERE staff_id = ? AND day = ?` avec
+  `daysOfWeek[new Date().getDay()]` = `"thursday"`.
+
+Le filtre ne pouvait donc jamais rien rapporter. Aucun test ne le voyait : le
+test e2e existant (`test/e2e/routes.spec.ts:102-107`) verifie la FORME du JSON
+(`typeof body.totalStockValue`) et le `CRUD staff` assert sur `staff.ts` —
+**la requete du KPI n'est exercee par aucun test**. Un test qui lit un fichier
+source au lieu de rejouer le comportement est un faux negatif.
+
+**Le correctif, arbitré par mesure et non par gout.** Trois formes de filtre
+comparees a 150 001 rangees, ABBA echauffe, contre un oracle Python independant
+(`scripts/probe-forme-filtre.py`) :
+
+| forme | p50 | plan | justesse |
+| --- | --- | --- | --- |
+| `staff_id=? AND date=?` seul | 0,148 ms | index PLEIN | **FAUX** (rate les bases heritees) |
+| `(a) OR (b)` | 140,14 ms | `SEARCH (staff_id=?)` | juste |
+| **deux SELECT `UNION ALL`** | **7,57 ms** | index PLEIN des deux cotes | juste |
+
+L'`OR` est un piége silencieux : il empeche SQLite d'exploiter la **seconde**
+colonne d'un index composite (le predicat `date` tombe du plan) — 18,5 fois plus
+lent, pour un resultat **identique**. Le `UNION ALL` est retenu. Garde ajoute au
+passage : `start_time`/`end_time` sont NULLables au schema, et `''.split(':')`
+produit un `NaN` que `JSON.stringify` serialise en `null` — le KPI se vide sans
+aucune erreur serveur.
+
+**Le consensus du 09/09 etait moitie faux, et corrige.** Il consignait
+« `staff_schedule(staff_id, day)`, +86,7 % RETENU ». Sa sonde semait `day` avec
+des **noms de jour**, la ou l'app ecrit `day = date = "<ISO>"` : elle a installe
+un index sur la colonne de la branche RARE en laissant la branche CHAUDE sans
+index. Re-mesure de la requete reellement emise (`scripts/probe-index-reel.py`) :
+
+| etat d'index | p50 du tour complet |
+| --- | --- |
+| aucun | 548,6 ms |
+| `(staff_id, day)` seul — l'etat instalé | 83,7 ms |
+| `(staff_id, date)` seul | 6,9 ms |
+| **les DEUX** | **0,159 ms** (les 4 etats rendent le MEME compte de lignes) |
+
+Soit **527x** devant l'etat precedent, pour un cout d'ecriture mesure de
++0,0009 ms/insertion (le planning s'ecrit a la main, pas par webhook). Les DEUX
+index sont instalés dans `src/db/init.ts`, `IF NOT EXISTS` (idempotence obligee:
+la migration tourne a chaque demarrage sur les bases deja livrées).
+
+Le harnais fautif est **repare a la source** et non contourne :
+`scripts/ab-indices.py` seme desormais les DEUX formes (`ISO/ISO` et
+`NOM/NULL`) avec des **colonnes nommees**, et son nouveau garde rougit si une
+requete du bench ne rapporte **aucune ligne** — le « refuse par mesure (+0,4 %) »
+du 09/09 etait precisement un scan vide chronometré.
+
+**La forme N+1 est gardee, decidee et non supposee.** Remplacer la boucle par une
+jointure (41 declarations → 1) ne gagne que **0,11 ms/tour** une fois l'index en
+place (0,144 vs 0,034) : sous tout seuil decisionnel, pour un changement qui se
+paie en risque de faute. Le premier verdict « jointure −12,3 % » etait un artefact
+(seed a 0 ligne + predicats differents entre les deux bras).
+
+**Preuves attacheses.** `scripts/probe-labor-cost-zero.py` : sonde de regression
+comportementale sur copie de la base reelle du client (8 checks, ligne de base lue
+AVANT injection, contre-controle negatif, jour voisin exclu, branche heritee,
+creneau vide ≠ NaN) — **rouge avant le correctif, vert apres**.
+`scripts/mutation-test-labor.py` : 5 fautes injectees dans des COPIES isolees
+(`node_modules` symlinké), **les 5 mordent** (rc + le check vise nomme) ; la
+falsification des DEUX index laisse la sonde **verte**, ce qui prouve que l'index
+est une optimisation et non la source de la justesse. Deux de mes propres checks
+avaient ete rattrapes par ce harnais (fragments de nommage qui ne correspondaient
+a aucun libelle reel ; une mutation qui creait un 500 et faisait tout rougir, ce
+qui ne prouvait plus le garde vise).
 
 ### Etat des portes (9 sept., HEAD Sprint 4.8)
 - `npx tsc --noEmit` : 0 erreur · `vitest` : **38** · `playwright` : **32** ·
