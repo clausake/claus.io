@@ -4,6 +4,26 @@ import { ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
 import { requireString, optionalString } from "../middleware/validate.js";
 
+// Un champ de detail de plat doit rester du JSON LISIBLE. Les DEUX noms de
+// champ sont acceptes (recipe_json cote API, recipe_details cote vue Menu, que
+// MenuAnalysis est seul a emettre) et une chaine DEJA serialisee n'est pas
+// re-serialisee : le double-encodage etait la cause reelle du besoin faux.
+function normalizeRecipeJson(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed === "") return null;
+    try {
+      JSON.parse(trimmed);
+      return trimmed; // deja du JSON : on ne le re-stringify pas
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return null;
+}
+
 export default function createRouter(db: Database) {
   const router = Router();
 
@@ -29,7 +49,8 @@ try {
 router.post("/api/menu-planning", async (req, res) => {
 try {
   if (!requireString(req, res, "date", 20)) return;
-  const { date, meal_type, recipe_id, title, recipe_json, language } = req.body;
+  const { date, meal_type, recipe_id, title, recipe_json, recipe_details, language } =
+    req.body;
   const mealType = optionalString(req, "meal_type", 50) || "lunch";
   const recipeId = optionalString(req, "recipe_id", 50) || null;
   const titleVal = optionalString(req, "title", 200) || "";
@@ -43,7 +64,14 @@ try {
       mealType,
       recipeId,
       titleVal,
-      JSON.stringify(recipe_json || null),
+      // ⚠ Ne pas re-stringifier ici. L'UI (MenuAnalysis) envoie deja
+      // recipe_details en CHAINE JSON.stringifye; la re-serialiser colle des
+      // guillemets d'echappement, le lecteur ne retrouve plus .couverts, les
+      // couverts retombent a 1 et le besoin est divise par le nombre de
+      // convives — un chiffre plausible et FAUX, sans aucun rougissement.
+      // Les DEUX noms de champ sont acceptes (recipe_json cote API,
+      // recipe_details cote vue Menu) au lieu de juger un payload invente.
+      normalizeRecipeJson(recipe_json ?? recipe_details),
       planningLang
     ],
   );

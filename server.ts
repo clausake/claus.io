@@ -9,6 +9,7 @@ import express from "express";
 import helmet from "helmet";
 import compression from "compression";
 import "dotenv/config";
+import crypto from "crypto";
 import os from "os";
 import path from "path";
 import fs from "fs";
@@ -82,6 +83,31 @@ async function startServer() {
     }),
   );
   app.use(httpLogger);
+
+  // --- Identite de CETTE instance ------------------------------------------
+  // Gravee dans chaque reponse. Elle existe pour une seule raison: permettre a
+  // qui lance le serveur de VERIFIER que la reponse qu'il recoit vient bien de
+  // L'INSTANCE QU'IL A LANCEE, et non d'un serveur herite qui tient le port.
+  //
+  // Pourquoi c'est necessaire ici et non « en amont » dans le harnais: un test
+  // qui demande un port libre a l'OS, le referme, puis lance son serveur dessus
+  // ne peut PAS savoir qui va repondre. Si une autre instance (un autre harnais
+  // en parallele, un serveur de dev oublie) a repris le port entre-temps, le
+  // test juge des donnees et un code qu'il n'a pas installes -- et son verdict,
+  // VERT ou ROUGE, est sans valeur. C'est exactement la faute qui a fait
+  // annoncer « la mutation M5 ne mord pas » alors qu'elle mord (verifiee seul,
+  // hors lot: Expected 840 / Received 120 sur le check K).
+  //
+  // L'appelant fournit le jeton (COOKDRIVE_INSTANCE_TOKEN) : ainsi le test sait
+  // d'avance ce qu'il doit attendre, sans avoir a le lire dans une route. Sans
+  // jeton fourni (lancement normal de l'app), on en genere un: l'en-tete reste
+  // utile pour le diagnostic (deux instances qui rendent des diagnostics
+  // distincts sur un même port).
+  const INSTANCE_TOKEN = process.env.COOKDRIVE_INSTANCE_TOKEN || crypto.randomUUID();
+  app.use((_req, res, next) => {
+    res.setHeader("X-Cookdrive-Instance", INSTANCE_TOKEN);
+    next();
+  });
 
   // Rate-limit par categorie de surface (read / mutate / delete / auth / ai).
   // L'ancien budget unique de 300/15 min faisait un 429 global sur le simple
@@ -172,18 +198,38 @@ async function startServer() {
   }
 
   const HOST = process.env.HOST || "127.0.0.1";
+  // Le port SORT d'un environnement absent, mais il a un maitre : quand l'appelant
+  // l'a demande Explicitement (PORT dans l'environnement), c'est un CONTRAT et non
+  // une suggestion. L'ancien comportement faisait PORT++ en silence sur EADDRINUSE,
+  // ce qui produisait le pire des defauts: un harnais de mutations qui impose un
+  // port pour juger une source MUTEE se retrouvait a juger une AUTRE instance, celle
+  // qui tenait deja le port (le serveur mute, lui, ecoutait un cran plus loin). Le
+  // test passait VERT sur une source qu'il n'avait jamais chargee et le harnais
+  // annoncait, a tort, « la mutation ne mord pas ».
+  //
+  // Regle: pas de translacion silencieuse. On ne cede le port demande que si personne
+  // ne l'a demande (le defaut 3000, lui, peut glisser d'un cran sans consequence).
+  const PORT_IMPOSE = process.env.PORT !== undefined && process.env.PORT !== "";
   const startListening = () => {
     const server = app.listen(PORT, HOST, () => {
       console.log(`Server running on http://${HOST}:${PORT}`);
     });
     server.on("error", (err: any) => {
-      if (err.code === "EADDRINUSE") {
+      if (err.code === "EADDRINUSE" && !PORT_IMPOSE) {
         console.error(`Port ${PORT} is in use, trying next port...`);
         PORT++;
         startListening();
-      } else {
-        console.error("Server error:", err);
+        return;
       }
+      if (err.code === "EADDRINUSE") {
+        // Mort dans l'oeuf: on meurt sur le port demande au lieu de vivre ailleurs.
+        console.error(
+          `Port ${PORT} is in use and was EXPLICITLY requested (PORT=${process.env.PORT}); ` +
+            `refusing to listen on another port.`,
+        );
+        process.exit(1);
+      }
+      console.error("Server error:", err);
     });
   };
   startListening();
