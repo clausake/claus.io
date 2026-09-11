@@ -298,6 +298,13 @@ export async function initDatabase(): Promise<DbInitResult> {
   await ensureColumn("recipes", "language", "TEXT DEFAULT 'fr'");
   await ensureColumn("menu_planning", "language", "TEXT DEFAULT 'fr'");
   await ensureColumn("documents", "source_image_url", "TEXT");
+  // -- Chaine d'achat : le bon devient un document qui se receptionne ---------
+  // Sans ces deux colonnes, la reception n'a nulle part ou ecrire son etat et
+  // l'historique « combien recu vs combien commande » n'existe pas.
+  // ensureColumn est idempotent (PRAGMA + ALTER) : la migration rejoue a chaque
+  // demarrage sur les bases deja livrees chez le client.
+  await ensureColumn("documents", "received_at", "TEXT");
+  await ensureColumn("document_items", "received_quantity", "REAL");
   await ensureColumn("document_items", "original_name", "TEXT");
   await ensureColumn("document_items", "lot_number", "TEXT");
   await ensureColumn("document_items", "dlc", "TEXT");
@@ -414,6 +421,19 @@ export async function initDatabase(): Promise<DbInitResult> {
     [
       "CREATE INDEX IF NOT EXISTS ix_staff_schedule_staff_date ON staff_schedule(staff_id, date)",
       "staff_schedule(staff_id, date)",
+    ],
+    [
+      // La requete de la prevision d'achat (GET /api/purchasing/forecast) filtre
+      // les dates planifiees. Mesure (scripts/probe-index-forecast.py) : la forme
+      // DATE(col) est NON SARGABLE (gain -0,6 %, l'index ne peut pas s'appliquer
+      // sous une fonction) ; la variante sargable donne un plan PLEIN
+      // SEARCH mp USING INDEX idx_mp_date (date>? AND date<?). La route porte
+      // DONC les DEUX predicats : l'un indexable pour la vitesse, l'autre en
+      // DATE() pour la justesse sur une date heritee non zero-paddee.
+      // A 1 040 lignes de plan : p50 0,136 -> 0,084 ms (le plan est un SCAN qui
+      // croit avec le temps — un planning ne se supprime pas ; l'lookup, non).
+      "CREATE INDEX IF NOT EXISTS ix_menu_planning_date ON menu_planning(date)",
+      "menu_planning(date)",
     ],
   ]) {
     try {
