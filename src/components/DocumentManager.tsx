@@ -225,9 +225,21 @@ export function DocumentManager({ t }: { t: any }) {
       });
       if (res.ok) {
         fetchDocuments();
+        return;
       }
+      // ⚠ Le `if (res.ok)` SANS branche d'echec etait un defaut d'usage : un
+      // refus (deja valide, bon de commande non validationable) ne faisait
+      // RIEN a l'ecran. Le cuisinier cliquait, rien ne bougeait, et il
+      // recliquait. Une route qui refuse doit SE DIRE : le message du serveur
+      // est le seul qui explique POURQUOI le stock n'a pas bouge.
+      const body = await res.json().catch(() => null as any);
+      toast(
+        body?.message || (t.validateFailed || "Validation impossible"),
+        body?.already_validated ? "info" : "error",
+      );
     } catch (e) {
       console.error(e);
+      toast(t.validateFailed || "Validation impossible", "error");
     }
   };
 

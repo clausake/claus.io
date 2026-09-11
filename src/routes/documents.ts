@@ -44,8 +44,24 @@ try {
     req.body;
   
   const docId = id || Date.now().toString();
-  
-  if (id) {
+
+  // -- Deux defauts de cette branche, tous deux muets -------------------------
+  //  1. Le tri se faisait sur `if (id)` et non sur « la ligne EXISTE ». Or la
+  //     voie de creation manuelle (DocumentManager) envoie son propre `id` pour
+  //     un document qui n'est pas encore en base : l'UPDATE ne toucait AUCUNE
+  //     ligne, le document n'etait jamais cree — et la reponse rendait
+  //     `id: <celui demande>`, donc le client croyait avoir cree quelque chose.
+  //     Un PASS creux de bout en bout : 200, un id, rien en base.
+  //  2. Les lignes etaient inserees avec `document_id = id` (donc NULL en
+  //     creation, ou l'id demande) au lieu de `docId` : le detail se retrouvaient
+  //     orphelins, invisibles au GET. Une factture sans lignes ne majore rien.
+  // La presence reelle de la ligne decide donc, et les lignes partent sur docId.
+  const existing: { id: string } | undefined = await db.get(
+    "SELECT id FROM documents WHERE id = ?",
+    [docId],
+  );
+
+  if (existing) {
     await db.run(
       "UPDATE documents SET type = ?, supplier = ?, date = ?, total_amount = ?, source_image_url = ?, status = 'PENDING' WHERE id = ?",
       [type, supplier, date, total_amount, source_image_url, docId]
@@ -57,6 +73,7 @@ try {
       "INSERT INTO documents (id, type, supplier, date, total_amount, source_image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [docId, type, supplier, date, total_amount, source_image_url, "PENDING"],
     );
+    await db.run("DELETE FROM document_items WHERE document_id = ?", [docId]);
   }
   
   for (const item of items) {
@@ -64,7 +81,7 @@ try {
       "INSERT INTO document_items (id, document_id, inventory_id, original_name, quantity, unit_price, lot_number, dlc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
         Math.random().toString(36).substr(2, 9),
-        id,
+        docId,
         item.inventory_id || null,
         item.original_name || "",
         item.quantity,
@@ -90,7 +107,42 @@ try {
     return res
       .status(404)
       .json({ status: "error", message: "Document not found" });
-  
+
+  // -- Deux gardes d'integrite du stock ------------------------------------
+  // La validation est un MOUVEMENT DE STOCK (quantity = quantity + ...). Elle
+  // doit donc etre idempotente et exclusive, sinon le stock part a la derive
+  // sans qu'aucun ecran ne le montre :
+  //
+  //  1. UN SEUL PASSEAGE. Le garde d'avant etait absent : un double-clic sur
+  //     « Valider » (ou un retry du reseau) additionnait la marchandise DEUX
+  //     fois. Le statut passait a VALIDATED des le premier coup, donc le second
+  //     ne rougissait nulle part — et le stock du client etait faux de 100 %.
+  //  2. LES BONS DE COMMANDE NE SE VALIDENT PAS ICI. Un bon porte des quantites
+  //     PREVUES et non recues : c'est la reception qui les met en stock. Sans
+  //     cette exclusion, la voie Saisies (PDF) et la voie Documents se battaient
+  //     le meme mouvement, et un bon valide par megarde puis receptionne
+  //     additionnait deux fois. Le type est verifie contre la liste blanche au
+  //     lieu d'une negation : un type inconnu (donnee heritee d'une vieille
+  //     version) ne merite pas d'entrer en stock.
+  const TYPES_VALISIBLES = ["FACTURE", "BL", "BON_LIVRAISON", "AVOIR"];
+  const typeDoc = (doc.type || "").toUpperCase();
+  if (!TYPES_VALISIBLES.includes(typeDoc)) {
+    return res.status(409).json({
+      status: "error",
+      message:
+        typeDoc === "COMMANDE"
+          ? "Un bon de commande ne se valide pas : receptionnez-le (les quantites entrent en stock a la livraison)."
+          : "Type de document non validationable : " + (doc.type || "(vide)"),
+    });
+  }
+  if ((doc.status || "").toUpperCase() === "VALIDATED") {
+    return res.status(409).json({
+      status: "error",
+      message: "Ce document est deja valide : le stock a deja ete majouré.",
+      already_validated: true,
+    });
+  }
+
   let supplierId: string | null = null;
   if (doc.supplier && doc.supplier.trim()) {
     const normName = doc.supplier.trim();
