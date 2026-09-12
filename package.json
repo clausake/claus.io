@@ -38,7 +38,13 @@
     "verify:ready": "node scripts/probe-ready-parity.mjs",
     "verify:ready-mord": "python3 scripts/negative-test-ready-parity.py",
     "verify:inventory-put": "python3 scripts/negative-test-inventory-put.py",
-    "verify:all": "python3 scripts/run-all-gates.py"
+    "verify:all": "python3 scripts/run-all-gates.py",
+    "verify:supplier-price": "python3 scripts/negative-test-supplier-price.py",
+    "verify:supplier-import": "python3 scripts/negative-test-supplier-import.py",
+    "verify:installeur": "python3 scripts/probe-installeur-morsure.py",
+    "verify:import-contract": "node scripts/probe-supplier-import-contract.mjs",
+    "verify:documents-validate": "python3 scripts/negative-test-documents-validate.py",
+    "verify:supplier-probe": "node scripts/probe-supplier-price-contract.mjs"
   },
   "build": {
     "appId": "com.agentculinaire.os",

@@ -44,6 +44,11 @@ test/shots/
 # il est perissable et ne se juge que sur place. Versionner un journal de rc produit un
 # diff a chaque run et, pis, un etat « vert » herite qu'on relit comme une preuve.
 test/gates.out
+# Les verdicts des lots et des preuves negatives sont DES artefacts: consignes pour
+# etre relues dans la fouillee, jamais pour etre versionnees. Un .out versionne
+# se lit, lui, comme un etat « vert herite » (la faute exactement chasse par ce
+# depot) des qu'une porte change de consistance sous lui.
+test/*.out
 *.db-wal
 *.db-shm
 

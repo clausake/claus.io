@@ -6,7 +6,7 @@ import type { Database } from "sqlite";
 import fs from "fs";
 import path from "path";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
-import { safeJsonParse, calculatePricePerRef, ExtractedDocumentData } from "../shared/util.js";
+import { safeJsonParse, calculatePricePerRef, prixOuNul, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
 import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
@@ -91,7 +91,32 @@ try {
       ],
     );
   }
-  res.json({ status: "success", id });
+  // La reponse ne RECITE pas le client: l'ancien `res.json({ id })` rendait la
+  // cle DEMANDEE, donc `undefined` pour la voie de creation manuelle qui n'en
+  // envoie pas une (mesure: scripts/probe-documents-validate-contract.mjs,
+  // D1_VALIDE_CODE=404 — le client obtenait un 200, un id faux, et son appel
+  // SUIVANT, /api/documents/<id>/validate, meurait en 404 « Document not found »
+  // sur un document qui venait bel et bien d'etre cree). La cle rendu est la cle
+  // ECITE (docId) et la ligne est RELLE en base: temoin independant du corps de
+  // requete, seul moyen de voir une ecraserie entre le payload et la colonne.
+  const relu = await db.get(
+    "SELECT id, type, supplier, date, total_amount, status FROM documents WHERE id = ?",
+    [docId],
+  );
+  const lignes = await db.all(
+    "SELECT id, inventory_id, original_name, quantity, unit_price FROM document_items WHERE document_id = ?",
+    [docId],
+  );
+  if (!relu) {
+    // Un 200 sur une ligne absente de la base est le PASS creux consigne pour
+    // documents.ts: la reponse ne peut pas pretendre une creation que la
+    // relecture dement.
+    return res.status(500).json({
+      status: "error",
+      message: "Le document n'a pas ete enregistre (relecture videe).",
+    });
+  }
+  res.json({ status: "success", id: relu.id, document: relu, items: lignes });
 } catch (error) {
   console.error(error);
   res
@@ -164,6 +189,13 @@ try {
     "SELECT * FROM document_items WHERE document_id = ?",
     [id],
   );
+  // Les lignes dont le montant n'est pas un prix defendable: elles ne bloquent
+  // pas la validation (le mouvement de stock est le travail principal de cette
+  // route) mais elles ne peuvent pas certifier un tarif, et elles sont NOMMEES
+  // au lieu d'etre tués — un prix ignore muet est un prix que le chef croit
+  // importe. Le type est declare ici et non infere du push: une mutation qui
+  // vide le `push` laisserait une chaine `any` passer sans que tsc ne bronche.
+  const prixNonExploitables: Array<{ original_name: string; valeur: string; raison: string }> = [];
   for (const item of items) {
     if (!item.inventory_id) continue;
     const qtyChange =
@@ -193,35 +225,69 @@ try {
         item.inventory_id,
       ]);
 
-      // Save to supplier_prices if we have a valid supplier
-      if (supplierId && item.unit_price !== null && item.unit_price !== undefined) {
+      // -- LA TROISIEME PORTE D'ECRITURE DES PRIX FOURNISSEURS ---------------
+      // Validationner une facture n'est pas seulement un mouvement de stock:
+      // c'est aussi une ECOUTURE de prix fournisseur, et la seule qui force
+      // `is_verified_from_invoice = 1`. A ce titre c'est la voie la plus chere
+      // du produit: le badge « releve sur facture » est exactement ce sur quoi
+      // le chef DECIDE de croire un tarif (et la comparaison designe le
+      // gagnant sur le nombre qui l'accompagne).
+      //
+      // Deux defauts MESURES par scripts/probe-documents-validate-contract.mjs:
+      //   D1_PRIX_STOCK=-12 D1_BADGE_VERIFIE=1  un MONTANT NEGATIF (une remise,
+      //     un retour, une ligne d'avoir mal saisie) partait en base CERTIFIE
+      //     VERIFIE. Un credit n'est pas un prix: de plus il remporte la
+      //     comparaison au meilleur prix a chaque fois.
+      //   D3_VALIDE_CODE=500 un montant NON NUMERIQUE faisait MEURIR toute la
+      //     validation en 500 « Validation failed » (node-sqlite3 jette sur un
+      //     binding NaN): le document restait PENDING, le stock non majouré, et
+      //     l'operateur ne savais pas quelle ligne corriger.
+      //
+      // Le reglage: la MEME predicat que les deux autres portes (prixOuNul du
+      // module partagé — une borne recopiée se perime en silence, la lecon des
+      // BUDGETS de l'auditeur). Une ligne au montant indefendable ne bloque pas
+      // la validation du document (le stock est le travail principal de cette
+      // route) mais elle n'entre PAS en tarif et elle est NOMMEe dans le
+      // compte-rendu: un prix ignore muet est un prix que le chef croit importe.
+      const prixValide = prixOuNul(item.unit_price);
+      if (supplierId && prixValide !== null) {
         const purchaseUnit = invItem.unit || "kg";
-        const calculated_price_per_ref = calculatePricePerRef(Number(item.unit_price), purchaseUnit, purchaseUnit);
-        
+        const calculated_price_per_ref = calculatePricePerRef(prixValide, purchaseUnit, purchaseUnit);
+
         const existingPrice = await db.get("SELECT id FROM supplier_prices WHERE supplier_id = ? AND inventory_id = ?", [
           supplierId,
           item.inventory_id
         ]);
-        
+
         if (existingPrice) {
           await db.run(
             "UPDATE supplier_prices SET raw_unit_price = ?, unit = ?, calculated_price_per_ref = ?, is_verified_from_invoice = 1, valid_until = NULL WHERE id = ?",
-            [Number(item.unit_price), purchaseUnit, calculated_price_per_ref, existingPrice.id]
+            [prixValide, purchaseUnit, calculated_price_per_ref, existingPrice.id]
           );
         } else {
           const priceId = Date.now().toString() + Math.random().toString().substring(2, 7);
           await db.run(
             "INSERT INTO supplier_prices (id, supplier_id, inventory_id, raw_unit_price, unit, calculated_price_per_ref, is_verified_from_invoice) VALUES (?, ?, ?, ?, ?, ?, 1)",
-            [priceId, supplierId, item.inventory_id, Number(item.unit_price), purchaseUnit, calculated_price_per_ref]
+            [priceId, supplierId, item.inventory_id, prixValide, purchaseUnit, calculated_price_per_ref]
           );
         }
+      } else if (supplierId && item.unit_price !== null && item.unit_price !== undefined) {
+        prixNonExploitables.push({
+          original_name: item.original_name || item.inventory_id,
+          valeur: String(item.unit_price),
+          raison: "montant_non_exploitable",
+        });
       }
     }
   }
   await db.run("UPDATE documents SET status = 'VALIDATED' WHERE id = ?", [
     id,
   ]);
-  res.json({ status: "success" });
+  // Le compte-rendu NOMME les lignes de tarif écartées. Une variable collectée
+  // et jamais rendue est un PASS creux: le harnais croit juger un refus notifié
+  // alors que la route le tait (verifie par
+  // test/e2e/documents-validate-contract.spec.ts, check V2_LA_LIGNE_REJETEE_EST_NOMMEE_ET_NON_TUEE).
+  res.json({ status: "success", prix_non_exploitables: prixNonExploitables });
 } catch (error) {
   console.error(error);
   res.status(500).json({ status: "error", message: "Validation failed" });
