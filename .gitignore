@@ -40,6 +40,10 @@ test-results/
 # est entre dans un commit). D'ou le joker.
 test/tmp-*/
 test/shots/
+# Le journal du lot de portes (scripts/run-all-gates.py): il porte des rc, donc
+# il est perissable et ne se juge que sur place. Versionner un journal de rc produit un
+# diff a chaque run et, pis, un etat « vert » herite qu'on relit comme une preuve.
+test/gates.out
 *.db-wal
 *.db-shm
 

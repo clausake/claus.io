@@ -34,7 +34,11 @@
     "verify:purchasing": "python3 scripts/mutation-test-purchasing.py",
     "verify:instance-guard": "node scripts/probe-instance-guard.mjs",
     "verify:instance-mord": "python3 scripts/probe-instance-garde-mord.py",
-    "verify:forecast": "python3 scripts/probe-forecast-real.py"
+    "verify:forecast": "python3 scripts/probe-forecast-real.py",
+    "verify:ready": "node scripts/probe-ready-parity.mjs",
+    "verify:ready-mord": "python3 scripts/negative-test-ready-parity.py",
+    "verify:inventory-put": "python3 scripts/negative-test-inventory-put.py",
+    "verify:all": "python3 scripts/run-all-gates.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
