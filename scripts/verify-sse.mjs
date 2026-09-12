@@ -25,21 +25,66 @@ import process from "node:process";
 
 const PORT = 4127;
 const BASE = `http://127.0.0.1:${PORT}`;
+// Le jeton que CE harnais impose au serveur.
+const TOKEN_INSTANCE = "verify-sse";
 const DATA = join(process.cwd(), "test", "tmp-sse");
 rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
 
 const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
 const child = spawn(process.execPath, [tsx, "server.ts"], {
-  env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA },
+  env: {
+    ...process.env,
+    PORT: String(PORT),
+    USER_DATA_PATH: DATA,
+    // Le jeton est FOURNI par l'APPELANT et doit rester DEDANS de
+    // l'objet env: place apres la accolade fermante, il seroit un champ
+    // de l'objet d'options de spawn (ignore par le fils), le serveur
+    // retomberait sur son propre crypto.randomUUID() et le garde
+    // d'identite rougiroit sur PROPRE fils — ce qui s'est produit et
+    // a ete rattrape par la branche « control » de
+    // scripts/probe-garde-instance-harnais-mord.py.
+    COOKDRIVE_INSTANCE_TOKEN: TOKEN_INSTANCE,
+  },
   stdio: "pipe",
 });
 child.stdout.on("data", () => {});
 child.stderr.on("data", () => {});
-for (let i = 0; i < 120; i++) {
-  try { const r = await fetch(`${BASE}/api/settings`); if (r.ok) break; } catch {}
-  await new Promise((r) => setTimeout(r, 250));
+// ⚠ L'attente CONFRONTE LE JETON D'INSTANCE, elle ne se contente pas de r.ok.
+// Ces quatre harnais tiennent un PORT FIGE: sans confrontation, un server.ts
+// orphelin (un fils qu'un harnais precedant a laisse vivre, ou un server d'un
+// AUTRE projet du meme poste) repond sur le port et le harnais juge QUI REPOND
+// au lieu de son instance — la classe exacte de faute que
+// scripts/probe-instance-guard.mjs chasse ailleurs dans ce depot, mais pas
+// ici. Port impose = contrat: server.ts meurt d'EADDRINUSE si un autre le
+// tient, et l'en-tete rendu dit si c'est BIEN le serveur que CE harnais a lance.
+// (Un PASS rendu par une instance qui n'est pas la tienne n'est pas une mesure.)
+let pret = false;
+let instanceEtrange = null;
+for (let i = 0; i < 160; i++) {
+  try {
+    const r = await fetch(`${BASE}/api/settings`, {
+      headers: { "X-Cookdrive-Instance": TOKEN_INSTANCE },
+    });
+    const recu = r.headers.get("x-cookdrive-instance");
+    if (r.ok && recu === TOKEN_INSTANCE) { pret = true; break; }
+    if (r.ok && recu) { instanceEtrange = recu; break; }
+  } catch {}
+  await new Promise((res) => setTimeout(res, 250));
 }
+if (instanceEtrange) {
+  child.kill("SIGKILL");
+  console.log("ECHEC  instance PERIMEE sur le port " + PORT + " : l'en-tete dit « "
+    + instanceEtrange + " », ce harnais attend « " + TOKEN_INSTANCE
+    + " ». Ce n'est pas le serveur de ce harnais.");
+  process.exit(1);
+}
+if (!pret) {
+  child.kill("SIGKILL");
+  console.log("ECHEC  serveur pas pret (ou pas la bonne instance) sur " + BASE);
+  process.exit(1);
+}
+
 
 let fail = 0;
 const check = (label, cond, detail) => {
