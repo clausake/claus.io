@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Lot des portes de qualite, avec les verdicts LUS et non inferez.
+
+Pourquoi ce script existe: les portes sont dix-sept commandes npm, et les lancer
+dans une chaine shell produit un verdict qui ment de deux facons:
+  - le `rc` d'une chaine est celui du DERNIER element: neuf portes rouges puis
+    une verte rendent "tout vert";
+  - les sorties se melangent, et un "passed" qui vient du lot precedent se lit
+    comme le verdict du lot courant.
+Ici chaque porte a son rc propre, sa queue de sortie est consignee dans un
+fichier, et le resume final est rendu en TOKENS (gates=14 rc_sse=0 ...), pas
+dans un tableau de noms: le rendu de ce poste altere les identifiants (piege
+consigned dans PHASES.md), un nombre survit, un nom de check non.
+
+Lancement: python3 scripts/run-all-gates.py [port1 port2 ...]
+"""
+import json
+import os
+import subprocess
+import sys
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "test", "gates.out")
+
+DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
+          "verify:ratelimit", "verify:ci", "verify:indices",
+          "verify:instance-guard", "verify:instance-mord",
+          "verify:purchasing", "verify:forecast",
+          "verify:ready", "verify:ready-mord",
+          "verify:inventory-put"]
+
+# Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
+# ici. Une liste recopiee se perime silencieusement des qu'une porte change de
+# nom (la meme faute que les budgets de BUDGETS recopies dans audit-perf.mjs, qui
+# a fait annoncer un 429 inexistant pendant des jours).
+def portes_declarees():
+    with open(os.path.join(BASE, "package.json"), encoding="utf-8") as f:
+        return set(json.load(f).get("scripts", {}))
+
+
+def main(cible):
+    declarees = portes_declarees()
+    inconnues = [g for g in cible if g not in declarees]
+    if inconnues:
+        # Une porte qui n'existe plus dans package.json n'est pas une porte verte:
+        # c'est une porte qui a cesse d'etre jugee. Elle doit etre nommee.
+        print("PORTES_INCONNUES " + "|".join(inconnues))
+        return 2
+
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, "w", encoding="utf-8") as log:
+        verdicts = []
+        for g in cible:
+            p = subprocess.run(["npm", "run", g, "--silent"], cwd=BASE,
+                               capture_output=True, text=True, timeout=1800)
+            txt = (p.stdout or "") + (p.stderr or "")
+            verdicts.append((g, p.returncode))
+            log.write("\n===== %s rc=%s =====\n%s\n" % (g, p.returncode, txt[-2500:]))
+            log.flush()
+
+    # Un resum qui enumerate TOUT comme rouge (ou, pire, qui filtre mal) fait
+    # passer une porte rouge pour verte: le compteur est le seul mot que l'on
+    # doit pouvoir lire sans relire le log.
+    rouges = [g for g, rc in verdicts if rc != 0]
+    print("GATES=%d" % len(verdicts))
+    for g, rc in verdicts:
+        print("RC %s %d" % (g.replace(":", "_"), rc))
+    print("ROUGES=%d" % len(rouges))
+    if rouges:
+        print("LISTE " + "|".join(rouges))
+    print("LOG " + OUT)
+    return 1 if rouges else 0
+
+
+if __name__ == "__main__":
+    cible = sys.argv[1:] or DEFAUT
+    sys.exit(main(cible))

@@ -22,6 +22,7 @@ import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
 import { settingsStore } from "./src/services/settings.js";
 import { uploadsDir } from "./src/services/paths.js";
 import { startDbBackup } from "./src/services/db-backup.js";
+import { announceReady } from "./src/services/ready.js";
 
 // --- Routeurs métier ---
 import settingsRouter from "./src/routes/settings.js";
@@ -210,9 +211,28 @@ async function startServer() {
   // Regle: pas de translacion silencieuse. On ne cede le port demande que si personne
   // ne l'a demande (le defaut 3000, lui, peut glisser d'un cran sans consequence).
   const PORT_IMPOSE = process.env.PORT !== undefined && process.env.PORT !== "";
+  // Le port qui avoit ete demande, fige AVANT toute recursion. Le piege, mesure
+  // par scripts/probe-ready-parity.mjs (check S-b) : capture a l'interieur de
+  // `startListening`, cette constante prenait la valeur de PORT a CHAQUE rappel
+  // recursif — donc apres un `PORT++`. Le serveur avait bien glisse de 3000 a
+  // 3002 et l'annonce rendait `glisse:false`, c'est-a-dire le contraire exact de
+  // l'information que le client Electron attend de ce champ (il s'en sert pour
+  // prevenir que le port demande etait pris). Fige ici, elle ne bouge plus.
+  const PORT_DEMANDE = PORT;
   const startListening = () => {
     const server = app.listen(PORT, HOST, () => {
       console.log(`Server running on http://${HOST}:${PORT}`);
+      // L'annonce du port REELlement obtenu (voir src/services/ready.ts). Elle
+      // est faite ici et pas plus haut: `server.address()` n'a de sens qu'apres
+      // le succes du bind, et c'est le seul endroit qui connaisse a la fois
+      // l'identite d'instance et le port que l'OS a laisse.
+      try {
+        announceReady(server, { host: HOST, demandedPort: PORT_DEMANDE, instance: INSTANCE_TOKEN });
+      } catch (e) {
+        // Une annonce qui jette ne doit pas faire tomber un serveur qui tient
+        // deja son port et sert tres bien.
+        console.error("[ready] annonce rate:", e);
+      }
     });
     server.on("error", (err: any) => {
       if (err.code === "EADDRINUSE" && !PORT_IMPOSE) {
