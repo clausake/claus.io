@@ -1107,7 +1107,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                       onClick={handleConfirmImport}
                       className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-black rounded-lg text-xs shadow-lg shadow-amber-500/10"
                     >
-                      Enregistrer les prix ({importMatches.length})
+                      Enregistrer les prix ({importMatches.filter((m: any) => m.prix_exploitable !== false && m.matched_inventory_id).length})
                     </button>
                   </div>
                 </div>
@@ -1127,7 +1127,24 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
                       {importMatches.map((m, idx) => (
                         <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
                           <td className="p-2 font-bold text-slate-200">{m.raw_name}</td>
-                          <td className="p-2 text-right font-mono text-amber-400 font-bold">{m.raw_price.toFixed(2)} €</td>
+                          <td className="p-2 text-right font-mono font-bold">
+                            {/* Le prix non numerique arrive desormais en `null`
+                                (la route danalyse ne fabrique plus de 0 par
+                                defaut). Sans ce garde, `m.raw_price.toFixed(2)`
+                                jetterait sur null et toute la vue deimport
+                                meurait — un defaut remplace par un autre. La
+                                ligne reste VISIBLE (le chef doit voir ce qui
+                                etait dans le fichier) mais elle est marquee
+                                exploitable-plutot-que-fausse et le bouton ne la
+                                compte plus. */}
+                            {m.prix_exploitable === false ? (
+                              <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-caption font-black">
+                                prix illisible
+                              </span>
+                            ) : (
+                              <span className="text-amber-400">{Number(m.raw_price).toFixed(2)} €</span>
+                            )}
+                          </td>
                           <td className="p-2 text-slate-400 font-mono">{m.raw_unit}</td>
                           <td className="p-2">
                             <select
