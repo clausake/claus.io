@@ -605,6 +605,64 @@ avaient ete rattrapes par ce harnais (fragments de nommage qui ne correspondaien
 a aucun libelle reel ; une mutation qui creait un 500 et faisait tout rougir, ce
 qui ne prouvait plus le garde vise).
 
+### 7.6 Les quatre portes de perf/SSE/cache jugoient QUI REPOND, pas leur instance
+
+Decouverte en relisant les sources, pas par un rouge: `verify:sse`, `verify:perf`,
+`verify:http`, `verify:ratelimit` tiennent chacun un **PORT FIGE** (4126-4129) et
+attendoient leur serveur sur `r.ok` **sans confronter le jeton d'instance**.
+`server.ts` rend `COOKDRIVE_INSTANCE_TOKEN` (sinon son propre `crypto.randomUUID()`),
+et `scripts/probe-instance-guard.mjs` chasse deja la meme classe de faute pour les
+SPECS e2e — mais pas pour ces quatre portes, que `verify:all` comte comme vertes.
+Un `server.ts` orphelin (fils qu'un harnais a laisse vivre, ou serveur d'un AUTRE
+projet du poste: `ps` en montroit sept, dont deux de `Stefan/Volt-App-main`) repond
+sur le port et le harnais le juge comme etant le sien.
+
+Correctif: les quatre attestent desorais sur l'en-tete (`pret` exige le jeton
+ATTENDU), separent la cause « instance PERIMEE » (ce n'est pas MON serveur) de
+« serveur pas pret », et **sortent en dur** (`process.exit(1)`, et non le
+`setTimeout(..., 200)` qui pouvoit laisser le compte continuer).
+
+Preuve de morsure: `npm run verify:instance-mord-harnais`
+(`scripts/probe-garde-instance-harnais-mord.py`) — **12/12**, par porte:
+`control VERT / faute imposteur ROUGE + cause nommee / restaure VERT`, avec un
+vrai faux serveur qui repond un AUTRE jeton. Sortie de la branche faute:
+`ECHEC instance PERIMEE sur le port 4126 : l'en-tete dit « imposteur-... », ce
+harnais attend « verify-ratelimit »`.
+
+Trois fautes d'harnais rattrapees PAR CES PROPRE CONTROLES, a retenir:
+
+1. **Le jeton mis a cote de l'objet `env` au lieu de dedans.** `spawn(..., {env:
+   {...}}, COOKDRIVE_INSTANCE_TOKEN: ...)` en fait un champ d'options IGNORE par
+   le fils: le serveur retombait sur son `randomUUID` et la porte **rougissot sur
+   SON PROPRE fils** (`l'en-tete dit « 84f0cc30-… », ce harnais attend
+   « verify-perf »`). C'est la branche `control (attendu VERT)` qui l'a dit — le
+   controle sans faute est ce qui empeche un harnais casse de crier « la mutation
+   mord ». Verifie depuis par octets: `dedans_env=True, hors_env=0`.
+2. **Un predicat a nommure inverse est un bug qui ne rougit pas.** `liberer(port)`
+   retournait `connect() != 0`, donc `not liberer()` etait vrai quand la connexion
+   REUSSISSOT: l'attente « imposteur en place » pouvoit se satisfaire d'un port
+   LIBRE. Renomme `port_pris()` + semantique droite.
+3. **« Le port est occupe » n'est pas « c'est mon imposteur qui y est ».** Le
+   predicat d'imposteur etait satisfait par n'importe quel detenteur, **y compris
+   le fils du run precedent** que `child.kill("SIGTERM")` (le wrapper `tsx` laisse
+   un petit-fils) n'avoit pas encore tue: l'imposteur ne pouvot pas binder, et la
+   porte jugeait le fils rémanant — qui porte, lui, le BON jeton. Verdict
+   rendu: « la mutation ne mord pas » (**11/12**), pour une faute d'harnais. La
+   correction n'est pas de toucher au garde: c'est `jeton_sert(port)` (l'IDENTITE
+   de ce qui répond) + `attends_port_libre()` avant d'installer l'imposteur + un
+   `srv.on("error")` qui fait MEURIR l'imposteur sur `EADDRINUSE` (sans lui il
+   restot vivant sans servir, et le harnais croisait binder). Le garde, lui,
+   n'a jamais eu tort: **il a fallu l'imposteur manuel pour le savoir**, et le
+   verdict `12/12` dit que « ne mord pas » etait mien.
+
+Ne PAS mettre cette porte dans `DEFAUT` de `run-all-gates.py`: elle relance
+ELLE-MEME les quatre portes et exige les ports LIBRES, ce qui est exactement la
+condition de contention qu'un lot séquentiel produit (fils residuel) → rouge
+flou. Elle se lance seule. Le contrat general est le meme que pour l'instance:
+**un PASS rendu par une instance qui n'est pas la tienne n'est pas une mesure.**
+
+
+
 ## Sprint 7 - La colonne de prix fournisseur a TROIS portes d'ecriture, et une seule etait garde (12 sept.)
 
 ### 7.1 La lecon du jour, une seule phrase
