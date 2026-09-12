@@ -44,7 +44,8 @@
     "verify:installeur": "python3 scripts/probe-installeur-morsure.py",
     "verify:import-contract": "node scripts/probe-supplier-import-contract.mjs",
     "verify:documents-validate": "python3 scripts/negative-test-documents-validate.py",
-    "verify:supplier-probe": "node scripts/probe-supplier-price-contract.mjs"
+    "verify:supplier-probe": "node scripts/probe-supplier-price-contract.mjs",
+    "verify:instance-mord-harnais": "python3 scripts/probe-garde-instance-harnais-mord.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
