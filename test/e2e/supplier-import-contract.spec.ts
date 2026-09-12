@@ -68,6 +68,8 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 
 let PORT = 0;
 let BASE = "";
@@ -165,12 +167,33 @@ test.beforeAll(async () => {
   });
   if (!a.ok) throw new Error(`semence: article kg non cree (${a.status})`);
   IID = (await a.json())?.id;
+  // ⚠ « UN ARTICLE DONT L'UNITE EST VIDE EN BASE » est une DONNEE HERITEE, et
+  // non une saisie de l'ecran: le contrat de POST /api/inventory (Sprint 8.2)
+  // REFUSE `unit: ""` (un texte blanc est refuse, et l'UI n'envoie jamais
+  // celte-la). La voie legitime pour mettre cette forme en base est donc le
+  // SEMIS DIRECT, comme pour S6c dans supplier-price-contract.spec.ts: la
+  // route cree l'article proprement, puis une ecriture de bas-niveau lui met
+  // l'unite vide. La semence est PROUVEE par relecture (le contrat de la porte
+  // du dessous la juge), sinon le verdict porterait sur du vide — le piege des
+  // index « refuses par mesure » sur des scans vides.
+  // L'API est CELLE DU DEPOT (src/db/init.ts:80): `open({ filename, driver:
+  // sqlite3.Database })`, pas un `sqlite3.open()` invente.
   const v = await fetch(`${BASE}/api/inventory`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(ARTICLE_SANS_UNITE),
+    body: JSON.stringify({ ...ARTICLE_SANS_UNITE, unit: "kg" }),
   });
-  if (!v.ok) throw new Error(`semence: article sans unite non cree (${v.status})`);
+  if (!v.ok) throw new Error(`semence: article (futures sans unite) non cree (${v.status})`);
   IIDV = (await v.json())?.id;
+  {
+    const dbFichier = path.join(DATA_DIR, "agent_culinaire.db");
+    const dbLocal = await open({ filename: dbFichier, driver: sqlite3.Database });
+    await dbLocal.run("PRAGMA busy_timeout = 8000");
+    const pose = await dbLocal.run("UPDATE inventory SET unit = '' WHERE id = ?", [IIDV]);
+    await dbLocal.close();
+    if (pose.changes !== 1) {
+      throw new Error(`semence: l'unite vide n'a pas pu etre posee en base (changes=${pose.changes})`);
+    }
+  }
   if ([SID, IID, IIDV].some((x) => typeof x !== "string")) {
     throw new Error("semence: les routes de creation n'ont pas rendu leurs cles");
   }
@@ -180,6 +203,11 @@ test.beforeAll(async () => {
   const ligneV = (relue as any[]).find((x) => x.id === IIDV);
   if (!ligneV || ligneV.unit !== "") {
     throw new Error(`semence: l'article sans unite n'a pas d'unite VIDE en base (${JSON.stringify(ligneV?.unit)})`);
+  }
+  // et la quantite de ce meme article est bien un NOMBRE (et non un texte herite
+  // d'un avant-contrat qui n'en decidait pas): sinon J7 jugerait une autre faute.
+  if (typeof ligneV?.quantity !== "number") {
+    throw new Error(`semence: la quantite de l'article herite n'est pas un nombre (${JSON.stringify(ligneV?.quantity)})`);
   }
 }, 90_000);
 

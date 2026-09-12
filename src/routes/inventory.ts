@@ -1,6 +1,18 @@
 // Routes : Inventaire
 import { Router } from "express";
 import { safeJsonParse } from "../shared/util.js";
+import {
+  COLONNES_NUM,
+  COLONNES_TEXTE,
+  COLONNE_TEXTE_MAX,
+  STATUTS,
+  statutDeparse,
+  lireNombre,
+  estNombreExploitable,
+  lireTexte,
+  nombreALaCreation,
+  texteALaCreation,
+} from "../shared/inventory-fields.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
 
@@ -22,34 +34,128 @@ try {
 });
 router.post("/api/inventory", async (req, res) => {
 try {
-  const {
-    id,
-    name,
-    quantity,
-    minStock,
-    unit,
-    status,
-    category,
-    unit_price,
-    yield_percent,
-  } = req.body;
-  const itemId = id || Date.now().toString();
-  const finalYield = yield_percent !== undefined ? yield_percent : 100;
+  // Contrat ECRIT/LUE de la CREATION d'une ligne d'inventaire (Sprint 8).
+  //
+  // C'etait le PUT du Sprint 6, en pire, et la sonde brute
+  // scripts/probe-post-inventory-voices.mjs l'a rendu sur des payloads pris dans
+  // le code de l'UI (et non inventes par la sonde) :
+  //
+  //  1. LA VOIE D'AJOUT RAPIDE DE L'ECRAN FACTURE ETAIT MORTE. DocumentManager
+  //     (handleQuickAdd, ~138) poste {name, unit, category, minStock, unit_price}
+  //     SANS `quantity` ni `status`. La route passoit ces `undefined` au binding
+  //     sur des colonnes NOT NULL -> « NOT NULL constraint failed » -> 500.
+  //     La sonde rend `status_http=500, ligne_en_base=AUCUNE` : le chef ne peut
+  //     pas creer l'article depuis cet ecran. Idem `name` absent ou non-str
+  //     (S6, S8b) : 500 au lieu d'un 400 qui lui dirait quoi corriger.
+  //  2. UN TEXTE DANS UNE COLONNE REAL Y SURVIT, et le badge de l'auditeur
+  //     devient un chiffre invente. `quantity:"beaucoup"` a ete ACCEPTE
+  //     (status_http=200, relu en base `quantity:"beaucoup"`,
+  //     `typeof = text`) et, verification faite dans la MEME sonde, `/api/alerts`
+  //     ne remonte PAS cette ligne : `quantity <= minStock` compare texte a reel
+  //     et ne matche jamais. Un article dont le stock est reellement bas
+  //     disparait silencieusement des alertes du chef.
+  //  3. LE STATUT ETAIT CE QUE LE CLIENT DIT. HaccpModules (saveBatch, ~98) y
+  //     depose 'normal' -- une valeur que l'ENUM du PUT ne connait pas : la meme
+  //     donnee se fait refuser a la modification et accepter a la creation, et
+  //     l'auditeur affiche une etiquette que regle d'aucune ne definit. La
+  //     creation ne laisse PLUS un agent exterior designer le statut : absente,
+  //     la valeur est DERIVEE des quantites par la MEME regle que l'UI
+  //     (statutDeparse); presente, elle doit etre dans le jeu ferme.
+  //  4. UNE CLEF DEJA PRISE REPONDAIT 500 « Failed to create » (S5), un message
+  //     sans rapport avec le defaut (c'est un conflit d'identifiant).
+  //
+  // Un `undefined` n'entre donc plus nulle part (voir src/shared/inventory-fields.ts
+  // pour pourquoi ce n'est pas « une erreur le dira » : sur une colonne NULLABLE,
+  // node-sqlite3 l'accepte et ecrit NULL en silence).
+  const refus: string[] = [];
+
+  const nom = lireTexte(req.body?.name, COLONNE_TEXTE_MAX);
+  if (nom === undefined) refus.push("name");
+
+  const unite = texteALaCreation("unit" in (req.body ?? {}), req.body?.unit, "kg");
+  if (unite === undefined) refus.push("unit");
+  const categorie = texteALaCreation("category" in (req.body ?? {}), req.body?.category, "Uncategorized");
+  if (categorie === undefined) refus.push("category");
+
+  // `quantity` et `minStock` sont NOT NULL en base : absents, ils recoivent un
+  // defaut EXPLICITE (0) au lieu d'un `undefined` qui ferait 500.
+  // ⚠ ce que la sonde a appris ici: `JSON.stringify(Infinity)` et
+  // `JSON.stringify(NaN)` rendent `"null"`. Un Infinity ou un NaN de saisie
+  // n'arrive DONC JAMAIS comme nombre, mais comme `null`. Le confondre avec «
+  // champ absent » (et lui donner le defaut) ferait passer une saisie que l'UI
+  // n'a pas pu serialiser: c'est une ordure, pas une omission. D'ou la paire de
+  // helpers absent/present, qui porte la MEME distinction a trois etats que le
+  // PUT de ce fichier.
+  const quantite = nombreALaCreation("quantity" in (req.body ?? {}), req.body?.quantity, 0);
+  if (quantite === undefined || !estNombreExploitable(quantite, COLONNES_NUM.quantity.min, COLONNES_NUM.quantity.max)) {
+    refus.push("quantity");
+  }
+  const minimum = nombreALaCreation("minStock" in (req.body ?? {}), req.body?.minStock, 0);
+  if (minimum === undefined || !estNombreExploitable(minimum, COLONNES_NUM.minStock.min, COLONNES_NUM.minStock.max)) {
+    refus.push("minStock");
+  }
+  const prix = nombreALaCreation("unit_price" in (req.body ?? {}), req.body?.unit_price, 0);
+  if (prix === undefined || !estNombreExploitable(prix, COLONNES_NUM.unit_price.min, COLONNES_NUM.unit_price.max)) {
+    refus.push("unit_price");
+  }
+  const rendement = nombreALaCreation("yield_percent" in (req.body ?? {}), req.body?.yield_percent, 100);
+  if (rendement === undefined || !estNombreExploitable(rendement, COLONNES_NUM.yield_percent.min, COLONNES_NUM.yield_percent.max)) {
+    refus.push("yield_percent");
+  }
+
+  let statut: string;
+  const brutS = req.body?.status;
+  // ⚠ `undefined` (le client n'a pas rempli) recoit le statut DERIVE; un
+  // `null` EXPLICITE est une saisie que l'UI n'a pas pu serialiser (voir les
+  // helpers de src/shared/inventory-fields.ts) et se refuse comme les autres
+  // champs, au lieu de recevoir un defaut compatissant.
+  if (brutS === undefined) {
+    statut = statutDeparse(quantite as number, minimum as number);
+  } else if (typeof brutS !== "string" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {
+    refus.push("status");
+    statut = "active";
+  } else {
+    statut = brutS.trim().toLowerCase();
+  }
+
+  if (refus.length > 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Champs refuses",
+      refused: refus,
+    });
+  }
+
+  const brutId = req.body?.id;
+  const itemId =
+    typeof brutId === "string" && brutId.trim() !== "" ? brutId.trim() : Date.now().toString();
+  const existeDeja = await db.get("SELECT id FROM inventory WHERE id = ?", [itemId]);
+  if (existeDeja) {
+    // Une clef prise n'est pas une panne du serveur: c'est une requisette
+    // invalide, nommee comme telle (l'UI pourra dire « cet article existe deja »).
+    return res.status(409).json({
+      status: "error",
+      message: "Un article porte deja cet identifiant",
+      id: itemId,
+    });
+  }
+
   await db.run(
     "INSERT INTO inventory (id, name, quantity, minStock, unit, status, category, unit_price, yield_percent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [itemId, name, quantity, minStock, unit, status, category, unit_price, finalYield],
+    [itemId, nom, quantite as number, minimum as number, unite as string, statut, categorie as string, prix as number, rendement as number],
   );
-  res.json({
-    id: itemId,
-    name,
-    quantity,
-    minStock,
-    unit,
-    status,
-    category,
-    unit_price,
-    yield_percent: finalYield,
-  });
+  // La reponse relit la BASE (meme contrat que le PUT, S4_RELECTURE) : sans
+  // cette relecture la route rendoit un objet recite du corps de la requisette,
+  // et un client qui se fie a sa reponseaffiche ce que la base ne contient pas.
+  const relu = await db.get(
+    "SELECT id, name, quantity, minStock, unit, status, category, unit_price, yield_percent, lot_number, dlc FROM inventory WHERE id = ?",
+    [itemId],
+  );
+  if (!relu) {
+    // INSERT qui ne depose aucune ligne est un echec, pas un succes a rapporter.
+    return res.status(500).json({ status: "error", message: "Ligne non creee en base" });
+  }
+  res.json({ status: "success", id: relu.id, ...relu });
 } catch (error) {
   console.error("Error creating inventory item:", error);
   res
@@ -107,15 +213,13 @@ try {
   // NET (on ecrit), ou REJETE (le client a envoye une ordure -> 400). Un
   // booleen ne porte pas ces trois etats, d'ou le marqueur REJETE de
   // src/middleware/validate.ts.
-  const COLONNES_NUM = {
-    quantity: { min: 0, max: 1_000_000 },
-    minStock: { min: 0, max: 1_000_000 },
-    unit_price: { min: 0, max: 1_000_000 },
-    yield_percent: { min: 0, max: 100 },
-  } as const;
-  const COLONNES_TEXTE = ["name", "unit", "category", "lot_number", "dlc"] as const;
-  const STATUTS = ["ok", "low", "critical", "active"] as const;
-
+  // Les regles de forme (bornes, jeu de statuts, colonnes texte) viennent de
+  // src/shared/inventory-fields.ts : la meme source que la CREATION de ce
+  // fichier. Une borne recopiee deux fois se perime en silence (lecon des
+  // BUDGETS de audit-perf.mjs, puis des prix fournisseurs a trois portes).
+  // La boucle de validation, elle, reste ICI et n'est pas partageable avec le
+  // POST : le PUT est PARTIEL (une colonne absente = on n'y touche pas), le POST
+  // est une CREATION (une colonne absente recoit le defaut du schema).
   const ecrites: string[] = [];
   const valeurs: unknown[] = [];
   const refus: string[] = [];
@@ -214,30 +318,120 @@ try {
     .json({ status: "error", message: "Failed to update inventory item" });
 }
 });
+// POST /api/inventory/consume : decrement de stock a la validation d'un chariot
+// de production (ProductionPlan.tsx, handleConsumeStock).
+//
+// CE QUI EST MESURE, et ce qui ne l'est pas (scripts/probe-consume-semantiques.mjs,
+// node-sqlite3 sur table `id TEXT PRIMARY KEY, q REAL NOT NULL`):
+//   - `UPDATE ... WHERE id = ?` sur une clef inexistante rend `changes: 0` SANS
+//     jeter. L'ancien code ignorait ce compteur: une clef inconnue laissait les
+//     AUTRES lignes consommees et repondait {success:true}. C'est le defaut
+//    central corrige ici (400 + `unknown:[index]` + ROLLBACK).
+//   - `typeof quantity !== "number" -> continue` SIGILAIT l'entree et la
+//     reponse restait {success:true}: une quantite absente, en texte, nulle ou
+//     NEGATIVE (qui, elle, REMPLissait le stock) ne levait aucun signal. Desorais
+//     400 + `refused:[index]`, aucune ecriture.
+//   - un nombre NON FINI lie dans un `?` d'une colonne REAL NOT NULL JETTE une
+//     contrainte (sonde: `NOT NULL constraint failed`). Le garde amont ne sert
+//     donc pas a empecher un NaN grave — il sert a rendre un 400 LISIBLE au lieu
+//     d'un 500 sorti du catch.
+//   - ⚠ MA THESE INITIALE « `BEGIN TRANSACTION` n'existe pas en SQLite, le
+//     ROLLBACK etait un no-op » etait FAUSSE et la sonde l'a infirmee: la grammaire
+//     SQLite est `BEGIN [DEFERRED|IMMEDIATE|EXCLUSIVE] [TRANSACTION]`, et apres
+//     BEGIN TRANSACTION + UPDATE + ROLLBACK la valeur etait RESTAUREE (123 -> 5).
+//     Je garde `BEGIN IMMEDIATE` pour une raison DIFFERENTE et non mesuree ici:
+//     il prend le verrou d'ecriture a l'entree (donc pas de SQLITE_BUSY en cours
+//     de lot sous un WAL ou le webhook HACCP ecrit en continu). Une forme qui
+//     marche n'est pas une raison d'en changer sans mesure: si ce choix doit etre
+//     juge, le juger par un A/B sous concurrence, pas par une intuition.
+//
+// Chaque regle est doublee par test/e2e/consume-contract.spec.ts: DELTA d'abord
+// (poster par la MEME route que l'UI, exiger le mouvement EXACT relu en base),
+// puis RETIRER (re-poster l'inverse) et exiger le retour a la ligne de base.
 router.post("/api/inventory/consume", async (req, res) => {
 try {
-  const items = req.body.items;
+  const items = req.body?.items;
   if (!Array.isArray(items)) {
     return res.status(400).json({ error: "Invalid payload: items must be an array" });
   }
+  if (items.length === 0) {
+    return res.status(400).json({ error: "Invalid payload: items must not be empty" });
+  }
 
-  await db.run("BEGIN TRANSACTION");
+  // Une entree est consommeable si elle porte une clef et UNE quantite
+  // NUMERIQUE finie et STRICTEMENT POSITIVE. On ne « continue » plus dessus.
+  const rejetees: number[] = [];
+  const valides: { index: number; id: string; quantite: number }[] = [];
+  items.forEach((item: any, index: number) => {
+    const brut = item?.quantity;
+    const quantite =
+      typeof brut === "number" ? brut
+        : typeof brut === "string" && brut.trim() !== "" ? Number(brut)
+        : Number.NaN;
+    if (
+      !item ||
+      typeof item.inventory_id !== "string" ||
+      item.inventory_id.trim() === "" ||
+      !Number.isFinite(quantite) ||
+      quantite <= 0
+    ) {
+      rejetees.push(index);
+    } else {
+      valides.push({ index, id: item.inventory_id, quantite });
+    }
+  });
+  if (rejetees.length > 0) {
+    return res.status(400).json({
+      error: "Invalid payload: each item needs an inventory_id and a positive quantity",
+      refused: rejetees,
+    });
+  }
+
+  await db.run("BEGIN IMMEDIATE");
+  let en_transaction = true;
   try {
-    for (const item of items) {
-      if (!item.inventory_id || typeof item.quantity !== 'number') continue;
-      await db.run(
+    let touches = 0;
+    const inconnues: number[] = [];
+    for (const ligne of valides) {
+      const r = await db.run(
         "UPDATE inventory SET quantity = CASE WHEN quantity - ? < 0 THEN 0 ELSE quantity - ? END WHERE id = ?",
-        [item.quantity, item.quantity, item.inventory_id]
+        [ligne.quantite, ligne.quantite, ligne.id],
       );
+      // changes === 0: la clef n'existe pas. Le contrat de l'ancien code
+      // l'ignorait; ici c'est un refus notifie (le chef ne corrige pas la meme
+      // chose pour un article supprimé que pour une quantite abusive).
+      if (!r || r.changes !== 1) inconnues.push(ligne.index);
+      else touches += r.changes;
+    }
+    if (inconnues.length > 0) {
+      await db.run("ROLLBACK");
+      en_transaction = false;
+      return res.status(400).json({
+        error: "Unknown inventory_id in items",
+        unknown: inconnues,
+      });
     }
     await db.run("COMMIT");
-    res.json({ success: true });
+    en_transaction = false;
+    // Le compte-rendu est RE-LU en base (meme contrat que le PUT de ce fichier:
+    // `item: relu`), pas recite depuis le corps de la requete.
+    const relues: { id: string; name: string; quantity: number }[] = [];
+    for (const ligne of valides) {
+      const relu = await db.get(
+        "SELECT id, name, quantity FROM inventory WHERE id = ?",
+        [ligne.id],
+      );
+      if (relu) relues.push(relu);
+    }
+    res.json({ success: true, consumed: touches, items: relues });
   } catch (e) {
-    await db.run("ROLLBACK");
+    if (en_transaction) {
+      try { await db.run("ROLLBACK"); } catch { /* deja hors transaction */ }
+    }
     throw e;
   }
 } catch (error) {
-  console.error(error);
+  console.error("Consume API Error:", error);
   res.status(500).json({ error: "Internal Server Error" });
 }
 });

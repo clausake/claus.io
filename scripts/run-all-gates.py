@@ -34,7 +34,14 @@ DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
           # validation de facture). Les retirer rend le contrat jugeable
           # partiellement sans que personne ne le voie.
           "verify:supplier-price", "verify:supplier-import",
-          "verify:documents-validate"]
+          "verify:documents-validate",
+          # Les deux portes d'ECRITURE d'inventaire du Sprint 8, chacune avec sa
+          # preuve de morsure: consume (decrement de stock du chariot de
+          # production) et post-inventory (la CREATION, qui avait TROIS voies dans
+          # l'UI dont une morte en 500). Sans elles, une de ces routes peut
+          # redevenir un 500 generalise sans qu'aucun lot ne le voie.
+          "verify:consume", "verify:consume-mord",
+          "verify:post-inventory", "verify:post-inventory-mord"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
