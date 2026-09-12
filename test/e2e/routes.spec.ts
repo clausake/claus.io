@@ -296,11 +296,22 @@ test("CRUD supplier-prices : depend de inventory + calcul prix/ref", async ({ re
   expect(sup.status()).toBe(200);
   const supId = (await sup.json()).id;
 
-  // 404 attendu si l'item d'inventaire n'existe pas (garde d'integrite)
+  // -- CHANGEMENT DE CONTRAT (Sprint 7), consigné et non tacite ----------------
+  // Ce test attendait 404 « Inventory item not found », le comportement de
+  // l'avant-contrat. Une CLE ETRANGERE de corps qui n'existe pas n'est pas une
+  // ressource absente de l'URI: c'est la REQUETE qui est invalide, donc 400 —
+  // et le 400 doit NOMMER le champ, sinon le cuisinier perd sa saisie sans
+  // savoir quoi corriger. L'attendu est donc aligne sur le contrat de
+  // test/e2e/supplier-price-contract.spec.ts (S4b, juge par sa propre preuve
+  // negative M3). Le 404 reste la reponse de l'UPDATE sur un `id` ADRESSE par
+  // l'appelant (S5), ce qui est une autre porte et reste jugee ici.
+  // Le test est en meme temps RENFORCE: l'ancien assert ne verifiait que le
+  // code, jamais la raison du refus.
   const missing = await request.post(`${BASE}/api/supplier-prices`, {
     data: { supplier_id: supId, inventory_id: "inexistant", raw_unit_price: 1.2, unit: "kg" },
   });
-  expect(missing.status()).toBe(404);
+  expect(missing.status(), "CLE_ETRANGERE_INEXISTANTE_EST_UN_400_NOMME").toBe(400);
+  expect((await missing.json())?.refused, "LE_REFUS_NOMME_LARTICLE").toContain("inventory_id");
 
   const created = await request.post(`${BASE}/api/supplier-prices`, {
     data: { supplier_id: supId, inventory_id: invId, raw_unit_price: 1.8, unit: "kg" },

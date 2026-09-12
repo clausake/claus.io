@@ -28,7 +28,13 @@ DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
           "verify:instance-guard", "verify:instance-mord",
           "verify:purchasing", "verify:forecast",
           "verify:ready", "verify:ready-mord",
-          "verify:inventory-put"]
+          "verify:inventory-put",
+          # les trois portes du contrat des prix fournisseurs: une par VOIE
+          # D'ECRITURE de la colonne jugeable (saisie unitaire, import CSV,
+          # validation de facture). Les retirer rend le contrat jugeable
+          # partiellement sans que personne ne le voie.
+          "verify:supplier-price", "verify:supplier-import",
+          "verify:documents-validate"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
