@@ -51,6 +51,8 @@ import { test, expect } from "@playwright/test";
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 import { createServer } from "net";
 
 let PORT = 0;
@@ -259,10 +261,37 @@ test("V5 aucun nombre de devis negatif ne sort du REPLI de la comparaison",
   // n'est electionable. C'est la mesure de D1_MEILLEUR_PRIX=-12.
   const art = await poster(request, "/api/inventory", {
     name: "Sonde V5 Sel Corrompu", quantity: 5, minStock: 1, unit: "kg",
-    status: "ok", category: "Epicerie", unit_price: -50,
+    status: "ok", category: "Epicerie", unit_price: 12,
   });
-  expect(art.status(), "l'article au prix de reference corrompu doit passer la creation").toBe(200);
+  expect(art.status(), "l'article de reference doit passer la creation").toBe(200);
   const iid = (await art.json())?.id;
+  // ⚠ LE PRIX DE REFERENCE CORROMPU est une DONNEE HERITEE et non une saisie:
+  // le contrat de POST /api/inventory (Sprint 8.2) REFUSE un `unit_price`
+  // negatif — un prix de -50 € ne sort plus d'une porte d'ecriture. C'est
+  // justement ce que ce test doit traverser: le garde de repli, lui, vise les
+  // BASES DEJA LIVREES (les lignes posees par l'ancienne route sans borne, la
+  // lecon de M7/S6c). La voie legitime est donc le SEMIS DIRECT en base, comme
+  // S6c dans supplier-price-contract.spec.ts, avec l'API du depot
+  // (`open({filename, driver: sqlite3.Database})`, src/db/init.ts:80) et une
+  // PREUVE de la semence: sans relecture du compte, le test jugerait le vide.
+  {
+    const dbFichier = path.join(DATA_DIR, "agent_culinaire.db");
+    const dbLocal = await open({ filename: dbFichier, driver: sqlite3.Database });
+    await dbLocal.run("PRAGMA busy_timeout = 8000");
+    const pose = await dbLocal.run(
+      "UPDATE inventory SET unit_price = ? WHERE id = ?",
+      [-50, iid],
+    );
+    await dbLocal.close();
+    expect(pose.changes, "V5_LA_SEMENCE_DU_PRIX_CORROMPU_ENTRE_EN_BASE").toBe(1);
+  }
+  // et il y est REELLEMENT, relu par la voie de lecture de l'app (et non par le
+  // seul compteur de l'UPDATE): sinon les expects du dessous porteroient sur une
+  // ligne saine et le verdict serait un faux vert.
+  const relueV5 = ((await (await request.get(`${BASE}/api/inventory`)).json()) as any[])
+    .find((x: any) => x.id === iid);
+  expect(relueV5?.unit_price, "V5_LE_PRIX_DE_REFERENCE_EST_BIEN_CORROMPU_EN_BASE").toBe(-50);
+  expect(relueV5?.quantity, "et la quantite reste un nombre exploitable").toBe(5);
   const sid = await unFournisseur(request, "Sonde Fourn V5");
   // Une ligne fournisseur NON COMPARABLE (unite hors famille): le groupe existe,
   // mais rien n'est electionable -> la comparaison tombe sur le repli.
