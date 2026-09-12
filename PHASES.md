@@ -933,6 +933,29 @@ quatre portes du Sprint 8. Deux de ses lecons :
   pose pour le `PUT` de ce fichier), `POST /api/robots/assign`, et
   `POST /api/haccp/*` (`temperature`, `scan`, `corrective-action`, qui nourrissent
   l audit HACCP du chef).
+- **POST /api/documents (import de facture) : verdicts rendus, contrat NON encore pose.**
+  La sonde rejouable `scripts/probe-document-items-voices.mjs` (relecture EN
+  BASE, sa premiere version reliait par `GET /api/documents/:id` qui rend du
+  HTML → elle croisait « relecture impossible », un verdict creux) rend, sur le
+  payload REEL de `DocumentManager` handleAddItem (~107 initialise chaque ligne
+  a `quantity:""`, `unit_price:""`):
+  - A/B/C lignes en chaines VIDES ou texte -> **200 et la ligne est en base en
+    `typeof=text`** (`''` / `'beaucoup'`) alors que `document_items.quantity` est
+    `REAL NOT NULL` (l'affinite dynamique de SQLite ne verifie rien). Un total de
+    facture calcule sur ces lignes est un chiffre invente.
+  - D/E/F quantite absente, `items` absent ou non-tableau -> **500 « Failed to
+    save document »** (message fourre, le chef ne sait pas quoi corriger).
+  - G `inventory_id` inexistante -> **200 + ligne orphelinee en base** (aucune
+    cle etrangere n'est verifiee a l'INSERT).
+  - H `total_amount:"42,50"` survit en TEXTE dans une colonne REAL ('42.50' est
+    lui converti par l'affinite). L'UI corrige la virgule avant d'envoyer
+    (`toString().replace(",", ".")`), mais une voie d'import ou un poste tierce
+    ne le fait pas.
+  Ce qui EST deja juge par ailleurs : le 500 du texte non numerique a la
+  VALIDATION (M3 de `verify:documents-validate`) et la clef rendue a la
+  creation. Ce qui ne l'est PAS : la forme des LIGNES a la CREATION. C'est le
+  prochain contrat, avec la meme triade (refus nomme + `rejetees:[{index,raison}]`
+  + rien d'ecrit sur un refus) que l'import de mercuriale.
 - `/api/agent/command` lance un Chromium `headless:false` : hors suite e2e, a
   couvrir sous `xvfb` dans un dedie.
 - Les routes Ollama (`/api/ai/chat`, `/api/voice`, `/api/inventory/analyze`,
