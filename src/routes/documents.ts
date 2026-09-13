@@ -10,6 +10,11 @@ import { safeJsonParse, calculatePricePerRef, prixOuNul, ExtractedDocumentData }
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
 import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import {
+  jugerLignesDeDocument,
+  lireTexteDeLigne,
+  totalOuNul,
+} from "../shared/document-items.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -40,88 +45,231 @@ try {
 });
 router.post("/api/documents", async (req, res) => {
 try {
-  const { id, type, supplier, date, total_amount, source_image_url, items } =
+  // ======================================================================
+  // CONTRAT LIGNES DE DOCUMENT (Sprint 9) — la porte D'ECRITURE des lignes
+  // de facture. Jugee par test/e2e/document-items-contract.spec.ts et par sa
+  // preuve de morsure verify:document-items-mord.
+  //
+  // VERDICTS MESURES AVANT CE CORRECTIF (scripts/probe-document-items-voices
+  // .mjs, instance isolee + relecture EN BASE par l'API du depot,
+  // src/db/init.ts:80):
+  //   A/B/C  quantity:"" ou "beaucoup" -> 200 et la ligne est en base en
+  //          typeof='text' dans une colonne REAL NOT NULL (l'affinite
+  //          dynamique de SQLite ne verifie RIEN) : 3 lignes sur les 7 semees.
+  //          Un total additione sur ces lignes est un chiffre invente.
+  //   D/E/F  quantity absente / items absent / items non-tableau -> 500 muet
+  //          « Failed to save document ». Le 500 est le pire des silences : le
+  //          chef ne sait pas quoi corriger, et handleSubMIT de
+  //          DocumentManager (un `if (res.ok)` sans branche d'echec) ne lui
+  //          rend RIEN a l'ecran.
+  //   G      inventory_id inexistant -> 200 et ligne ORPHELINEE en base. La
+  //          validation qui suit fait `UPDATE inventory ... WHERE id = <cle>`
+  //          de 0 ligne SANS ERREUR : la facture « reussit » et le stock ne
+  //          bouge jamais.
+  //   H/H2   total_amount:"42,50" survit en typeof='text' dans une REAL,
+  //          pendant que "42.50" y est un REAL : une saisie, deux issues.
+  //
+  // LES QUATRE REGLES, dans cet ordre (le LOT d'abord, la LIGNE ensuite) :
+  //   1) faute de structure (items absent ou non-tableau, type blanc, total
+  //      indefendable) -> 400 qui NOMME les champs : un 400 muet fait perdre
+  //      la saisie du cuisinier sans qu'il sache quoi corriger ;
+  //   2) clef d'article PRESENTE mais inexistante -> la ligne est refusee et
+  //      NOMMEE (index + raison + clef), jamais ecrite orpheline ;
+  //   3) clef d'article ABSENTE -> la ligne est ECRITE (proposition libre : le
+  //      chef saisiit un PDF a la main et n'a pas encore apparie chaque ligne ;
+  //      le GET la rend via COALESCE(i.name, di.original_name)). La rejeter
+  //      rendrait la voie manuelle du produit inutilisable — la lecon de
+  //      l'ENUM du Sprint 6, qui omettoit 'active' pose par l'init ;
+  //   4) zero ligne ecrite n'est JAMAIS un 200 (famille S5 / J9) : un 200 sur
+  //      une facture sans lignes est le PASS creux le plus cher du produit,
+  //      le chef range un papier qu'il croit compte.
+  //
+  // CE QUE CE CONTRAT NE FAIT PAS, ET NE DOIT PAS FAIRE (verdicts consignes
+  // par V2 et V3 de documents-validate-contract.spec.ts, qui jugent ces DEUX
+  // voies depuis CETTE porte) : une ligne au montant indefendable SURVIT,
+  // avec son brut conserve, et la VALIDATION du document reussit quand meme.
+  // Le mouvement de stock est le travail principal de la route-soeur ;
+  // amputer la facture de sa ligne priverait le chef de sa marchandise pour
+  // un defaut de frappe sur un prix. Ce qui est neutralise, c'est le TARIF
+  // (unit_price NULL, donc jamais elu, jamais badge « releve sur facture »),
+  // pas la ligne.
+  // ======================================================================
+  const { id, type, supplier, date, total_amount, source_image_url } =
     req.body;
-  
+  const aRefuse: string[] = [];
+
+  // 1) LE LOT. Un champ de structure indefendable est une faute de REQUETE
+  // (400), pas une ressource absente (404) ni un accident serveur (500).
+  const typeDoc = lireTexteDeLigne(type, "");
+  if (typeDoc === undefined || typeDoc === "") aRefuse.push("type");
+  const fournisseur = lireTexteDeLigne(supplier, "");
+  if (fournisseur === undefined) aRefuse.push("supplier");
+  const dateDoc = lireTexteDeLigne(date, "");
+  if (dateDoc === undefined) aRefuse.push("date");
+  const image = lireTexteDeLigne(source_image_url, "");
+  if (image === undefined) aRefuse.push("source_image_url");
+  // Le total a DEUX ecritures legitimes (42.50 et "42,50") et une seule
+  // exploitable : totalOuNul les reunifie, et refuse ce qui melange les
+  // separateurs au lieu de le deviner (un « 1.234,56 » lu comme 1.234 est
+  // faux de trois ordres de grandeur).
+  const total = totalOuNul(total_amount);
+  if (total === undefined) aRefuse.push("total_amount");
+  if (!Array.isArray(req.body?.items)) aRefuse.push("items");
+  if (aRefuse.length > 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Champs refuses : " + aRefuse.join(", "),
+      refused: Array.from(new Set(aRefuse)),
+    });
+  }
+
   const docId = id || Date.now().toString();
 
-  // -- Deux defauts de cette branche, tous deux muets -------------------------
+  // -- Deux defauts de cette branche, tous deux muets --------------------
   //  1. Le tri se faisait sur `if (id)` et non sur « la ligne EXISTE ». Or la
-  //     voie de creation manuelle (DocumentManager) envoie son propre `id` pour
-  //     un document qui n'est pas encore en base : l'UPDATE ne toucait AUCUNE
-  //     ligne, le document n'etait jamais cree — et la reponse rendait
-  //     `id: <celui demande>`, donc le client croyait avoir cree quelque chose.
-  //     Un PASS creux de bout en bout : 200, un id, rien en base.
+  //     voie de creation manuelle (DocumentManager) envoie son propre `id`
+  //     pour un document qui n'est pas encore en base : l'UPDATE ne touchait
+  //     AUCUNE ligne, le document n'etait jamais cree — et la reponse rendait
+  //     `id: <celui demande>`. Un PASS creux de bout en bout : 200, un id,
+  //     rien en base.
   //  2. Les lignes etaient inserees avec `document_id = id` (donc NULL en
-  //     creation, ou l'id demande) au lieu de `docId` : le detail se retrouvaient
-  //     orphelins, invisibles au GET. Une factture sans lignes ne majore rien.
-  // La presence reelle de la ligne decide donc, et les lignes partent sur docId.
+  //     creation, ou l'id demande) au lieu de `docId` : le detail se
+  //     retrouvait orphelin, invisible au GET. Une facture sans lignes ne
+  //     majore rien.
+  // La presence reelle de la ligne decide donc, et les lignes partent docId.
   const existing: { id: string } | undefined = await db.get(
     "SELECT id FROM documents WHERE id = ?",
     [docId],
   );
 
-  if (existing) {
-    await db.run(
-      "UPDATE documents SET type = ?, supplier = ?, date = ?, total_amount = ?, source_image_url = ?, status = 'PENDING' WHERE id = ?",
-      [type, supplier, date, total_amount, source_image_url, docId]
-    );
-    // Delete all old items if any
-    await db.run("DELETE FROM document_items WHERE document_id = ?", [docId]);
-  } else {
-    await db.run(
-      "INSERT INTO documents (id, type, supplier, date, total_amount, source_image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [docId, type, supplier, date, total_amount, source_image_url, "PENDING"],
-    );
-    await db.run("DELETE FROM document_items WHERE document_id = ?", [docId]);
-  }
-  
-  for (const item of items) {
-    await db.run(
-      "INSERT INTO document_items (id, document_id, inventory_id, original_name, quantity, unit_price, lot_number, dlc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [
-        Math.random().toString(36).substr(2, 9),
-        docId,
-        item.inventory_id || null,
-        item.original_name || "",
-        item.quantity,
-        item.unit_price,
-        item.lot_number,
-        item.dlc,
-      ],
-    );
-  }
-  // La reponse ne RECITE pas le client: l'ancien `res.json({ id })` rendait la
-  // cle DEMANDEE, donc `undefined` pour la voie de creation manuelle qui n'en
-  // envoie pas une (mesure: scripts/probe-documents-validate-contract.mjs,
-  // D1_VALIDE_CODE=404 — le client obtenait un 200, un id faux, et son appel
-  // SUIVANT, /api/documents/<id>/validate, meurait en 404 « Document not found »
-  // sur un document qui venait bel et bien d'etre cree). La cle rendu est la cle
-  // ECITE (docId) et la ligne est RELLE en base: temoin independant du corps de
-  // requete, seul moyen de voir une ecraserie entre le payload et la colonne.
-  const relu = await db.get(
-    "SELECT id, type, supplier, date, total_amount, status FROM documents WHERE id = ?",
-    [docId],
+  // 2) + 3) LES LIGNES, JUGEEs AVANT TOUTE ECRIRE : la transaction n'a pas
+  // encore commence, donc RIEN n'est ecrit sur un refus. La predicat est
+  // PARTAGEE avec POST /api/purchasing/order (src/shared/document-items.ts)
+  // parce que les DEUX portes ecrivent les MEMES colonnes de document_items
+  // et que « une porte ne prouve que la voie qu'elle arpente ».
+  const { ecrites, rejetees } = await jugerLignesDeDocument(
+    db,
+    req.body.items,
+    {
+      exigerClef: false,
+      prixIndefendable: "neutraliser",
+    },
   );
-  const lignes = await db.all(
-    "SELECT id, inventory_id, original_name, quantity, unit_price FROM document_items WHERE document_id = ?",
-    [docId],
-  );
-  if (!relu) {
-    // Un 200 sur une ligne absente de la base est le PASS creux consigne pour
-    // documents.ts: la reponse ne peut pas pretendre une creation que la
-    // relecture dement.
-    return res.status(500).json({
+
+  // 4) ZERO LIGNE N'EST PAS UNE REUSSITE. Un 200 ici ferait disparaitre la
+  // saisie du chef sans qu'aucun ecran ne le voie. Le 400 NOMME chaque ligne
+  // et sa raison : le chef ne corrige pas la meme chose selon que le champ
+  // est vide, texte ou negatif.
+  if (ecrites.length === 0) {
+    return res.status(400).json({
       status: "error",
-      message: "Le document n'a pas ete enregistre (relecture videe).",
+      message:
+        "Aucune ligne de document exploitable : rien n'a ete enregistre.",
+      refused: ["items"],
+      rejetees,
     });
   }
-  res.json({ status: "success", id: relu.id, document: relu, items: lignes });
+
+  await db.run("BEGIN TRANSACTION");
+  try {
+    if (existing) {
+      await db.run(
+        "UPDATE documents SET type = ?, supplier = ?, date = ?, total_amount = ?, source_image_url = ?, status = 'PENDING' WHERE id = ?",
+        [typeDoc, fournisseur, dateDoc, total, image, docId]
+      );
+      await db.run(
+        "DELETE FROM document_items WHERE document_id = ?",
+        [docId]
+      );
+    } else {
+      await db.run(
+        "INSERT INTO documents (id, type, supplier, date, total_amount, source_image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [docId, typeDoc, fournisseur, dateDoc, total, image, "PENDING"],
+      );
+      await db.run(
+        "DELETE FROM document_items WHERE document_id = ?",
+        [docId]
+      );
+    }
+
+    let posees = 0;
+    for (const ligne of ecrites) {
+      const resultat = await db.run(
+        "INSERT INTO document_items (id, document_id, inventory_id, original_name, quantity, unit_price, unit_price_brut, lot_number, dlc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          Math.random().toString(36).substr(2, 9),
+          docId,
+          ligne.inventory_id,
+          ligne.original_name,
+          ligne.quantity,
+          ligne.unit_price,
+          ligne.unit_price_brut,
+          ligne.lot_number,
+          ligne.dlc,
+        ],
+      );
+      // Temoin INDEPENDANT du corps de reponse : une ligne qui ne touche
+      // RIEN n'est enregistree, meme dans une transaction qui « reussit »
+      // (un UPDATE de 0 ligne rendait 200 au Sprint 6 — la lecon S5).
+      if (resultat?.changes !== 1) throw new Error("ligne_non_ecrite");
+      posees += 1;
+    }
+    await db.run("COMMIT");
+
+    // La reponse ne RECITE pas le client : l'ancien `res.json({ id })`
+    // rendait la cle DEMANDEE, donc `undefined` pour la voie de creation
+    // manuelle qui n'en envoie pas une (mesure D1_VALIDE_CODE=404 : le
+    // client obtenait un 200, un id faux, et son appel SUIVANT
+    // /api/documents/<id>/validate meurait en 404 sur un document qui
+    // venait bel et bien d'etre cree). La cle rendue est la cle ECITE et la
+    // ligne est RELLE en base : temoin independant du corps de requete.
+    const relu = await db.get(
+      "SELECT id, type, supplier, date, total_amount, typeof(total_amount) AS total_type, status FROM documents WHERE id = ?",
+      [docId],
+    );
+    const lignes = await db.all(
+      "SELECT id, inventory_id, original_name, quantity, typeof(quantity) AS quantity_type, unit_price, unit_price_brut FROM document_items WHERE document_id = ?",
+      [docId],
+    );
+    if (!relu) {
+      // Un 200 sur une ligne absente de la base est le PASS creux consigne
+      // pour documents.ts : la reponse ne peut pas pretendre une creation
+      // que la relecture dement.
+      throw new Error("document_non_relie");
+    }
+    res.json({
+      status: "success",
+      id: relu.id,
+      document: relu,
+      items: lignes,
+      ecrites: posees,
+      ignorees: rejetees.length,
+      rejetees,
+    });
+  } catch (erreurTransaction) {
+    // Une ecriture partielle n'est pas un demi-succes : sans ROLLBACK, une
+    // facture moitie ecrite reste a l'ecran comme une facture valable.
+    await db.run("ROLLBACK");
+    console.error("Error saving document:", erreurTransaction);
+    return res.status(500).json({
+      status: "error",
+      message:
+        "Document annule (transaction) : aucune ligne n'a ete enregistree.",
+      raison: String((erreurTransaction as Error)?.message ?? erreurTransaction),
+    });
+  }
 } catch (error) {
-  console.error(error);
-  res
-    .status(500)
-    .json({ status: "error", message: "Failed to save document" });
+  // Filet: tout ce qui tombe ICI arrive AVANT la transaction (une lookup qui
+  // jette, un binding surprise). Ce n'est pas un 500 « Failed to save document »
+  // muet — le 500 d'origine ne disait pas QUOI corriger et DocumentManager ne
+  // l'affichait meme pas. La raison technique est rendue, et le document n'est
+  // PAS enregistre partiellement (rien n'a commence).
+  console.error("Error saving document:", error);
+  res.status(500).json({
+    status: "error",
+    message: "Le document n'a pas pu etre prepare : aucune ligne n'a ete ecrite.",
+    raison: String((error as Error)?.message ?? error),
+  });
 }
 });
 router.post("/api/documents/:id/validate", async (req, res) => {
@@ -202,15 +350,35 @@ try {
       doc.type === "AVOIR"
         ? -Math.abs(item.quantity)
         : Math.abs(item.quantity);
+    // -- Le SET se construit sur les colonnes REELLEMENT PRESENTES ------------
+    // Depuis le contrat de la CREATION, une ligne au montant indefendable a
+    // `unit_price = NULL`. Le passer au binding n'est PAS neutre: `unit_price`
+    // de la colonne `inventory` est NULLABLE, donc node-sqlite3 ECrit NULL EN
+    // SILENCE (sonde scripts/probe-binding-undefined.mjs: update_undefined_
+    // nullable -> ok, colonne NULL). Valider une facture dont un prix est
+    // illisible effacerait donc le PRIX DE REFERENCE de l'article — le nombre
+    // sur lequel la comparaison retombe quand aucun fournisseur n'est elu
+    // (checks V5/V6). Une absence n'est pas un ordre d'effacement: la colonne
+    // sort du SET, comme pour le PUT partiel du Sprint 6. Idem lot_number/dlc,
+    // ou une ligne sans lot ne doit pas vider le lot de l'article.
+    const colonnes: string[] = ["quantity = quantity + ?"];
+    const valeurs: unknown[] = [qtyChange];
+    if (item.unit_price !== null && item.unit_price !== undefined) {
+      colonnes.push("unit_price = ?");
+      valeurs.push(item.unit_price);
+    }
+    if (item.lot_number !== null && item.lot_number !== undefined && item.lot_number !== "") {
+      colonnes.push("lot_number = ?");
+      valeurs.push(item.lot_number);
+    }
+    if (item.dlc !== null && item.dlc !== undefined && item.dlc !== "") {
+      colonnes.push("dlc = ?");
+      valeurs.push(item.dlc);
+    }
+    valeurs.push(item.inventory_id);
     await db.run(
-      "UPDATE inventory SET quantity = quantity + ?, unit_price = ?, lot_number = ?, dlc = ? WHERE id = ?",
-      [
-        qtyChange,
-        item.unit_price,
-        item.lot_number,
-        item.dlc,
-        item.inventory_id,
-      ],
+      `UPDATE inventory SET ${colonnes.join(", ")} WHERE id = ?`,
+      valeurs,
     );
     const invItem = await db.get(
       "SELECT quantity, minStock, unit FROM inventory WHERE id = ?",
@@ -271,10 +439,24 @@ try {
             [priceId, supplierId, item.inventory_id, prixValide, purchaseUnit, calculated_price_per_ref]
           );
         }
-      } else if (supplierId && item.unit_price !== null && item.unit_price !== undefined) {
+      } else if (
+        supplierId &&
+        (item.unit_price !== null || item.unit_price_brut != null) &&
+        (item.unit_price !== undefined || item.unit_price_brut !== undefined)
+      ) {
+        // Depuis le contrat de la CREATION (Sprint 9), une ligne au montant
+        // indefendable arrive ici avec `unit_price = NULL` et son BRUT dans
+        // `unit_price_brut`: la porte d'entree refuse desorais d'ecrire un
+        // texte dans une colonne REAL, mais ne JETTE pas la ligne (le contrat
+        // V2/V3 — le mouvement de stock reste le travail principal de cette
+        // route). Sans lire la colonne de trace, la ligne serait DEVENUE
+        // MUETTE: le 400 de la creation ne la nomme plus (elle n'empeche pas
+        // la facture) et la validation ne la nommerait plus non plus, parce
+        // qu'elle ne verrait qu'un NULL ordinaire — un prix ignore muet est
+        // un prix que le chef croit importe.
         prixNonExploitables.push({
           original_name: item.original_name || item.inventory_id,
-          valeur: String(item.unit_price),
+          valeur: String(item.unit_price ?? item.unit_price_brut),
           raison: "montant_non_exploitable",
         });
       }
