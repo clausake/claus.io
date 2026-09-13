@@ -110,7 +110,7 @@ def covers_of(raw_json):
 
 
 
-def caler_planning_sur_aujourdhui(db_path, today):
+def caler_planning_sur_aujourdhui(db_path, today, cible=None):
     """Decale UNIQUEMENT la colonne `menu_planning.date`, d un DECALE UNIQUE.
 
     ⚠ Ce que ce mode NE FABRIQUE PAS: aucune gramature (quantity_per_person),
@@ -120,8 +120,12 @@ def caler_planning_sur_aujourdhui(db_path, today):
     Decaler la date est la plus petite transformation qui rende la chaine
     mesurable sans la fabriquer.
 
-    Le decale est UNIQUE et DETERMINISTE: le plus vieux plat planifie tombe
-    a `today`. Les distances RELATIVES entre plats sont preservees (le
+    Par defaut le decale est UNIQUE et DETERMINISTE: le plus vieux plat
+    planifie tombe a `today`. Avec `cible` (mode fixture) il tombe a la
+    date DEMANDEE, qui peut etre dans le PASSE: c'est ce qui permet
+    d'exercer la borne BASSE de la fenetre et la garde des clefs vides
+    sans retirer une seule condition du SQL. Les distances RELATIVES
+    entre plats restent preservees (le
     calendrier du chef garde sa forme), et il n y a aucun ajustement ligne
     par ligne qui pourrait cacher une donne seme.
 
@@ -136,7 +140,12 @@ def caler_planning_sur_aujourdhui(db_path, today):
         if not bornes or not bornes[0]:
             return 0, 0
         d0 = datetime.datetime.strptime(bornes[0][:10], "%Y-%m-%d").date()
-        d1 = datetime.datetime.strptime(today, "%Y-%m-%d").date()
+        # `cible` (mode fixture) decale vers une date du PASSE au lieu de
+        # `today`: un plat peut alors etre a la fois LIE a une recette
+        # (done joint) et HORS DELAI (done la borne basse a quelque chose
+        # a exclure). Voir fixture_exercer().
+        repere = cible or today
+        d1 = datetime.datetime.strptime(repere, "%Y-%m-%d").date()
         delta = (d1 - d0).days
         if delta == 0:
             return 0, 0
@@ -150,6 +159,54 @@ def caler_planning_sur_aujourdhui(db_path, today):
         return delta, n
     finally:
         con.close()
+
+def fixture_exercer(db_path, today):
+    """Depose la seule donnee qui manque pour exercer la branche de gramature.
+
+    Ne seme AUCUN besoin: la gramature est a 0, done la route rend 0 et
+    l'oracle a la main saute la meme ligne (`qpp <= 0`). L'accord est
+    preserve AVANT mutation — c'est la condition pour que le rougit sous
+    mutation soit imputable a la mutation et non au fixture.
+
+    La clef d'ingredient est prise LIBRE (jamais touchee par la recette du
+    plat en fenetre): sans ca le besoin cree par la mutation serait noye
+    dans un besoin deja non nul et le check « pas de fuite » ne pourrais la
+    designer. Retourne (n_plan, n_ingredient, article) ou (0, 0, None).
+    """
+    con = sqlite3.connect(db_path)
+    try:
+        base = con.execute(
+            "SELECT mp.recipe_id, mp.recipe_json, mp.meal_type"
+            "  FROM menu_planning mp"
+            " WHERE mp.recipe_id IS NOT NULL AND mp.recipe_id <> ''"
+            "   AND DATE(mp.date) = DATE(?)"
+            "   AND mp.recipe_json IS NOT NULL LIMIT 1", (today,)).fetchone()
+        if not base:
+            return 0, 0, None
+        recette, rjson, repas = base[0], base[1], base[2]
+        pris = {r[0] for r in con.execute(
+            "SELECT inventory_id FROM recipe_ingredients WHERE recipe_id = ?",
+            (recette,)).fetchall()}
+        cand = [r[0] for r in con.execute(
+            "SELECT id FROM inventory ORDER BY id").fetchall()]
+        cible = next((x for x in cand if x and x not in pris), None)
+        if not cible:
+            return 0, 0, None
+        con.execute(
+            "INSERT INTO menu_planning (id, date, meal_type, recipe_id,"
+            "                          title, recipe_json)"
+            "VALUES ('mp-x1', DATE(?), ?, ?, 'Fixture branche', ?)",
+            (today, repas or "LUNCH", recette, rjson))
+        con.execute(
+            "INSERT INTO recipe_ingredients (id, recipe_id, inventory_id,"
+            "                                quantity_per_person)"
+            "VALUES ('ri-x1', ?, ?, 0)",
+            (recette, cible))
+        con.commit()
+        return 1, 1, cible
+    finally:
+        con.close()
+
 
 def oracle_need(db_path, today, horizon):
     """Le calcul attendu, ecrit a la main et independant de la route."""
@@ -209,6 +266,16 @@ def main():
     # Il n'est PAS le defaut: sans lui, une base sans plat en fenetre
     # rend toujours rc=2, ce qui est le contrat de `verify:forecast`.
     semer = "--semer=decaler" in sys.argv
+    fixture = "--fixture=branches" in sys.argv
+    # Le nom etait passe au calage sans jamais etre produit (NameError).
+    # Sans cible le plus vieux plat tombe a `today`: le planning occupe
+    # [today, +6] et la borne BASSE de la fenetre n'a rien a exclure -- la
+    # juger dans cet etat serait un PASS sans temoin. Avec la cible, trois
+    # plats restent AVANT la borne tout en etant lies a des recettes.
+    cible = None
+    if fixture:
+        _t = datetime.datetime.strptime(TODAY, "%Y-%m-%d").date()
+        cible = (_t - datetime.timedelta(days=3)).isoformat()
     horizon = HORIZON
     for a in sys.argv:
         if a.startswith("--horizon="):
@@ -225,7 +292,11 @@ def main():
     delta_calage, lignes_calies = (0, 0)
     if semer:
         delta_calage, lignes_calies = caler_planning_sur_aujourdhui(
-            db_copy, TODAY)
+            db_copy, TODAY, cible)
+    article_fixe = None
+    n_fix_plan = n_fix_ing = 0
+    if fixture:
+        n_fix_plan, n_fix_ing, article_fixe = fixture_exercer(db_copy, TODAY)
 
     print("=" * 78)
     print("SONDE PREVISION D'ACHAT — base reelle du client"
@@ -258,11 +329,26 @@ def main():
         print("                        (%d lignes liees a une recette, dates seules" % lignes_calies)
         print("                        touchees; AUCUNE gramature, couverts, rendement,")
         print("                        prix ou stock invente).")
+        if fixture:
+            # les compteurs viennent de fixture_exercer: la banniere rend
+            # CE QUI A ETE POSE, et non ce qu'on aurait voulu poser. Un compte
+            # durci ferait du no-op un menonge, et M4, joue sans la donnee
+            # qui l'exerce, rendrait « ne mord pas » pour une raison d'harnais.
+            if n_fix_plan == 0 or article_fixe is None:
+                print("  FIXTURE DEMANDE MAIS RIEN N'A ETE POSE")
+                print("                        la voie de la gramature n'est pas")
+                print("                        exercee: ce run ne peut PAS")
+                print("                        prononcer la morsure de M4.")
+            else:
+                print("  FIXTURE (branche de gramature) : %d plat en fenetre" % n_fix_plan)
+                print("                        %d ingredient a gramature 0.0 sous %s" % (n_fix_ing, article_fixe))
+                print("                        valeur que recipes.ts ecrit lui-meme")
+                print("                        (`|| 0`) si le chef laisse le champ vide")
     print("  oracle        : %d lignes de plan dans [%s, +%d j (CELLE QUI EST JOUEE)], %d articles avec besoin"
           % (prises, TODAY, horizon, len(attendus)))
     if prises == 0:
         print("\nARRET : les %d plats planifies sont tous hors de la fenetre (dates" % n_liees)
-        print("passees ou future au-dela de %d jours). Juger la prevision ici" % HORIZON)
+        print("passees ou future au-dela de %d jours). Juger la prevision ici" % horizon)
         print("reviendrait a mesurer un scan vide. Relancez avec une base alimentee.")
         shutil.rmtree(WORKROOT, ignore_errors=True)
         return 2
@@ -356,6 +442,14 @@ def main():
             print("VERDICT : ECHEC — %d check(s) en defaut" % echoues)
             rc = 1
     finally:
+        # Un fixture demande et non pose rend la morsure de M4 INDECIDABLE:
+        # la rendre verte serait un PASS rendu par une course qui n'a pas
+        # joue la voie qu'elle pretend juger.
+        if rc == 0 and fixture and (n_fix_plan == 0 or article_fixe is None):
+            print("VERDICT : ECHEC - le fixture n'a rien pose; la voie de la")
+            print("          gramature reste sans temoin, M4 ne peut pas etre")
+            print("          prononce par ce run.")
+            rc = 3
         try:
             srv.stop()
         except Exception:

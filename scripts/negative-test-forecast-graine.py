@@ -34,7 +34,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_morsure_forecast_table import TABLE, CAUSES_MORTS  # noqa
+from lib_morsure_forecast_table import CAUSES_MORTS, RAISONS, TABLE
 
 RACINE = os.path.join(os.path.expanduser("~"), "cookdrive-project")
 SRC = os.path.join(RACINE, "src", "routes", "suppliers.ts")
@@ -65,7 +65,11 @@ def fils_de_sonde_vivants():
 
 def lancer():
     """Joue la sonde en mode grain + horizon serre; rend (rc, sortie)."""
-    r = subprocess.run([sys.executable, SONDE, "--semer=decaler", "--horizon=0"],
+    # `--fixture=branches` est INDISPENSABLE et non decoratif: sans la
+    # gramature a 0 que le fixture depose, M4 est joue sans la donnee qui
+    # l'exerce et rendrait « ne mord pas » pour une raison d'harnais.
+    r = subprocess.run([sys.executable, SONDE, "--semer=decaler",
+                       "--horizon=0", "--fixture=branches"],
                        cwd=RACINE, capture_output=True, text=True, timeout=420)
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
@@ -105,6 +109,7 @@ def main():
 
     mordues = []
     morts = []
+    constats = []
     fautes = []
     for nom, vieil, neuf, check, expectatif in TABLE:
         marq = nom.split(" ")[0]
@@ -135,13 +140,21 @@ def main():
                 fautes.append("%s: rougit (%s)" % (marq, motif))
                 print("%-52s rougit MAL rc=%d — %s" % (marq, rc, motif))
             else:
-                if expectatif == "mort":
-                    cause = CAUSES_MORTS.get(marq, "branche non exercee par ces donnees")
+                if expectatif == "mord":
+                    # pas de donnee qui traine: ici le chemin est sans temoin,
+                    # c'est la porte qui est en defaut.
+                    fautes.append("%s: NE MORD PAS (rc=0) — CHEMIN SANS TEMOIN" % marq)
+                    print("%-52s *** NE MORD PAS (rc=0) — SANS TEMOIN" % marq)
+                elif expectatif == "redundance":
+                    constats.append((marq, RAISONS.get(marq, "redundante")))
+                    print("%-52s ne mord pas, PREVU: voie REDONDANTE" % marq)
+                elif expectatif == "inatteignable":
+                    constats.append((marq, RAISONS.get(marq, "inatteignable")))
+                    print("%-52s ne mord pas, PREVU: INATTEIGNABLE" % marq)
+                else:
+                    cause = CAUSES_MORTS.get(marq) or "branche non exercee par ces donnees"
                     morts.append("%s: %s" % (marq, cause))
                     print("%-52s NE MORD PAS — attendu: branche morte ici" % marq)
-                else:
-                    fautes.append("%s: NE MORD PAS (rc=0) — ANGLE MORT" % marq)
-                    print("%-52s *** NE MORD PAS (rc=0) — ANGLE MORT" % marq)
         except subprocess.TimeoutExpired:
             fautes.append("%s: EXPIRE" % marq)
             print("%-52s EXPIRE" % marq)
@@ -157,8 +170,11 @@ def main():
     print("-" * 74)
     print("controle final (code retabli, attendu VERT)  rc=%d" % rc_fin)
     jouables = len(TABLE) - len([f for f in fautes if "non jouee" in f])
-    print("  mordues %d/%d jouables | %d angle(s) mort(s) assume(s)"
-          % (len(mordues), jouables, len(morts)))
+    print("  mordues %d/%d jouables | %d angle(s) mort(s) de donnees | "
+          "%d constat(s) structurel(s)"
+          % (len(mordues), jouables, len(morts), len(constats)))
+    for marq, txt in constats:
+        print("    - %s: %s" % (marq, txt))
     for m in morts:
         print("    ~ " + m)
     for f in fautes:
@@ -177,8 +193,9 @@ def main():
         print("  VERDICT: NON PRONONCEE — moins de trois voies jouables mordent")
         return 7
     print("  VERDICT: PRONONCEE sur les voies que ces donnees exercent")
-    print("         (%d jouables mordues; %d branches inatteignables, causes ci-dessus)"
-          % (len(mordues), len(morts)))
+    print("         (%d jouables mordues; %d non jouables: %d de donnees, "
+          "%d structurels — causes ci-dessus)"
+          % (len(mordues), len(morts) + len(constats), len(morts), len(constats)))
     return 0
 
 
