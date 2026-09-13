@@ -26,7 +26,7 @@ OUT = os.path.join(BASE, "test", "gates.out")
 DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
           "verify:ratelimit", "verify:ci", "verify:indices",
           "verify:instance-guard", "verify:instance-mord",
-          "verify:purchasing", "verify:forecast",
+          "verify:purchasing", "verify:forecast", "verify:forecast-mord",
           "verify:ready", "verify:ready-mord",
           "verify:inventory-put",
           # les trois portes du contrat des prix fournisseurs: une par VOIE

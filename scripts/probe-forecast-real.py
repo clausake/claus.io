@@ -109,6 +109,48 @@ def covers_of(raw_json):
         return 1.0
 
 
+
+def caler_planning_sur_aujourdhui(db_path, today):
+    """Decale UNIQUEMENT la colonne `menu_planning.date`, d un DECALE UNIQUE.
+
+    ⚠ Ce que ce mode NE FABRIQUE PAS: aucune gramature (quantity_per_person),
+    aucun couverts (recipe_json), aucun rendement (inventory.yield_percent),
+    aucun prix, aucun stock, aucun article. La base du client est RICH
+    (6 recettes, 18 ingredients, 0 orphelin): le seul blocage est CALANDRIAL.
+    Decaler la date est la plus petite transformation qui rende la chaine
+    mesurable sans la fabriquer.
+
+    Le decale est UNIQUE et DETERMINISTE: le plus vieux plat planifie tombe
+    a `today`. Les distances RELATIVES entre plats sont preservees (le
+    calendrier du chef garde sa forme), et il n y a aucun ajustement ligne
+    par ligne qui pourrait cacher une donne seme.
+
+    Retourne (delta, n_lignes_touchees). 0 si rien a decaler.
+    """
+    con = sqlite3.connect(db_path)
+    try:
+        bornes = con.execute(
+            "SELECT MIN(DATE(date)), MAX(DATE(date)) FROM menu_planning"
+            "  WHERE recipe_id IS NOT NULL AND recipe_id <> ''"
+        ).fetchone()
+        if not bornes or not bornes[0]:
+            return 0, 0
+        d0 = datetime.datetime.strptime(bornes[0][:10], "%Y-%m-%d").date()
+        d1 = datetime.datetime.strptime(today, "%Y-%m-%d").date()
+        delta = (d1 - d0).days
+        if delta == 0:
+            return 0, 0
+        n = con.execute(
+            "UPDATE menu_planning"
+            "   SET date = DATE(DATE(date), ? || ' days')"
+            "  WHERE recipe_id IS NOT NULL AND recipe_id <> ?",
+            (('%+d' % delta), ''),
+        ).rowcount
+        con.commit()
+        return delta, n
+    finally:
+        con.close()
+
 def oracle_need(db_path, today, horizon):
     """Le calcul attendu, ecrit a la main et independant de la route."""
     con = sqlite3.connect(db_path)
@@ -163,6 +205,14 @@ def main():
     db_src = CLIENT_DB
     if "--db" in sys.argv:
         db_src = sys.argv[sys.argv.index("--db") + 1]
+    # Le mode de calage calandrial (voir caler_planning_sur_aujourdhui).
+    # Il n'est PAS le defaut: sans lui, une base sans plat en fenetre
+    # rend toujours rc=2, ce qui est le contrat de `verify:forecast`.
+    semer = "--semer=decaler" in sys.argv
+    horizon = HORIZON
+    for a in sys.argv:
+        if a.startswith("--horizon="):
+            horizon = int(a.split("=", 1)[1])
     if not os.path.exists(db_src):
         print("BASE CLIENT ABSENT:", db_src)
         return 2
@@ -172,9 +222,15 @@ def main():
     data_dir = os.path.join(WORKROOT, "udata")
     db_copy = os.path.join(data_dir, "agent_culinaire.db")
     backup(db_src, db_copy)
+    delta_calage, lignes_calies = (0, 0)
+    if semer:
+        delta_calage, lignes_calies = caler_planning_sur_aujourdhui(
+            db_copy, TODAY)
 
     print("=" * 78)
-    print("SONDE PREVISION D'ACHAT — base reelle du client (aucune graine)")
+    print("SONDE PREVISION D'ACHAT — base reelle du client"
+          + (" — CALAGE CALENDRIAL (dates seules seulement)" if semer
+             else " (aucune graine)"))
     print("=" * 78)
     print("  source        :", db_src)
     con = sqlite3.connect(db_copy)
@@ -195,10 +251,15 @@ def main():
         shutil.rmtree(WORKROOT, ignore_errors=True)
         return 2
 
-    need, prises = oracle_need(db_copy, TODAY, HORIZON)
+    need, prises = oracle_need(db_copy, TODAY, horizon)
     attendus = {k: v for k, v in need.items() if v > 0}
-    print("  oracle        : %d lignes de plan dans [%s, +%d j], %d articles avec besoin"
-          % (prises, TODAY, HORIZON, len(attendus)))
+    if semer:
+        print("  SEME (calendrier seul) : planning decale de %+d j " % delta_calage)
+        print("                        (%d lignes liees a une recette, dates seules" % lignes_calies)
+        print("                        touchees; AUCUNE gramature, couverts, rendement,")
+        print("                        prix ou stock invente).")
+    print("  oracle        : %d lignes de plan dans [%s, +%d j (CELLE QUI EST JOUEE)], %d articles avec besoin"
+          % (prises, TODAY, horizon, len(attendus)))
     if prises == 0:
         print("\nARRET : les %d plats planifies sont tous hors de la fenetre (dates" % n_liees)
         print("passees ou future au-dela de %d jours). Juger la prevision ici" % HORIZON)
@@ -216,7 +277,8 @@ def main():
     try:
         if not srv.start(data_dir):
             return 2
-        st, payload = srv.call("GET", "/api/purchasing/forecast")
+        st, payload = srv.call("GET", "/api/purchasing/forecast"
+                            + ("?horizon=%d" % horizon if horizon != HORIZON else ""))
         checks.append(("GET /forecast sort en 200", st == 200, "status=%s" % st))
         if st != 200:
             print(json.dumps(payload, ensure_ascii=False)[:700])
@@ -225,7 +287,7 @@ def main():
         checks.append(("la reponse porte { items, window }",
                        isinstance(items, list) and bool(win.get("from")), str(payload)[:120]))
         checks.append(("la fenetre annonce le jour + l'horizon reels",
-                       win.get("from") == TODAY and win.get("horizon") == HORIZON, str(win)))
+                       win.get("from") == TODAY and win.get("horizon") == horizon, str(win)))
 
         rendus = {}
         for it in (items or []):
@@ -286,7 +348,9 @@ def main():
         if echoues == 0:
             print("VERDICT : la commande s'appuie desormais sur les COUVERTS PLANIFIES.")
             print("        %d articles avec un besoin non nul, %d lignes de plan jugees," % (len(non_nuls), prises))
-            print("        confrontees a un oracle independant (aucune donne semelee).")
+            print("        confrontees a un oracle independant"
+                  + (" (dates calees, donnees intactes)" if semer
+                     else " (aucune donne semelee)."))
             rc = 0
         else:
             print("VERDICT : ECHEC — %d check(s) en defaut" % echoues)
