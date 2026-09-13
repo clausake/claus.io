@@ -586,6 +586,9 @@ export const TRANSLATIONS: any = {
     receivedOk: "Bon réceptionné : {lines} ligne(s) entrée(s) en stock",
     receiveFailed: "Réception impossible",
     validateFailed: "Validation impossible",
+    saveFailed: "Enregistrement impossible",
+    partialDocument: "Document enregistre, mais",
+    rejectedLines: "ligne(s) ecartee(s)",
 
     needWindowHint: "couverts planifiés, {n} j",
 
@@ -1367,6 +1370,9 @@ export const TRANSLATIONS: any = {
     receivedOk: "Order received: {lines} line(s) added to stock",
     receiveFailed: "Receiving failed",
     validateFailed: "Validation failed",
+    saveFailed: "Save failed",
+    partialDocument: "Document saved, but",
+    rejectedLines: "line(s) discarded",
 
     needWindowHint: "planned covers, {n} d",
 
@@ -1949,6 +1955,9 @@ export const TRANSLATIONS: any = {
     receivedOk: "Bestellung empfangen: {lines} Zeile(n) ins Lager gebucht",
     receiveFailed: "Empfang fehlgeschlagen",
     validateFailed: "Validierung fehlgeschlagen",
+    saveFailed: "Speichern fehlgeschlagen",
+    partialDocument: "Dokument gespeichert, aber",
+    rejectedLines: "Zeile(n) verworfen",
 
     needWindowHint: "planierte Gedecke, {n} T",
 
@@ -2855,6 +2864,9 @@ export const TRANSLATIONS: any = {
     receivedOk: "Orden recibida: {lines} línea(s) añadida(s) al stock",
     receiveFailed: "Recepción imposible",
     validateFailed: "Validacion imposible",
+    saveFailed: "No se pudo guardar",
+    partialDocument: "Documento guardado, pero",
+    rejectedLines: "linea(s) descartada(s)",
 
     needWindowHint: "cubiertos planificados, {n} d",
 
@@ -3576,6 +3588,9 @@ export const TRANSLATIONS: any = {
     receivedOk: "Ordine ricevuto: {lines} riga/he entrata/e in stock",
     receiveFailed: "Ricezione impossibile",
     validateFailed: "Validazione impossibile",
+    saveFailed: "Salvataggio impossibile",
+    partialDocument: "Documento salvato, ma",
+    rejectedLines: "riga/e scartat/e",
 
     needWindowHint: "coperti pianificati, {n} g",
 
