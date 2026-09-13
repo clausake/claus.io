@@ -179,19 +179,24 @@ export function DocumentManager({ t }: { t: any }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // LES CHAMPS PARTENT BRUTS, sans parse cote client. L'ancien code
+      // faisait `parseFloat((item.quantity || "").toString().replace(",",
+      // ".",) || 0`: le `|| 0` ecrasoit TROIS etats distincts en un seul
+      // nombre — le champ NON REMPLI (`""`, la valeur initiale de
+      // handleAddItem), le texte illegible, et un vrai 0 saisi a dessein. Un
+      // bouton « Ajouter une ligne » sans rien saisir fabriquait donc une
+      // ligne de 0 unite et de 0 €, que le serveur acceptait (200) et que la
+      // VALIDATION transformait en mouvement de stock. Le serveur juge
+      // desorais les DEUX ecritures decimales (`2,5` comme `2.5`,
+      // src/shared/document-items.ts): le parse n'est plus l'affaire de l'UI,
+      // et ce qui est vide doit ARRIVER vide pour que le refus soit NOMME.
       const payload = {
         ...formData,
-        total_amount:
-          parseFloat(
-            (formData.total_amount || "").toString().replace(",", "."),
-          ) || 0,
+        total_amount: formData.total_amount,
         items: formData.items.map((item) => ({
           ...item,
-          quantity:
-            parseFloat((item.quantity || "").toString().replace(",", ".")) || 0,
-          unit_price:
-            parseFloat((item.unit_price || "").toString().replace(",", ".")) ||
-            0,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
         })),
       };
 
@@ -200,19 +205,51 @@ export function DocumentManager({ t }: { t: any }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        setShowForm(false);
-        setFormData({
-          id: null,
-          type: "FACTURE",
-          supplier: "",
-          date: new Date().toISOString().split("T")[0],
-          total_amount: 0,
-          source_image_url: null,
-          items: [],
-        });
-        fetchDocuments();
+      // ⚠ Le `if (res.ok)` SANS branche d'echec etait un defaut d'usage,
+      // le meme que handleValidate avant son correctif: sur un 400, le
+      // cuisinier cliquait sur « Enregistrer », RIEN ne bougeait a l'ecran,
+      // et il ressaisissait un document QUI N'ETAIT JAMAIS NE. Un refus qui
+      // ne se dit pas est une saisie perdue.
+      if (!res.ok) {
+        const corps = await res.json().catch(() => null as any);
+        const rejetees: any[] = Array.isArray(corps?.rejetees) ? corps.rejetees : [];
+        const detail = rejetees
+          .map((r) => `ligne ${(r?.index ?? 0) + 1} (${r?.nom || "?"}) : ${r?.raison || "?"}`)
+          .join(" · ");
+        toast(
+          `${corps?.message || t.saveFailed || "Enregistrement impossible"}${
+            detail ? ` — ${detail}` : ""
+          }`,
+          "error",
+        );
+        return;
       }
+      const corps = await res.json().catch(() => null as any);
+      // Une facture PARTIELLEMENT acceptee est un papier que le chef croit
+      // entier: la ligne ecartee doit se voir, pas rester dans le corps de
+      // reponse (la lecon des prix_non_exploitables collectes et jamais lus).
+      if (Array.isArray(corps?.rejetees) && corps.rejetees.length > 0) {
+        const detail = corps.rejetees
+          .map((r: any) => `ligne ${(r?.index ?? 0) + 1} (${r?.nom || "?"}) : ${r?.raison}`)
+          .join(" · ");
+        toast(
+          `${t.partialDocument || "Document enregistre, mais "} ${corps.rejetees.length} ${
+            t.rejectedLines || "ligne(s) ecartee(s)"
+          } : ${detail}`,
+          "info",
+        );
+      }
+      setShowForm(false);
+      setFormData({
+        id: null,
+        type: "FACTURE",
+        supplier: "",
+        date: new Date().toISOString().split("T")[0],
+        total_amount: 0,
+        source_image_url: null,
+        items: [],
+      });
+      fetchDocuments();
     } catch (e) {
       console.error(e);
     }

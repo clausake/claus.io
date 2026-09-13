@@ -308,6 +308,15 @@ export async function initDatabase(): Promise<DbInitResult> {
   await ensureColumn("document_items", "original_name", "TEXT");
   await ensureColumn("document_items", "lot_number", "TEXT");
   await ensureColumn("document_items", "dlc", "TEXT");
+  // CONTRAT LIGNES DE DOCUMENT (Sprint 9): le montant RECU quand il n'a pas pu
+  // devenir un prix exploitable. `unit_price` porte desorais soit un nombre
+  // defendable, soit NULL (jamais un texte): l'affinite dynamique de SQLite
+  // laissit vivre `quantity='beaucoup'` et `unit_price='vingt virgule cinq'`
+  // dans une colonne REAL (mesure de la sonde: 3 lignes en typeof=text sur 7).
+  // La valeur brute n'est PAS pour autant jete: le papier du chef reste
+  // fidele, /validate peut la NOMMER, et V3 de documents-validate-contract
+  // exige cette fidelite. NULLABLE: une ligne saine n'a rien a tracer.
+  await ensureColumn("document_items", "unit_price_brut", "TEXT");
   await ensureColumn("batches", "source_image_url", "TEXT");
   await ensureColumn("temperature_logs", "entry_type", "TEXT DEFAULT 'manuel'");
   await ensureColumn("temperature_logs", "sensor_mode", "TEXT DEFAULT 'online'");

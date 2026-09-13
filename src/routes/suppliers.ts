@@ -2,6 +2,7 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { requireString, optionalString, requireArray } from "../middleware/validate.js";
+import { jugerLignesDeDocument } from "../shared/document-items.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -107,48 +108,59 @@ try {
   // pas rentrer en stock n'est pas un bon de commande, c'est un PDF.
   // Chaque ligne est donc resolue contre inventory ICI, et une ligne qui ne
   // resolve pas fait rougir la requete au lieu de passer en silence.
-  const cleaned: Array<{
-    inventory_id: string;
-    original_name: string;
-    quantity: number;
-    unit_price: number;
-  }> = [];
-  const unknown: string[] = [];
-  for (const item of items || []) {
-    const rawId =
-      typeof item?.inventory_id === "string" ? item.inventory_id.trim() : "";
-    if (!rawId) {
-      unknown.push(String(item?.name ?? "(vide)"));
-      continue;
-    }
-    const inv: { id: string; name: string } | undefined = await db.get(
-      "SELECT id, name FROM inventory WHERE id = ?",
-      [rawId],
-    );
-    if (!inv) {
-      unknown.push(rawId);
-      continue;
-    }
-    const qty = Number(item?.quantity);
-    const price = Number(item?.unit_price);
-    cleaned.push({
-      inventory_id: inv.id,
-      original_name: inv.name,
-      quantity: Number.isFinite(qty) && qty > 0 ? qty : 0,
-      unit_price: Number.isFinite(price) && price > 0 ? price : 0,
-    });
-  }
+  //
+  // DES LIGNES, LA MEME PREDICAT QUE LA FACTURE (Sprint 9). Cette route est la
+  // SECONDE porte d'ecriture de `document_items` : elle ecrit les MEMES
+  // colonnes (quantity, unit_price, original_name) et debouche sur le MEME
+  // lecteur — `POST /api/purchasing/orders/:id/receive`, qui fait
+  // `UPDATE inventory SET quantity = quantity + ? WHERE id = ?` et le solde de
+  // cloture. Or elle avait TROIS trous que la porte de la facture neavait pas :
+  //   1. `Number.isFinite(qty) && qty > 0 ? qty : 0`  -> un TEXTE, un NEGATIF
+  //      ou un `null` non serialisee DEVENAIT UN 0. Un bon partiellement a 0 €
+  //      s'IMPRIME et part chez le fournisseur (handleCreateOrder appelle
+  //      `doc.save()` sur le resultat). C'est le defaut I3 de l'import de
+  //      mercuriale (`Number(raw) || 0`), sous une autre ecriture : le nombre
+  //      fabrique, jamais l'absence nommee.
+  //   2. `Number(item?.quantity)` ne lisait PAS la virgule decimale (0,5 ->
+  //      NaN -> 0) alors que la facture, elle, la recoit.
+  //   3. `unknown.push(String(item?.name ?? "(vide)"))` ne disait NI l'index NI
+  //      la raison: « votre cellule n'est pas un montant » et « cet article
+  //      n'existe plus » ne se corrigent pas de la meme main.
+  // La difference de SEMANTIQUE est assumée et non supprimee : ici une clef
+  // absente est une FAUTE (un bon sans clef est receptionnable par personne et
+  // bloque la cloture pour toujours), alors que pour la facture c'est une
+  // PROPOSITION libre. D'ou les options explicites, lues a l'ecran du module.
+  const { ecrites: cleaned, rejetees } = await jugerLignesDeDocument(db, items, {
+    exigerClef: true,
+    quantiteMin: 1e-9,
+    prixIndefendable: "rejeter",
+  });
+  // Le compte-rendu que l'UI de Purchasking ne lit PAS (handleCreateOrder fait
+  // un `await fetch(...)` sans meme regarder la reponse): les raisons restent
+  // donc dans le corps de reponse POUR le log serveur et pour tout client qui
+  // les demande. `unknown_items` est CONSERVE (c'est le contrat juge par le
+  // test G de purchasing-chain.spec.ts) et nourri par les motifs du nouveau
+  // jugeur: le garde existant ne devient pas un PASS creux sous le nouveau.
+  const unknown: string[] = rejetees.map(
+    (r) => `${r.index}:${r.raison}:${r.nom ?? "(sans nom)"}`,
+  );
   if (cleaned.length === 0) {
     return res.status(400).json({
       status: "error",
       message:
         "Aucun article du bon ne correspond a un article de l'inventaire",
       unknown_items: unknown,
+      rejetees,
     });
   }
 
+  // Le total est la SOMME qui s'IMPRIME sur le bon: il se lit donc sur le
+  // nombre VERIFIE, et une ligne sans tarif y entre a 0 explicitement (le
+  // comportement historique) avec un temoin NOMME — pas par un `|| 0` qui
+  // confond un texte, un negatif et une absence.
+  const sansTarif = cleaned.filter((l) => l.unit_price === null).length;
   const totalAmount = cleaned.reduce(
-    (sum, it) => sum + it.quantity * it.unit_price,
+    (sum, it) => sum + it.quantity * (it.unit_price ?? 0),
     0,
   );
   await db.run(
@@ -163,13 +175,19 @@ try {
     ],
   );
   for (const it of cleaned) {
+    // Le nom ECIT est le nom REEL de l'article (`nom_resolu`), pas le nom
+    // SAISI: l'UI de Purchasking envoie un nom TRADUIT dans la langue du chef
+    // (translateIngredient), et le bon s'IMPRIME puis se receptionne a la main
+    // contre l'inventaire. Le comportement historique etait celui-la
+    // (`original_name: inv.name`) et il est conserve — le module partage rend
+    // les DEUX sans trancher a la place de la route.
     await db.run(
       "INSERT INTO document_items (id, document_id, inventory_id, original_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?)",
       [
         Date.now().toString() + Math.random().toString(36).substring(2, 7),
         documentId,
         it.inventory_id,
-        it.original_name,
+        it.nom_resolu ?? it.original_name,
         it.quantity,
         it.unit_price,
       ],
@@ -181,6 +199,11 @@ try {
     total_amount: totalAmount,
     lines: cleaned.length,
     unknown_items: unknown,
+    // Une ligne SANS TARIF entre a 0 dans le total imprime: c'est le
+    // comportement historique, mais il devient NOMME (le defaut I3 etait
+    // precisement un 0 non nomme).
+    lignes_sans_tarif: sansTarif,
+    rejetees,
   });
 } catch (error) {
   console.error("Error creating order:", error);

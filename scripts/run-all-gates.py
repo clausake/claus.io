@@ -41,7 +41,14 @@ DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
           # l'UI dont une morte en 500). Sans elles, une de ces routes peut
           # redevenir un 500 generalise sans qu'aucun lot ne le voie.
           "verify:consume", "verify:consume-mord",
-          "verify:post-inventory", "verify:post-inventory-mord"]
+          "verify:post-inventory", "verify:post-inventory-mord",
+          # Les trois portes du contrat des LIGNES DE DOCUMENT (Sprint 9):
+          # le spec de contrat, sa preuve de morsure, et la sonde des voies
+          # REELLES (celle qui force le payload vide de l'UI a ARRIVER vide).
+          # Les retirer rend la porte d'entree de document_items jugeable
+          # partiellement sans qu'aucun lot ne le voie.
+          "verify:document-items", "verify:document-items-mord",
+          "verify:document-items-voices"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
