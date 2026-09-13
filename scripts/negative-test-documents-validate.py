@@ -48,14 +48,18 @@ MUTATIONS = [
      "V2_AUCUN_TARIF_NE_SORT_D_UN_MONTANT_NEGATIF"),
     ("M2 les lignes de tarif ecartees ne sont plus nommees au chef",
      DOCS,
-     "      } else if (supplierId && item.unit_price !== null && item.unit_price !== undefined) {",
+     "      } else if (\n"
+         "        supplierId &&\n"
+         "        (item.unit_price !== null || item.unit_price_brut != null) &&\n"
+         "        (item.unit_price !== undefined || item.unit_price_brut !== undefined)\n"
+         "      ) {",
      "      } else if (false) {",
      "V2_LA_LIGNE_REJETEE_EST_NOMMEE_ET_NON_TUEE"),
     ("M3 un montant non numerique refait meuurir la validation en 500",
      DOCS,
      "      const prixValide = prixOuNul(item.unit_price);",
      "      const prixValide = Number(item.unit_price);",
-     "V3_UN_TEXTE_N_EST_UN_500_SERVEUR"),
+     "V3_AUCUN_INGREDIENT_GRATUIT_NE_SORT_DUN_TEXTE_ILLISIBLE"),
     ("M4 le repli de la comparaison recite le prix de reference sans le juger",
      SPRI,
      "      best_price: prix_defendable ? bestPrice : null,",
