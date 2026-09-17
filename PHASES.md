@@ -5,8 +5,8 @@
 
 ## Stack
 - Electron + React 19 + Vite + Tailwind
-- Backend Express (Node) **monolithe** : `server.ts` (~4 666 lignes, ~60 routes)
-- Frontend **monolithe** : `src/App.tsx` (~14 535 lignes, 20+ composants)
+- Backend Express (Node), **decoupe** : `server.ts` (258 lignes) + 20 routeurs branchés dans `src/routes/`
+- Frontend : `src/App.tsx` (952 lignes, routage + etat global); les vues vivent dans `src/components/` (19 vues)
 - `epicure.ts` : matching fuzzy ingrédients (edit distance) + chargement des embeddings
 - SQLite locale, IA via **Ollama** (`localhost:11434`)
 
@@ -78,7 +78,7 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   globaux (helmet, json, rate-limit), init SQLite (`src/db/init.ts`), état
   licence, `app.use(router)` × 21, servir le frontend (vite dev / dist prod),
   écouter le port.
-- 21 routeurs dans `src/routes/` : admin, ai, antiwaste, backup, dashboard,
+- 20 routeurs dans `src/routes/` : admin, ai, antiwaste, backup, dashboard,
   documents, epicure, haccp, health, inventory, licensing, menuplanning, menu,
   recipes, robots, search, settings, staff, supplierprices, suppliers + (les
   plus gros : menu 32 Ko, documents 21 Ko, haccp 18 Ko, recipes 11 Ko).
@@ -94,8 +94,8 @@ Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
   des `never`/`any` : typer l'arg + la variable `bestMatch`.
 
 ### 2. Découpage `src/App.tsx` — ✅ FAIT (commit `b5acf35`)
-- `App.tsx` : 10 559 → **934 lignes** (routing + état global uniquement).
-- 13 vues extraites dans `src/components/` (un fichier par vue) :
+- `App.tsx` : 952 lignes aujourd'hui (`wc -l`) — routage + etat global uniquement.
+- 19 vues extraites dans `src/components/` (un fichier par vue) :
   - `MenuAnalysis.tsx` (1753), `FichesTechniques.tsx` (2348),
     `DocumentManager.tsx` (1238), `InventoryAudit.tsx` (1231),
     `SettingsView.tsx` (945), `DashboardOverview.tsx` (550),
