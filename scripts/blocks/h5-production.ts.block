@@ -1,0 +1,62 @@
+// SPRINT-11 h5 — enregistrement de production. Deux defauts de la version
+// precedente, chacun d'une classe consignee ailleurs dans ce depot:
+//  1. `for (const batchId of batch_ids)` sans Array.isArray: un objet ou une
+//     chaine au lieu du tableau levait une exception AVALEE en 500 (le chef ne
+//     savait pas quoi corriger).
+//  2. PAS de transaction et PAS de controle d'existence: la voie de LECTURE de
+//     l'historique est `production_records JOIN recipes` (JOIN INTERNE, relue a
+//     l'octet). Une production avec recipe_id invalide est donc ECRITE et
+//     DISPARAIT de l'historique — le registre de production du jour ne montre
+//     pas la production. Le PRAGMA foreign_keys n'est jamais declenche par
+//     init.ts (prouve par sonde: un orphelin est ACCEPTE), la clef du schema ne
+//     protege rien.
+router.post("/api/haccp/production", async (req, res) => {
+  try {
+    const { recipe_id, batch_ids } = req.body;
+    const refus: string[] = [];
+    const recette = clefEtrangere(recipe_id);
+    if (recette === undefined) refus.push("recipe_id");
+    let lots: string[] = [];
+    if (!Array.isArray(batch_ids) || batch_ids.length === 0) {
+      refus.push("batch_ids");
+    } else {
+      lots = batch_ids.map((b: unknown) => (typeof b === "string" ? b.trim() : ""));
+      if (lots.some((b: string) => b === "") || new Set(lots).size !== lots.length) {
+        refus.push("batch_ids");
+      }
+    }
+    if (refus.length) return res.status(400).json(estRejete(refus));
+    const recetteOk = await db.get("SELECT id FROM recipes WHERE id = ?", [recette]);
+    if (!recetteOk) {
+      return res.status(400).json(estRejete(["recipe_id"],
+        "recette inexistante: une production sans recette jointe disparait de l'historique (JOIN interne)"));
+    }
+    const inconnus: string[] = [];
+    for (const l of lots) {
+      const b = await db.get("SELECT id FROM batches WHERE id = ?", [l]);
+      if (!b) inconnus.push(l);
+    }
+    if (inconnus.length) {
+      return res.status(400).json({
+        refused: ["batch_ids"],
+        inconnus,
+        error: `Lots inexistants: ${inconnus.join(", ")}`,
+      });
+    }
+    const productionId = nouvelId();
+    await db.run("BEGIN");
+    try {
+      await db.run("INSERT INTO production_records (id, recipe_id) VALUES (?, ?)", [productionId, recette]);
+      for (const l of lots) {
+        await db.run("INSERT INTO production_batches (production_id, batch_id) VALUES (?, ?)", [productionId, l]);
+      }
+      await db.run("COMMIT");
+    } catch (e) {
+      await db.run("ROLLBACK");
+      throw e;
+    }
+    res.json({ status: "success", productionId });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to record production" });
+  }
+});

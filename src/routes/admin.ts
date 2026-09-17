@@ -2,7 +2,6 @@
 import { Router } from "express";
 import fs from "fs";
 import path from "path";
-import { chromium } from "playwright";
 
 // Factory : les routes admin ont besoin du dossier de données utilisateur.
 export default function adminRouter(storageDir: string) {
@@ -39,45 +38,64 @@ if (fs.existsSync(dbFile)) {
 }
 });
 router.post("/api/agent/command", async (req, res) => {
-try {
-  const payload = req.body;
-  console.log("D\xE9marrage du processus...", payload);
-  const browser = await chromium.launch({
-    headless: false,
-    args: ["--start-maximized"],
-  });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  // Le try/catch qui ferme ce bloc est CONSERVE tel quel: une erreur
+  // serveur doit rester une erreur serveur (500), pas un 200 muet.
+  //
+  // ⚠ CE BLOC A ETE REECRIT. L'ancien lancait un navigateur, attendait
+  // deux secondes, le refermait, puis presentait chaque ligne du panier
+  // comme une visite fournisseur effectuee, avec un found_price egal au
+  // prix QUE L'APPELANT venait d'envoyer: un devis qui se confirme
+  // lui-meme. Aucun consommateur (src/lib/helpers.tsx, releve par
+  // octets) ne lisait un prix renvoye: il n'y avait rien a extraire,
+  // seulement un contrat a nommer.
   try {
-    const carts = payload.data?.carts || [];
-    let rpaResults: Array<{ item: unknown; status: string; found_price: string; found_supplier: unknown }> = [];
-    for (const cartItem of carts) {
-      rpaResults.push({
-        item: cartItem.item,
-        status: "Navigation B2B effectu\xE9e",
-        found_price: `${cartItem.price} \u20AC`,
-        found_supplier: cartItem.supplier,
-      });
-    }
-    await page.waitForTimeout(2e3);
-    await browser.close();
-    res.json({
-      status: "success",
-      message: "L'analyse comparative des prix a \xE9t\xE9 effectu\xE9e.",
-      claus_analysis:
-        "J'ai pilot\xE9 le robot pour comparer vos besoins avec les prix du march\xE9. Voici les r\xE9sultats extraits en direct : " +
-        rpaResults.map((r) => `${r.item}: ${r.found_price}`).join(", "),
-      results: rpaResults,
+  const payload = req.body;
+  const carts = payload?.data?.carts;
+  if (!Array.isArray(carts) || carts.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      refused: ["data.carts"],
+      error:
+        "aucun article a comparer: un succes sur zero ligne n'est pas une analyse",
     });
-  } catch (rpaError) {
-    await browser.close();
-    throw rpaError;
   }
+  const rpaResults: Array<{
+    item: unknown;
+    status: string;
+    verified: boolean;
+    source: string;
+    found_price: number | null;
+    found_supplier: unknown;
+  }> = [];
+  for (const cartItem of carts) {
+    rpaResults.push({
+      item: cartItem?.item ?? null,
+      status: "SIMULATION: echo de la saisie, aucune navigation jouee",
+      verified: false,
+      source: "echo-input",
+      found_price: null,
+      found_supplier: cartItem?.supplier ?? null,
+    });
+  }
+  res.json({
+    status: "success",
+    // Le contrat est dans le NOM: ce qui est rendu est une simulation
+    mode: "SIMULATION",
+    verified: false,
+    message:
+      rpaResults.length +
+      " ligne(s) simulee(s): les prix ci-dessous sont ceux de votre saisie.",
+    claus_analysis:
+      "Simulation locale: les lignes ci-dessous rejouent votre saisie, " +
+      "aucune comparaison fournisseur n'a ete jouee. " +
+      rpaResults.map((r) => String(r.item) + ": a confirmer").join(", "),
+    results: rpaResults,
+  });
 } catch (error) {
   console.error("Erreur:", error);
   res.status(500).json({
     status: "error",
-    message: "Une erreur est survenue pendant l'automatisation.",
+    message: "Une erreur est survenue pendant le traitement de la commande.",
     error: String(error),
   });
 }

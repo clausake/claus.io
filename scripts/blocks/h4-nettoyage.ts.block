@@ -1,0 +1,18 @@
+// SPRINT-11 h4 — registre de nettoyage. zone_name est NOT NULL en schema mais
+// l'ancien corps l'insérait tel quel: un POST {zone_name: '   '} produisait une
+// ligne de registre vide, indiscernable d'une zone absente a l'audit.
+router.post("/api/haccp/cleaning", async (req, res) => {
+  try {
+    const { zone_name, completed_by } = req.body;
+    const zone = lireTexte(zone_name, 200);
+    if (zone === undefined) return res.status(400).json(estRejete(["zone_name"]));
+    const id = nouvelId();
+    await db.run(
+      "INSERT INTO cleaning_records (id, zone_name, completed_by) VALUES (?, ?, ?)",
+      [id, zone, lireTexte(completed_by, 100) ?? "SYSTÈME"],
+    );
+    res.json({ status: "success", id });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save record" });
+  }
+});
