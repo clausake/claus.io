@@ -1,0 +1,2134 @@
+# CookDrive — Journal des phases & continuité
+
+> Ce fichier documente l'état du projet et ce qui reste à faire, pour la
+> continuité du travail (y compris changement de modèle/cerveau : Qwen → DeepSeek).
+
+## Stack
+- Electron + React 19 + Vite + Tailwind
+- Backend Express (Node) **monolithe** : `server.ts` (~4 666 lignes, ~60 routes)
+- Frontend **monolithe** : `src/App.tsx` (~14 535 lignes, 20+ composants)
+- `epicure.ts` : matching fuzzy ingrédients (edit distance) + chargement des embeddings
+- SQLite locale, IA via **Ollama** (`localhost:11434`)
+
+## Phases terminées (MERGÉES dans `main`, commit de référence `00e5194`)
+
+### Phase 0 — Sécurisation licence + hardening serveur
+- **Licence RSA asymétrique** : le SALT en clair est remplacé par une **clé publique**
+  dans le binaire. La **clé privée** reste hors du bundle. Impossible de forger une
+  clé d'unlock sans la privée. (`verifyLicenseKey` dans server.ts)
+- **Suppression des "shadow files"** : l'app n'écrit plus la date d'installation
+  dans de faux fichiers de télémétrie système (`Microsoft/CLR_v4.0/UsageLogs`,
+  `INetCache/Content.Telemetry`, `~/.local/share/systemd/timers.log`,
+  `Library/Caches/com.apple.Safari/SafeBrowsing/metrics.plist`, etc.).
+  La date vit uniquement dans SQLite (`app_license`).
+- **Middleware de licence déplacé au TOP** de `startServer()` : couvre 100 % des
+  routes `/api/*` (l'ancien était contournable — posé après ~40 routes).
+  Bloque les mutations (POST/PUT/DELETE/PATCH) si trial expiré + non unlocké.
+- **helmet() + rate-limit global** sur `/api` (300 req / 15 min).
+- **Multer durci** : `limits` (25 Mo max, 5 fichiers) + `fileFilter` (refus
+  exécutables/scripts).
+- Fix TS : cast `db.all()` (erreur `unit does not exist on unknown`).
+
+### Phase 1 — Hygiène du dépôt + déps mortes + outil de licence
+- **Renommage propre** des fichiers de données (plus d'espaces ni `(1)/(2)`),
+  avec update des refs dans `epicure.ts` :
+  - `embeddings.safetensors` → `embeddings.chem.safetensors`
+  - `embeddings (1).safetensors` → `embeddings.cooc.safetensors`
+  - `embeddings (2).safetensors` → `embeddings.core.safetensors`
+  - `epicure_core (1).csv` → `epicure_core.csv`
+  - ⚠️ Les 3 `.safetensors` ne sont **PAS** des doublons (md5 distincts) :
+    ce sont 3 ensembles d'embeddings distincts (chem / cooc / core).
+- **Git LFS** sur les binaires lourds (PDF guides + screenshots) via `.gitattributes`.
+- **Retrait des dépendances mortes** : `@google/genai`, `jsdom`, `puppeteer`,
+  `@aws-sdk/*`, `cors`.
+- **CI** : `lint` (tsc) passé en `allow_failure:false`.
+- `.gitignore` : `backup.zip`, `*.pem` (clé privée licence), `.lfs_cache`.
+- **`scripts/sign-license.cjs`** : outil pour générer une clé d'unlock valide
+  (signature RSA du `machineId` avec la clé privée).
+
+## ⚠️ Fix CI crucial (à retenir)
+Le `package-lock.json` est généré sur environnement **ARM64** (GB10). Il ne
+contenait que les binaires natifs `arm64`. Le runner GitLab étant **x86_64**,
+`vite build` échouait (`MODULE_NOT_FOUND` dans `rollup/dist/native.js`, puis
+`lightningcss`). **Fix** : ajout des binaires natifs **x64** (+ darwin/win) de :
+`@rollup/rollup-*`, `lightningcss-*`, `@esbuild/*`, `@tailwindcss/oxide-*`,
+`@napi-rs/canvas-*` en `optionalDependencies` de `package.json`, puis
+régénération du lock. Sans ça, le CI casse à chaque regen de lock sur ARM.
+
+## 📌 À protéger (hors Git, volontairement)
+- **Clé privée RSA de licence** : `/tmp/cookdrive_license_private.pem`
+  (récupérer et ranger dans un coffre/vault). Jamais commitée.
+  Pour générer une clé : `node scripts/sign-license.cjs <machineId> <cheminCléPrivée>`
+
+## 🔐 Accès
+- Repo : `https://gitlab.com/cookdrive-group/cookdrive-project`
+- Token GitLab (clausake) : scope `read_repository` + `write_repository`
+  (pas `api` → ne peut pas créer/merger des MRs via API, uniquement Git clone/push)
+
+## 🚧 Phase 2 — EN COURS (architecture)
+Objectif : rendre le projet **maintenable** (ne PAS toucher l'UI/esthétique).
+
+> **État au 28 août** : point 1 (découpage `server.ts`) est **largement fait**,
+> point 4 (tests + CI) est **en place**, point 3 (`strict`) est **activé**.
+> Seul le point 2 (découpage `App.tsx`) reste à faire.
+> ⚠️ **Le lint (`npx tsc --noEmit`) passe clean** à cet instant (0 erreur).
+
+### 1. Découpage `server.ts` — ✅ FAIT
+- `server.ts` : 4 666 → **151 lignes**. Ne fait que : express + middlewares
+  globaux (helmet, json, rate-limit), init SQLite (`src/db/init.ts`), état
+  licence, `app.use(router)` × 21, servir le frontend (vite dev / dist prod),
+  écouter le port.
+- 21 routeurs dans `src/routes/` : admin, ai, antiwaste, backup, dashboard,
+  documents, epicure, haccp, health, inventory, licensing, menuplanning, menu,
+  recipes, robots, search, settings, staff, supplierprices, suppliers + (les
+  plus gros : menu 32 Ko, documents 21 Ko, haccp 18 Ko, recipes 11 Ko).
+- Squelettes communs extraits :
+  - `src/db/init.ts` (init + tables + migrations, 14 Ko)
+  - `src/services/` (paths.ts, settings.ts)
+  - `src/shared/` (fuzzy.ts, ollama.ts, upload.ts, util.ts)
+  - `src/middleware/license.ts`
+  - `src/prompts/menuPrompts.ts` (les ~30 prompts LLM)
+- Dernier WIP corrigé : `supplierprices.ts` — le `fuzzyMatch` de
+  `import-analyze` a été typé (`InvItem[]` + `bestMatch: InvItem | null`) pour
+  être propre sous `strict`. Pattern à réappliquer ailleurs si on retombe sur
+  des `never`/`any` : typer l'arg + la variable `bestMatch`.
+
+### 2. Découpage `src/App.tsx` — ✅ FAIT (commit `b5acf35`)
+- `App.tsx` : 10 559 → **934 lignes** (routing + état global uniquement).
+- 13 vues extraites dans `src/components/` (un fichier par vue) :
+  - `MenuAnalysis.tsx` (1753), `FichesTechniques.tsx` (2348),
+    `DocumentManager.tsx` (1238), `InventoryAudit.tsx` (1231),
+    `SettingsView.tsx` (945), `DashboardOverview.tsx` (550),
+    `AntiWaste.tsx` (390), `ProductionPlan.tsx` (375),
+    `CulinaryChat.tsx` (226), `RobotManagement.tsx` (180),
+    `QualityControl.tsx` (158), `LandingPage.tsx` (47), `NavItem.tsx` (46)
+- 7 helpers extraits dans `src/lib/helpers.tsx` (256 lignes) :
+  `MediaDisplay`, `getSupplierForIngredient`, `gerer_flux_culinaire`,
+  `translateIngredientHelper`, `translateAlertMessage`,
+  `getCostModifier`, `getIngredientEffectivePrice`
+- Barrel `src/components/views.ts` pour les imports centralisés.
+- `HaccpModules.tsx` : import `MediaDisplay` déporté de `../App` → `../lib/helpers`.
+- Données déjà dans `src/data/` : `translations.ts` (3676), `menuData.ts` (141),
+  `ingredientTranslations.ts` (172).
+
+### 2 bis. Lazy loading des 4 vues restantes — ✅ FAIT (Sprint 3)
+`Haccp`, `Purchasing`, `EpicureStudio`, `StaffPlanning` étaient encore imports
+statiquement dans `App.tsx` (→ chunk principal). Passés dans
+`src/components/lazy-views.ts` comme les 11 autres.
+- Chunk `index` : **866 → 712 kB** (gzip 268 → 231 kB) puis **676 kB** (gzip 218)
+  apres extraction de `papaparse` + `qrcode.react` en chunks vendors.
+- 16/16 vues sont desormais code-splittees ; le chunk principal ne reste lourd
+  que de ses vendors (`react-dom` 525 kB, `motion-dom` 337 kB, `framer-motion`
+  120 kB) — pas de win possible sans changer de lib d'animation.
+- Outil ajoute : `scripts/build-analyze.mjs` (build avec sourcemaps) +
+  `scripts/analyze-bundle.mjs` (top 25 modules d'un chunk via le sourcemap).
+
+### 3. `strict: true` — ✅ ACTIVÉ (relâché)
+- `tsconfig.json` : `"strict": true`. Mais `noImplicitAny: false` et
+  `noImplicitThis: false` restent OFF : les `: any` existants (≈140 dans
+  App.tsx) ne provoquent pas d'erreur. Le lint passe.
+- Si on veut durcir plus tard : remettre `noImplicitAny: true` et dépiler les
+  `: any` un routeur/App par App (le lint flaggera).
+
+### 4. Tests + CI — ✅ EN PLACE
+- `vitest.config.ts` + `test/unit/` (utils partagés : safeJsonParse, prix,
+  matching flou, modèle Ollama).
+- `playwright.config.ts` + `test/e2e/` (CRUD inventaire, licence, dashboard,
+  HACCP). Serveur démarré via tsx sur port isolé.
+- `.gitlab-ci.yml` : stages `verify` (lint + build) et `test`
+  (unit-test vitest + e2e-test playwright).
+
+## 🚧 Prochaine étape (pour le prochain chat)
+> **Phase 2 + 6 améliorations post-Phase 2 + UI/UX Sprint 1 & 2 + Sprint 3
+> (perf/coverage) terminés** (6 sept.).
+> La CI est verte. Le code est maintenable, testé, et le design system est formalisé.
+
+### UI/UX Sprint 3 — perf bundle + couverture API (6 sept.)
+1. **Lazy loading des vues restantes** (voir « 2 bis » ci-dessus) : chunk
+   principal 866 → 676 kB, gzip 268 → 218 kB.
+2. **Couverture e2e des 6 routeurs orphelins** : `settings`, `ollama/status`,
+   `supplier-prices` (CRUD + comparaison + garde 404), `admin/db-download`,
+   `admin/guide-download`, `ai/chat`. Suite e2e : **13 → 27 tests**, tous verts.
+   - ⚠️ `/api/agent/command` reste **non couvert** : il demarre un Chromium
+     `headless:false` (pas de display sur le runner). Le couvrir sous xvfb dans
+     un job dedie, pas dans cette suite.
+   - Les tests `ollama/status` et `ai/chat` acceptent les **deux** branches
+     (Ollama present ou absent) : le contrat verifie est « repond un statut
+     explicite + un corps exploitable », pas la presence du modele.
+3. **Dérive de doc corrigee** : le compte e2e etait annonce a 11 (reel 27), les
+   `:any` a ~176 (reel 183).
+
+## Sprint 4 — Fiabilite du temps reel (8 sept.)
+
+### 4.1 Rate-limit par categorie de surface (commit `aa83fb2`)
+L'heritage (300 req / 15 min, un seul budget pour tout `/api`) etait un defaut de
+conception, pas un reglage. **Mesure** : une tablette laisse sur l'onglet HACCP
+emet ~29 req/min (capteurs 4 s + robots 5 s + alertes 30 s) et declenchait un 429
+**GLOBAL** au bout d'environ 10 min, sans autre activite. Dans une cuisine,
+l'app "mourait" pendant le service. Et a l'inverse, `/api/unlock` (la cle de
+licence, signee RSA) disposait de 300 tentatives par fenetre.
+
+- `src/middleware/api-rate-limiter.ts` : 5 budgets independants, une instance de
+  `MemoryStore` par categorie (donc **aucune double comptabilite** : une requete
+  traverse exactement un budget) :
+  `read 600/5min`, `mutate 150/5min`, `delete 40/5min`, `auth 20/15min`,
+  `ai 60/5min`. Exempts : `/api/sensors/stream`, `/api/trial-status`.
+- En-tetes **draft-8** : le seul format qui publie le NOM du quota. Un 429 est
+  donc diagnostiquable depuis le client sans interrogater le serveur.
+  ⚠ `draft-7` ne publie PAS le nom — c'est ce qui a fait rougir la premiere
+  verification de ce fichier.
+- Invariant grave en test unitaire : `auth.limit < mutate.limit` (le brute-force
+  de cle ne doit jamais couter moins cher qu'une saisie normale).
+- ⚠ `express-rate-limit` n'est plus importe que dans ce middleware : l'import
+  devenu mort a ete retire de `server.ts` (le projet a deja eu un incident de
+  dead-import sur le loader CJS de tsx avec `undici`).
+- Prouve par `scripts/verify-ratelimit.mjs` (5/5) : 500 lectures sans 429, 429 a
+  la 21e tentative d'unlock, 429 a la 151e ecriture. 7 tests unitaires.
+
+### 4.2 Push SSE des capteurs HACCP (remplace le polling 4 s)
+Le serveur connait deja l'instant exact ou un capteur poste (le webhook
+`/api/haccp/webhook/iot-report`) : il n'a pas besoin qu'on le lui demande.
+
+- `src/services/sensor-hub.ts` : hub unique, `attach/publishReading/publishList/
+  publishStale/heartbeat`. Reconnu au niveau du protocole (le header `Connection`
+  est un header *hop-by-hop* que Node tient lui-meme et qu'un reverse proxy ne
+  relai jamais : l'ecrire a la main etait un anti-pattern, retire).
+- `GET /api/sensors/stream` (monte par Express **avant** le middleware Vite : le
+  dev-server ne tamponne donc pas le flux) + instrumentation du webhook, du
+  register et du delete de capteur.
+- Le scan des capteurs **muets** (silence > 120 s, tour de 25 s) est l'alerte
+  HACCP qui manquait : un capteur a pile morte etait indiscernable d'une chambre
+  froide conforme. La LED devient ambre et **ne pulse plus** (le pulsation
+  mentirait sur une mesure fraiche).
+- **Pas de deduplication a l'emission** : un webhook poste est un fait HACCP, il
+  est toujours diffuse (une chambre qui reste a 3.4 degres doit pouvoir
+  rafraichir son horodatage). La premiere version avait une garde `lastHash`
+  speculente qui, de plus, incluait `last_reading_at` (toujours nouveau) : elle
+  n'absorbait jamais rien de legitime et pouvait masquer la releve d'un AUTRE
+  capteur. Retiree. De meme, `publishStale([])` est publie : "plus aucun capteur
+  muet" est un changement d'etat qui doit pouvoir de-fanionner le precedent.
+- Cote client (`Haccp.tsx`) : un `EventSource` + un **filet** (re-synchronisation
+  HTTP si aucun evenement depuis 20 s). `EventSource` se reconnecte seul mais ne
+  signale pas ses blancs : sans le filet, un proxy qui tamponne gellerait le
+  tableau sur des mesures de la veille.
+- **Mesure** : latence capteur->ecran **13 ms** (contre 4000 ms de polling).
+  Contrat grave en CI (Playwright n° 28) et en local (`scripts/verify-sse.mjs`).
+
+### 4.3 Instrumentation de latence par route (`/health/perf`)
+L'audit de perf devait se placer A L'EXTERIEUR pour obtenir des percentiles, parce
+que `/health` ne connait aucun percentile. Sans mesure interne, toute decision de
+perf est devinee ; avec elle, elle est mesuree dans l'app.
+
+- `src/services/perf.ts` : collecteur d'anneau circulaire (`RING_SIZE` 256) +
+  percentiles au rang exact (`rank = ceil(p/100*n)-1`). Trois invariants non
+  negociables, chacun grave en test unitaire :
+  1. mesure en `process.hrtime.bigint()` (microsecondes) et non `Date.now()` : sur
+     un endpoint a p50 reel de ~2 ms, l'echelle milliseconde noie tout ;
+  2. bucket par **motif** de route (`/api/inventory/:id`) et non par chemin brut :
+     une cle par id ferait une serie par id (cardinalite non bornee) ;
+  3. cardinalite BORNEE par construction (`MAX_ROUTES` 80, reste-agrege dans
+     `*overflow*`) : la limite memoire ne depend pas de la justesse de l'heuristique.
+- Le chemin chaud du logger reste O(1) : ni tri ni allocation par requete. Le tri
+  est dans `snapshot()`, a la demande.
+- SUBTILITE qui a fait echouer la premiere version : `http-logger` est monte
+  AVANT les routeurs, donc `req.route` est vide a l'entree de la requete. Le motif
+  n'est lisible que dans le callback `finish`. `req.route` porte aussi le prefixe
+  de montage : on ne le fait confiance qu'apres avoir verifie que sa regex teste
+  bien le chemin.
+- `/health/perf` est EXCLU du logger : sans ca, le poll de sante injecterait sa
+  propre mesure dans les stats qu'il est cense eclairer.
+- 16 tests d'invariant dans `test/unit/perf.test.ts` (16 de plus que la porte
+  precedente) + preuve terrain `node run verify:perf` (13/13 : percentiles coherents,
+  30 ids agglutines sous UN motif, 6 series pour ~160 requetes).
+
+### 4.4 Compression HTTP + cache des assets content-hashed
+Les deux dettes que `audit-perf` signalait sont soldees : `compression` etait absent
+de `package.json` et les assets haches etaient servis en `max-age=0`.
+
+- **gzip** (`compression` + `@types/compression`) : `threshold` 1 ko (sous ce plancher
+  le CPU coute plus cher que les octets economies), filtre delegue a
+  `compression.filter` pour ne pas dupliquer la liste des Content-Type compressibles.
+- ⚠ **LE POINT QUI FAIT MAL** : `text/event-stream` est exclu de la compression.
+  gzip met un flux en tampon ; sur le SSE des capteurs, cela reintroduirait la
+  latence que la phase 4.2 a supprime (4000 ms -> 13 ms). Le contrat est grave en CI
+  (Playwright) et en local (`verify:http`).
+- **Cache** : les assets Vite portent le hash de contenu dans leur nom, donc
+  `max-age=1 an + immutable` est sur. `index.html` reste `no-cache` (pas de hash dans
+  son nom) : c'est lui qui libere un nouveau bundle. `express.static` recoit
+  `maxAge`/`immutable` + un `setHeaders` qui force `no-cache` sur tout ce qui n'est
+  pas `/assets/`.
+- ⚠ Le `filter` de compression ne s'extrait PAS par `compression().filter` (le type
+  `RequestHandler` de @types ne l'expose pas) : c'est `compression.filter`, exporte
+  par le namespace. Erreur TS2339 a la premiere tentative.
+- Mesure reelle, sur socket BRUTE et non par `fetch` : `fetch` (undici) declare
+  `Accept-Encoding` et decompress tout seul, donc il masque le poids du fil et
+  transforme la mesure de compression en preuve creuse. Gain : **85 734 -> 18 783
+  octets** (ratio 0,219) sur `/api/epicure/vocab-list`, corps gzip verifie decodable
+  et identique a la variante `identity`.
+- `scripts/verify-http.mjs` (17 checks, dont la revalidation du HTML par `If-None-Match`
+  -> 304, l'absence de compression sur le SSE avec une vraie releve sortie en 4 ms, et
+  l'identite des en-tetes entre un client Electron et Chromium) est lance par
+  `npm run verify:http` — il exige `npm run build` prealable, car la suite e2e roule
+  en mode dev (middlewares Vite) et n'exerce donc jamais la branche `express.static`.
+
+### 4.5 Audit de perf mesongeur (le bloc rate-limit)
+Le bloc n° 4 d'`audit-perf.mjs` avait ete **laisse faux** par le passage au
+rate-limit par categorie (commit `aa83fb2`) : il recalculait encore avec le vieux
+budget global de 300/15 min et annoncait un 429 au bout de ~10 min d'onglet HACCP
+ouvert. Decision de perf prise sur ce chiffre = une journee perdue. Trois defauts
+corrignes, chacun avec sa raison :
+- les budgets et les frequences sont **dus dans le module**, pas recopies (un
+  audit qui recopie est deja faux ; `parseBudgets` echoue des que la forme change
+  au lieu de deviner). Le `const MIN = 60_000` doit etre resolu : lu comme 5, il
+  faisait annoncer un budget de 720 000 req/min.
+- le debit des sections precedentes est **retire** du rang du 429 : le limiteur ne
+  connaft qu'une cle IP, les sections 2-3 ont deja consomme le meme quota. Lu brut,
+  le 429 a la 528e passait pour un budget de 600 mal applique (528 + 74 = 602 ~ 600).
+- le calcul « temps avant verrou » etait une **erreur de raisonnement** : une
+  fenetre glissante se reinitialise, donc on compare `debit x fenetre` a `limit`,
+  et non `limit / debit`. Reponse reelle : 75 req par fenetre de 5 min pour 600 ->
+  **le verrou ne se declenchera jamais en passif** (8x de marge).
+- l'en-tete attendu etait faux : `draft-8` publie le **nom** du quota + le restant
+  + le delai (`"read-in-300000"; r=0; t=299`), pas le quota absolu (celui-la est
+  draft-7, desactive par `legacyHeaders: false`).
+
+### 4.6 Poids du bundle d'entree (-84 823 octets)
+- Passage de la variante lourde a la variante legere (`m`) sur les 8 fichiers qui
+  animaient, + `LazyMotion` dans `src/main.tsx` avec un **loader asynchrone**
+  (`src/motion-features.ts`). Conformement a la doc officielle Motion : la
+  version lourde ne peut pas etre allegee par le bundler au-dela de ~34 ko.
+- Aucun geste lourd dans l'app (recherche verifiee : aucun `whileHover`, `drag`,
+  `layout`, `LayoutGroup`) : `domAnimation` suffit. Le DnD de `MenuAnalysis` est
+  du DnD HTML5 natif (`React.DragEvent`), pas un geste Motion -> `domMax` etait
+  inutile.
+- ⚠ **DEFAUT SILENCIEUX attrape par le harnais, pas par le build** : la 1ere
+  version (remplacer la balise sans enrouler l'arbre dans le fournisseur) laissait
+  l'element anime **fige a `opacity: 0`** — `tsc` vert, build vert, les 30 tests de
+  `routes.spec` verts, et un ecran partiellement vide pour l'utilisateur. Seul
+  Chromium l'a vu (le harnais a rougi avant le commit)
+  (`test/e2e/motion-animation.spec.ts`, mesure l'opacite calculee du reel `dist`).
+- ⚠ **FAUX GAIN refuse** : une regle `manualChunks: { "vendor-motion":
+  ["motion/react", ...] }` rassemblait les features dans un chunk rendu
+  statiquement accessible -> cite dans `index.html`, donc charge au demarrage : le
+  gain tombait a ~40 ko. La regle est retiree, avec sa raison ecrite dans
+  `vite.config.ts` : c'est Rollup qui doit decider.
+- **Mesure avant/apres sur le meme harnais** (git stash + rebuild + relle) :
+  chunk d'entree **675 935 -> 591 112 octets**, total du chargement initial
+  identiquement **-84 823** (les vendors lourds etaient deja separe). Le chunk des
+  features (`motion-features-*.js`, 38 ko / 14 ko gzip) n'est PAS dans `index.html`.
+- ⚠ **Le controle visuel etait indispensable et n'allait pas de soi** : captures
+  avant/apres comparrees, 4 zones differentes (max 234/255). En portan le delai de
+  stabilisation a 4x, le delta tombe a **0,000 % (max 11)** : c'etaient des
+  animations saisies en cours de jeu. Sans ce contre-echantillon, on aurait either
+  signale une fausse regression, either laisse passer une vraie.
+- `scripts/verify-bundle.mjs` (`npm run verify:bundle`, 6 checks) verrouille :
+  plafond du chunk d'entree, existence du chunk de features, absence de son
+  chargement initial, presence de son import dynamique, et absence de tout import
+  de la variante lourde dans `src/` (un import oublie annule le gain pour toute
+  l'app sans rien casser de visible).
+
+### 4.7 Les routes « lentes » n'etaient PAS un probleme d'index (1 index sur 6 retenu)
+Aucun `CREATE INDEX` n'existait dans `src/db/init.ts` et six routes sortaient en
+p95 de 3 a 8 ms. L'intuition (« pas d'index donc c'est lent ») etait FAUSSE, et
+l'affirmer sans mesure aurait ajoute 6 index payants a l'ecriture pour rien.
+`scripts/ab-indices.py` (`npm run verify:indices`) tranche l'affaire :
+
+- **Volume d'abord, verdict ensuite.** Sur la base de demarrage (2 lignes
+  versionnees), un scan de table coute des microsecondes : la mesure ne pouvait
+  rien dire. Le harnais seede donc un volume de resto (180 articles, 6000 tarifs,
+  4000 plannings, 2500 factures, 3000 releves) et **verifie ses propres
+  compteurs en base** : `id TEXT PRIMARY KEY` n'est pas auto-incremente, donc un
+  `INSERT` qui omet `id` REUSSIT et ne seme RIEN. Sans ce garde, tout le verdict
+  portait sur une base vide.
+- ⚠ **Le p95 HTTP ne peut pas trancher.** Le bruit inter-bloc y est de 9 a 11 ms
+  pour un effet d'index attendu de ~10 ms : trois reglages differents du nombre
+  de passages y changeaient le verdict (une fois "GAIN REEL", une fois "NON
+  CONCLUANT" sur la MEME route). La decision est donc prise sur la **couche SQL
+  pure** (`sql_bench`, hors HTTP), ou le bruit tombe a la resolution de l'horloge.
+  Le p95 HTTP est quand meme rapporte, comme contexte, avec sa marge de bruit.
+- Deux pieges de harnais corriges en route, chacun grave en commentaire dans le
+  script : (a) `tsx` est lance par **node** et non par `sys.executable` — lance
+  par python, le shim shell meurt d'un `SyntaxError` qui se lit « serveur pas
+  pret » ; (b) chaque bloc demarre un processus NEUF, donc sans echauffement
+  (statements prepares + cache de pages froids) le verdict depend de l'ordre des
+  bras et non de l'index.
+- Trois passes de suite, meme classement : un seul candidat depasse le seuil de
+  15 % de gain SQL.
+
+| index candidat | p95 SQL sans | avec | gain | decision |
+| --- | --- | --- | --- | --- |
+| `temperature_logs(recorded_at DESC)` | 0,171 ms | 0,031 ms | **+82 %** | **RETENU** |
+| `supplier_prices(inventory_id)` | 5,796 | 5,792 | +0,1 % | refuse |
+| `staff_schedule(day)` | 0,094 | 0,094 | +0,4 % | refuse |
+| `staff(active)` | 0,015 | 0,015 | -0,5 % | refuse |
+| `documents(date)` | 0,351 | 0,376 | -7,0 % | refuse |
+| `supplier_prices(supplier_id)` | (idem jointure) | | | refuse |
+
+- Seul le gagnant est installe, dans `src/db/init.ts` : `SELECT * ... ORDER BY
+  recorded_at DESC LIMIT 50` etait un scan complet + tri temporaire
+  (`USE TEMP B-TREE`); l'index donne un parcours deja trie et le `LIMIT 50`
+  arrete la lecture apres 50 clefs. Verifie sur **base neuve** et sur **base
+  existante** (le cas des clients deja installes) : l'index reapparait apres un
+  redemarrage ou on l'a supprime, et le plan de la route dit `SCAN temperature_logs
+  USING INDEX ix_temperature_logs_recorded`.
+- ⚠ `CREATE INDEX IF NOT EXISTS` est ici une **obligation** et non une comfort :
+  `initDatabase()` tourne a chaque demarrage sur la base du client. Le `try/catch`
+  ne fait pas echouer le demarrage si le moteur est trop vieux pour un index DESC :
+  la requete reste correcte, seulement plus lente.
+- Les 5 refuses sont **la decision**, pas un oubli : un index non prouve est une
+  dette de plus a chaque ecriture (le webhook IoT des capteurs HACCP ecrit en
+  continu), et le cout d'ecriture des 6 etait deja mesure (sous la resolution de
+  l'horloge, +23 % sur un nombre trop petit pour etre significatif).
+
+### Etat des portes (8 sept., HEAD Sprint 4)
+- `npx tsc --noEmit` : 0 erreur · `npx vitest run` : **38** · `npx playwright test` :
+  **32** (SSE + 2 compression + 2 opacite Motion) · `npm run build` : chunk d'entree
+  **591.11 kB** (591 112 octets) / les vendors lourds restent en chunk separe.
+- Verify terrain : `verify:ratelimit` 5/5 · `verify:sse` · `verify:perf` 13/13 ·
+  `verify:http` 17/17 · `verify:bundle` 6/6 · `verify:indices` (A/B + plan).
+- Prochaine cible reelle (mesuree, pas supposee) : `/api/dashboard/stats` fait
+  **12 appels `db.all/get` par tour** (dont 7 agregats) et c'est ce qui fait son
+  p95, pas les scans. La reduction du nombre d'appels — ou la mise en cache de
+  l'agregat — est le levier, pas un index.
+- Nouveaux fichiers : `src/middleware/api-rate-limiter.ts`,
+  `src/services/sensor-hub.ts`, `src/services/perf.ts`,
+  `test/unit/{rate-limiter,perf}.test.ts`,
+  `test/e2e/motion-animation.spec.ts`, `src/motion-features.ts`,
+  `scripts/{verify-ratelimit,verify-sse,verify-perf,verify-http,verify-bundle,audit-perf}.mjs`.
+- Les 4 verify sont exposes en scripts npm (`verify:perf`, `verify:http`,
+  `verify:sse`, `verify:ratelimit`, `audit:perf`) : un reglage de perf se prouve
+  avec un de ces scripts, pas dans une conversation.
+- ⚠ `scripts/audit-perf.mjs` reste l'outil de mesure du temps reel : le lancer
+  avant de toucher au polling, au cache ou au rate-limit. Ce qu'il revele ENCORE :
+  le chunk d'entree a 591 kB (vendors `react-dom` surtout) et le p95 de
+  `/api/dashboard/stats` (voir 4.7 : il n'etait PAS du aux index).
+
+### 4.8 Le contrat du pipeline est VERIFIE par un script, plus raconte (Sprint 4.8)
+Deux dependances du runner portaient le pipeline, connues seulement par des
+commentaires dans `.gitlab-ci.yml`. Un contrat ecrit en prose se perd : le
+commentaire de `needs: [build]` avait deja ete reecrit trois fois, et chaque
+reecriture etait l'occasion d'un oubli. `scripts/verify-ci.mjs`
+(`npm run verify:ci`, 20 checks) le verrouille desormais par execution.
+
+- ⚠ **Une regex sur le YAML donnait un faux vert.** Les commentaires de
+  documentation contiennent deja les mots `needs` et `build` : un test textuel
+  « le YAML mentionne-t-il needs ? » annoncait un contrat tenu qu'il ne
+  verifiait pas. Le garde ne lit donc QUE l'arbre reellement parse, par un
+  **parseur YAML reel** (`js-yaml`, resolu par essais et non recopie a la main :
+  le nom affiche dans une console peut mentir sur le nom installe), et il
+  **rougit au lieu de simuler** si aucun parseur exploitable n'est disponible.
+- Les deux regles verrouillees, chacune acquise par MESURE et non par
+  supposition (motifs graves dans l'en-tete du script) :
+  1. `e2e-test.needs: [build]` — le harnais d'opacite Motion lit
+     `dist/index.html` et demarre en `NODE_ENV=production`. Prouve en RETIRANT
+     l'artefact (`mv dist .hold && npx playwright test` → rougit sur
+     « dist/ absent »), pas en le laissant trainer dans l'arbre local.
+  2. `npx playwright install --with-deps` — seul `motion-animation.spec.ts`
+     exerce le fixture `page` (la suite historique n'utilise que `request`, qui
+     ne lance **aucun** navigateur). Mesure dans un conteneur `node:22`,
+     `dist/` construit sur place pour ne pas confondre les deux causes :
+     sans install `rc=1` · `install` seul `rc=0` **puis le spec `rc=1`** ← le
+     point qui compte, `install --with-deps` `rc=0` et les 32 tests passent.
+- La regle 2 n'est pas applinee aveuglement : le garde **detecte les fixtures
+  reellement destructures** (`page`/`browser`/`context` vs `request`). Renommer
+  un spec ne peut donc pas faire disparaitre la dependance, et un suite 100 %
+  `request` n'exigerait pas l'install des navigateurs.
+- ⚠ **Un garde qui ne mord pas ne vaut rien.** Test negatif, 4 fautes injectees
+  dans des copies isolees (`/tmp`, `node_modules` symlinke) : retirer
+  `needs: [build]`, retirer `--with-deps`, falsifier l'artefact `dist/`,
+  debrancher `verify:ci` du YAML. Les 4 → `rc=1` avec le check fautif nomme.
+  Un garde jamais essaye en faute est une decoration.
+- ⚠ **Deux dependances invisibles localement, desormais verrouillees par le garde**
+  (lecture du lockfile, pas de lintention) :
+  1. `js-yaml` etait un **emprunt a l'arbre transitive** d'`electron-builder`
+     (via `app-builder-lib`/`builder-util`/`dmg-builder`, tout en `dev`).
+     `npm ci` l'installait par chance et non par contrat : il suffisait qu'un
+     ancetre devienne `optional` pour que le job `lint` rougisse sur
+     `npm run verify:ci` sans qu'AUCUN test local ne puisse le voir. Corrige
+     pour de vrai : `js-yaml` est declare en `devDependencies` (`4.3.2`, la
+     meme revision que le lockfile) et le garde verifie desormais qu'il est
+     **declare**, pas seulement qu'il est present dans `node_modules`.
+     Prouve par test negatif : retirer la declaration => `rc=1` sur le check
+     `parseur YAML DECLARE dans package.json`.
+  2. les **binaires natifs x64** du build. Le `package-lock.json` est genere sur
+     ARM64 ; si une entrees `*-linux-x64*` disparait, `vite build` casse en CI
+     (`MODULE_NOT_FOUND`) alors que tout est vert ici. Le garde recense les 5
+     entrees du lockfile ET les 5 declarations en `optionalDependencies`. Prouve
+     par test negatif : supprimer `lightningcss-linux-x64-gnu` du lockfile =>
+     `rc=1` sur le check `lockfile: binaires natifs x64 presents`.
+  Piege rencontre en ecrivant ces checks : `!('node_modules/' + n) in pkgs`
+  n'est PAS `!(cle in pkgs)` -- la precedance fait de `!chaine` un booleen puis
+  le compare par `in`, donc le check etait **toujours vert** (un PASS creux,
+  exactement ce que ce projet refuse). La forme correcte parente l'expression
+  ENTIERE : `!(('node_modules/' + n) in pkgs)`. Seul le test negatif revele un
+  check creux -- `node --check` ne voit pas la precedance.
+
+- Le garde tourne dans le job **`lint`** (et non `e2e-test`) : il doit pouvoir
+  rougir **avant** qu'on paie l'install des navigateurs. Choix verifie par probe
+  et non suppose : `npx playwright test --list` rend `rc=0` et enumere les 32
+  tests meme avec `PLAYWRIGHT_BROWSERS_PATH` pointe sur un repertoire vide —
+  l'enumcration des specs ne lance pas de navigateur.
+
+### 4.10 Un job e2e rouge etait AVEUGLE : la preuve n'etait pas collectee
+Le pipeline #2833166731 a rendu un job en echec **sans aucune trace
+exploitable** : impossible de dire pourquoi sans reproduire. Cause structurelle,
+et non un hasard : `e2e-test` ne declarait **aucun** `artifacts`, donc GitLab
+jetait `test-results/` au moment meme ou il devenait utile.
+
+- **Le mot qui decide est `when: always`.** Par defaut GitLab ne collecte les
+  artefacts que si le job reussit — le defaut est donc exactement l'inverse de
+  ce qui sert. Sans lui, declarer `test-results/` ne change rien sur un rouge.
+- **Encore faut-il que Playwright PRODUISE quelque chose.** Verifie par sonde
+  (un test volontairement faux, une fois sur `request`, une fois sur `page`) :
+  sans reglages, un echec ne laisse qu'`error-context.md` (799 o) et **rien de
+  visuel** ; avec `screenshot: 'only-on-failure'` + `trace: 'retain-on-failure'`
+  + `outputDir: 'test-results'`, un echec du fixture `page` laisse
+  `test-failed.png` (4 254 o) + `trace.zip` (4 394 o, rejouable) + `error-context.md`.
+  La trace se rejoue ensuite hors GitLab, ce qui rend le debuggage possible sans
+  acces au runner.
+- Ces reglages ne coutent rien a la suite historique : elle n'utilise que le
+  fixture `request`, qui ne lance **aucun** navigateur, donc ni capture ni trace.
+  Le seul spec qui paie est celui du harnais Motion — celui dont on a besoin.
+- Les trois regles sont desormais **verrouillees par le garde** (`verify:ci`,
+  17 → 20 checks) et les trois **mordent** (test negatif : retirer `when: always`
+  du YAML, retirer les `paths`, retirer les reglages du config → `rc=1` avec le
+  check fautif nomme a chaque fois).
+- ⚠ Le garde a failli etre **creux** a l'ecriture : `!('node_modules/' + n) in pkgs`
+  n'est pas `!(cle in pkgs)` — la precedance fait un booleen puis un `in` sur
+  autre chose, donc le check etait **toujours vert**. `node --check` ne voit pas
+  ca (syntaxe seule). Un PASS qui ne peut pas etre un FAIL n'est pas une mesure.
+
+### Etat des portes (10 sept., HEAD Sprint 4.11)
+- `npx tsc --noEmit` : **0 erreur** · `npx vitest run` : **38** ·
+  `npx playwright test` : **33** (le KPI de main d'oeuvre est entre) ·
+  `npm run build` : ok (chunk d'entree inchangé).
+- 6/6 preuves de contrat vertes : `verify:perf` 13/13 (**p95 stats = 4,6 ms**, la
+  route corrige est reste sous le seuil) · `verify:http` 17/17 · `verify:sse` ·
+  `verify:ratelimit` 5/5 · `verify:bundle` 6/6 · `verify:ci` **20/20**.
+- Preuves propres a la phase (hors suite, lancees a la main) :
+  `scripts/probe-labor-cost-zero.py` (ROUGE avant le correctif / VERT apres),
+  `scripts/mutation-test-labor.py` (5/5 mutations mordent),
+  `scripts/probe-index-installe.py` (les DEUX index posés, chaque branche PLEINE),
+  `scripts/negative-test-verify-indices.py` (le nouveau garde du harnais d'index
+  mord : rc=1 en nommant la requete fautive).
+- Nouveaux fichiers : `test/e2e/kpi-labor-cost.spec.ts`,
+  `scripts/{probe-labor-cost-zero,mutation-test-labor,probe-forme-filtre,
+  probe-index-reel,probe-join-stats,negative-test-verify-indices}.py`.
+  `scripts/__pycache__/` est desormais gitignoré.
+- ⚠ Deux sondes (`probe-index-staffday.py`, `probe-nplus1.py`) portent desormais
+  un bandeau « NE PAS SE FIER AU VERDICT » en tete : elles sont gardees comme
+  preuve de la faute de methode, pas comme reference. La regle qui en sort, et
+  qui vaut pour toute future decision d'index : rejouer la requete que le CODE
+  EMET (branches d'un UNION ALL comprises) sur des donnes dans la forme que
+  l'ECRITURE de l'app produit, et exiger un plan PLEIN par branche.
+
+### 4.9 Le parseur YAML etait un emprunt transitive (dependance invisible)
+
+### 4.11 Le KPI « cout journalier » etait faux chez le client (et l'index
+### instalé en payait la moitie)
+
+**Le defaut, prouvé par execution et non par lecture.** Le tableau de bord rend
+`dailyLaborCost: 0` en permanence. Sonde sur le serveur REEL du client (port 4173,
+base `promo_resto/udata`, le 2026-09-10) : **6 vacations saisies pour ce jour**
+dans `staff_schedule`, reponse `{"dailyLaborCost":0}`. La cause est un desaccord
+de cle entre l'ecriture et la lecture :
+
+- `POST /api/staff` (`src/routes/staff.ts:72`) ecrit `day = dayOrDate` **et**
+  `date = dayOrDate` avec la MEME valeur, et l'appelant (`StaffPlanning.tsx`,
+  `UI_TO_EXACT_DATE`) lui passe des **dates ISO** → la base du client a
+  `day='2026-09-16'`, `date='2026-09-16'`, et **0 rangee** portant un nom de jour ;
+- `src/routes/dashboard.ts` filtrait `WHERE staff_id = ? AND day = ?` avec
+  `daysOfWeek[new Date().getDay()]` = `"thursday"`.
+
+Le filtre ne pouvait donc jamais rien rapporter. Aucun test ne le voyait : le
+test e2e existant (`test/e2e/routes.spec.ts:102-107`) verifie la FORME du JSON
+(`typeof body.totalStockValue`) et le `CRUD staff` assert sur `staff.ts` —
+**la requete du KPI n'est exercee par aucun test**. Un test qui lit un fichier
+source au lieu de rejouer le comportement est un faux negatif.
+
+**Le correctif, arbitré par mesure et non par gout.** Trois formes de filtre
+comparees a 150 001 rangees, ABBA echauffe, contre un oracle Python independant
+(`scripts/probe-forme-filtre.py`) :
+
+| forme | p50 | plan | justesse |
+| --- | --- | --- | --- |
+| `staff_id=? AND date=?` seul | 0,148 ms | index PLEIN | **FAUX** (rate les bases heritees) |
+| `(a) OR (b)` | 140,14 ms | `SEARCH (staff_id=?)` | juste |
+| **deux SELECT `UNION ALL`** | **7,57 ms** | index PLEIN des deux cotes | juste |
+
+L'`OR` est un piége silencieux : il empeche SQLite d'exploiter la **seconde**
+colonne d'un index composite (le predicat `date` tombe du plan) — 18,5 fois plus
+lent, pour un resultat **identique**. Le `UNION ALL` est retenu. Garde ajoute au
+passage : `start_time`/`end_time` sont NULLables au schema, et `''.split(':')`
+produit un `NaN` que `JSON.stringify` serialise en `null` — le KPI se vide sans
+aucune erreur serveur.
+
+**Le consensus du 09/09 etait moitie faux, et corrige.** Il consignait
+« `staff_schedule(staff_id, day)`, +86,7 % RETENU ». Sa sonde semait `day` avec
+des **noms de jour**, la ou l'app ecrit `day = date = "<ISO>"` : elle a installe
+un index sur la colonne de la branche RARE en laissant la branche CHAUDE sans
+index. Re-mesure de la requete reellement emise (`scripts/probe-index-reel.py`) :
+
+| etat d'index | p50 du tour complet |
+| --- | --- |
+| aucun | 548,6 ms |
+| `(staff_id, day)` seul — l'etat instalé | 83,7 ms |
+| `(staff_id, date)` seul | 6,9 ms |
+| **les DEUX** | **0,159 ms** (les 4 etats rendent le MEME compte de lignes) |
+
+Soit **527x** devant l'etat precedent, pour un cout d'ecriture mesure de
++0,0009 ms/insertion (le planning s'ecrit a la main, pas par webhook). Les DEUX
+index sont instalés dans `src/db/init.ts`, `IF NOT EXISTS` (idempotence obligee:
+la migration tourne a chaque demarrage sur les bases deja livrées).
+
+Le harnais fautif est **repare a la source** et non contourne :
+`scripts/ab-indices.py` seme desormais les DEUX formes (`ISO/ISO` et
+`NOM/NULL`) avec des **colonnes nommees**, et son nouveau garde rougit si une
+requete du bench ne rapporte **aucune ligne** — le « refuse par mesure (+0,4 %) »
+du 09/09 etait precisement un scan vide chronometré.
+
+**La forme N+1 est gardee, decidee et non supposee.** Remplacer la boucle par une
+jointure (41 declarations → 1) ne gagne que **0,11 ms/tour** une fois l'index en
+place (0,144 vs 0,034) : sous tout seuil decisionnel, pour un changement qui se
+paie en risque de faute. Le premier verdict « jointure −12,3 % » etait un artefact
+(seed a 0 ligne + predicats differents entre les deux bras).
+
+**Preuves attacheses.** `scripts/probe-labor-cost-zero.py` : sonde de regression
+comportementale sur copie de la base reelle du client (8 checks, ligne de base lue
+AVANT injection, contre-controle negatif, jour voisin exclu, branche heritee,
+creneau vide ≠ NaN) — **rouge avant le correctif, vert apres**.
+`scripts/mutation-test-labor.py` : 5 fautes injectees dans des COPIES isolees
+(`node_modules` symlinké), **les 5 mordent** (rc + le check vise nomme) ; la
+falsification des DEUX index laisse la sonde **verte**, ce qui prouve que l'index
+est une optimisation et non la source de la justesse. Deux de mes propres checks
+avaient ete rattrapes par ce harnais (fragments de nommage qui ne correspondaient
+a aucun libelle reel ; une mutation qui creait un 500 et faisait tout rougir, ce
+qui ne prouvait plus le garde vise).
+
+### 7.6 Les quatre portes de perf/SSE/cache jugoient QUI REPOND, pas leur instance
+
+Decouverte en relisant les sources, pas par un rouge: `verify:sse`, `verify:perf`,
+`verify:http`, `verify:ratelimit` tiennent chacun un **PORT FIGE** (4126-4129) et
+attendoient leur serveur sur `r.ok` **sans confronter le jeton d'instance**.
+`server.ts` rend `COOKDRIVE_INSTANCE_TOKEN` (sinon son propre `crypto.randomUUID()`),
+et `scripts/probe-instance-guard.mjs` chasse deja la meme classe de faute pour les
+SPECS e2e — mais pas pour ces quatre portes, que `verify:all` comte comme vertes.
+Un `server.ts` orphelin (fils qu'un harnais a laisse vivre, ou serveur d'un AUTRE
+projet du poste: `ps` en montroit sept, dont deux de `Stefan/Volt-App-main`) repond
+sur le port et le harnais le juge comme etant le sien.
+
+Correctif: les quatre attestent desorais sur l'en-tete (`pret` exige le jeton
+ATTENDU), separent la cause « instance PERIMEE » (ce n'est pas MON serveur) de
+« serveur pas pret », et **sortent en dur** (`process.exit(1)`, et non le
+`setTimeout(..., 200)` qui pouvoit laisser le compte continuer).
+
+Preuve de morsure: `npm run verify:instance-mord-harnais`
+(`scripts/probe-garde-instance-harnais-mord.py`) — **12/12**, par porte:
+`control VERT / faute imposteur ROUGE + cause nommee / restaure VERT`, avec un
+vrai faux serveur qui repond un AUTRE jeton. Sortie de la branche faute:
+`ECHEC instance PERIMEE sur le port 4126 : l'en-tete dit « imposteur-... », ce
+harnais attend « verify-ratelimit »`.
+
+Trois fautes d'harnais rattrapees PAR CES PROPRE CONTROLES, a retenir:
+
+1. **Le jeton mis a cote de l'objet `env` au lieu de dedans.** `spawn(..., {env:
+   {...}}, COOKDRIVE_INSTANCE_TOKEN: ...)` en fait un champ d'options IGNORE par
+   le fils: le serveur retombait sur son `randomUUID` et la porte **rougissot sur
+   SON PROPRE fils** (`l'en-tete dit « 84f0cc30-… », ce harnais attend
+   « verify-perf »`). C'est la branche `control (attendu VERT)` qui l'a dit — le
+   controle sans faute est ce qui empeche un harnais casse de crier « la mutation
+   mord ». Verifie depuis par octets: `dedans_env=True, hors_env=0`.
+2. **Un predicat a nommure inverse est un bug qui ne rougit pas.** `liberer(port)`
+   retournait `connect() != 0`, donc `not liberer()` etait vrai quand la connexion
+   REUSSISSOT: l'attente « imposteur en place » pouvoit se satisfaire d'un port
+   LIBRE. Renomme `port_pris()` + semantique droite.
+3. **« Le port est occupe » n'est pas « c'est mon imposteur qui y est ».** Le
+   predicat d'imposteur etait satisfait par n'importe quel detenteur, **y compris
+   le fils du run precedent** que `child.kill("SIGTERM")` (le wrapper `tsx` laisse
+   un petit-fils) n'avoit pas encore tue: l'imposteur ne pouvot pas binder, et la
+   porte jugeait le fils rémanant — qui porte, lui, le BON jeton. Verdict
+   rendu: « la mutation ne mord pas » (**11/12**), pour une faute d'harnais. La
+   correction n'est pas de toucher au garde: c'est `jeton_sert(port)` (l'IDENTITE
+   de ce qui répond) + `attends_port_libre()` avant d'installer l'imposteur + un
+   `srv.on("error")` qui fait MEURIR l'imposteur sur `EADDRINUSE` (sans lui il
+   restot vivant sans servir, et le harnais croisait binder). Le garde, lui,
+   n'a jamais eu tort: **il a fallu l'imposteur manuel pour le savoir**, et le
+   verdict `12/12` dit que « ne mord pas » etait mien.
+
+Ne PAS mettre cette porte dans `DEFAUT` de `run-all-gates.py`: elle relance
+ELLE-MEME les quatre portes et exige les ports LIBRES, ce qui est exactement la
+condition de contention qu'un lot séquentiel produit (fils residuel) → rouge
+flou. Elle se lance seule. Le contrat general est le meme que pour l'instance:
+**un PASS rendu par une instance qui n'est pas la tienne n'est pas une mesure.**
+
+
+
+## Sprint 11 - HACCP: deux regles que le produit laissait au client, et un harnais qui contamine ses propres bras (16 sept.)
+
+**Ouvreur:** une autre session du meme projet a ecrit le contrat HACCP
+(`test/e2e/haccp-contract.spec.ts`, 8 CHEMINS C1..C8) et les deux tests de
+`routes.spec.ts` (guide LFS, `agent/command`). Ce qui etait dans l'arbre etait
+VERT mais NON JOUE: aucun gate ne citait le spec HACCP, aucune morsure
+n'existait, et deux des assertions du spec rougissaient sur le PRODUIT. Ce
+chat-la a: joue les rouges, tranche produit-vs-harnais, pose les portes, et
+solde une assertion qui n'etait pas portee par le code.
+
+### 11.1 Les deux rouges etaient le produit, pas le harnais
+
+| # | Ce qui etait rendu | Ce qui a ete exige |
+|---|---|---|
+| T1 | `POST /api/haccp/temperature` laissait le **client** declarer `entry_type`/`sensor_mode` | 400 nomme quand l'appelant les PORTE; la provenance est declaree par le serveur (`manuel`/`online`) |
+| T2 | `POST /api/haccp/batches` faisait `dateISO(...) ?? lireTexte(..., 40)` | plus de repli TEXTE sur une date de registre |
+
+Pourquoi ce n'etait pas de la decorative, juge par les EMETTEURS (non par l'UI):
+- T1: `Haccp.tsx` L263-271, l'unique emetteur de cette route, n'envoie NI
+  l'un NI l'autre. Une saisie de clavier signee `iot` faisait donc passer une
+  frappe pour une trace machine — et le badge IoT de `Haccp.tsx:821` le
+  affichait comme une preuve automatique. La voie d'ingestion reelle a sa
+  PROPRE route (`POST .../webhook/iot-report`), qui signe `iot`: la voie
+  humaine na pas a recevoir la clef du mensonge. Le 400 (et non l'ignore
+  silencieux) est le seul signal qu'une usurpation ou qu'un bug client est arrive.
+- T2: `HaccpModules.tsx` poste `dlc` et `dlc` est AUSSI populate par l'OCR
+  (`if (data.dlc) setDlc(data.dlc)`), done par une sortie d'IA au format non
+  controlle. La colonne est un TEXT compare lexicographiquement: un
+  `31/12/2030` y vivait sans bruit et rendait le tri muet.
+
+### 11.2 M7: un angle mort du CONTRAT, pas des donnees
+
+`verif` rendait 11/12, `M7` (retirer la confrontation `SELECT id FROM
+inventory WHERE id = ?`) faisait `NE_MORD_PAS`. Cause lue dans les octets: le
+seul cas de C3 etait `inventory_id: "UNKNOWN"`, happe par la regex de
+`clefEtrangere` AVANT la table — donc la branche etait **inexercee par le
+contrat lui-même**, et la ligne `fantome` (ecrite puis avalee par le JOIN
+interne de `GET /api/haccp/batches`) passait. Le piege: cette forme de
+silence ressemble en tous points a un harnais faible. Correctif: un cas
+`clef bien formee mais absente de inventory` + `aucune ligne fantome ecrite`.
+M7 MORD desormais (12/12).
+
+### 11.3 Trois defauts d'HARNAIS qui m'etaient propres, trouvés par mes portes
+
+| Defaut | Ce qu'il rendait | Ce qui la dit |
+|---|---|---|
+| copie de la copie isolee en LISTE BLANCHE de fichiers (package.json, server.ts, tsconfig…) | serveur mort au demarrage: `ERR_MODULE_NOT_FOUND /…/epicure` | le **témoin** sans mutation etait rouge; sans lui j'aurais rendu « 0 morsure prononcee » pour une raison d'infrastructure. Remplace par TOUS les fichiers racine |
+| `retablir()` ne restaurait que le fichier de l'iteration courante | 3 faux `MORD_AVEC_BRUIT` (M8 survit dans M9; M9, qui mute le module PARTAGE `haccp-fields.ts`, survit dans M10/M11) | ces trois bruits etaient MES FILS, pas le produit. La premiere lecture « le contrat touche deux regles » etait fausse des deux tiers |
+| compteur d'accolades avec toggle de chaine | solde +1 sur un bloc equilibre; deux `ABSTENTION` avant que `tsc` juge | les apostrophes francaises (`n'est pas` … `n'a ete`) AVALEMENT tout entre elles et masquent six accolades. Verifie en rejouant les deux variantes du compteur |
+
+Loi qui en sort: **un harnais doit retablir TOUS ses bras mutables avant chaque
+cas, et son temoin doit etre vert avant qu'un seul verdict soit prononce.** Une
+contamination entre bras rend des verdicts faux et parfaitement lisibles.
+
+### 11.4 La carte du script de verdit etait fausse (une classe deja consigne, forme inverse)
+
+`scripts/verif-sprint11-haccp.py` jugiait le « contrat » d'une route par
+`src.find('"<chemin>"')` SANS la methode. Pour un chemin porte par un GET et
+un POST (`iot-sensors`, `cleaning`, `batches`), le premier match est le GET —
+qui na pas de contrat — et le POST contracte etait declare non contracte.
+Verdit rendu: `routes_contractees=6/7`, la verite est `7/7`. C'est exactement
+la faute du 09/09 (« une carte jugee sur le NOM d'un chemin ») dans son autre
+sens: celle-ci mentait dans le sens ALARMISTE, aussi couteuse. Corrigee: span
+par (METHODE, CHEMIN). Le meme script a recu DEUX ancres de plus (M9/M10) pour
+les regles de 11.1, quelles ne voyait pas du tout.
+
+### 11.5 `agent/command`: un echo vendu comme une extraction (solde)
+
+Les tests de `routes.spec.ts` exigeaient un contrat que le code ne portait
+pas. Relu a l'octet: pour chaque ligne du panier, `status: "Navigation B2B
+effectue"` + un `found_price` egal au prix QUE L'APPELANT venait d'envoyer, et
+un `claus_analysis` qui affirmait « extraits en direct ». Le seul navigateur
+lance faisait une attente de deux secondes puis se refermait — et c'est CE
+launch qui rendait la route injouable sur un runner sans display (piege consigne
+plus haut) alors que la route ne navigue pas. `carts: []` repondait `success`.
+Lunique consommateur (`src/lib/helpers.tsx`, `gerer_flux_culinaire`) poste un
+panier DEJA prix et n'affiche que `claus_analysis`: aucune extraction na
+ete perdue. Rendu: `mode: "SIMULATION"`, `verified: false`,
+`source: "echo-input"`, `found_price: null`, 400 + `refused: ["data.carts"]`
+sur zero ligne, et le `catch` qui repond 500 est CONSERVE (une erreur serveur
+doit rester une erreur serveur). Un mensonge qui dit son nom vaut mieux qu'un
+mensonge qui s'ignore.
+
+### 11.6 Preuves LIES (et non inferrees)
+
+```
+npx tsc --noEmit                        log de 0 octet (rc=0)
+npx vitest run                          73 passed (6 fichiers)
+npx playwright test                     101 passed (dont les 8 CHEMINS C1..C8)
+npm run build                           build produit
+npm run verify:haccp                    8 passed
+npm run verify:haccp-mord               TEMONIN vert + 12/12 MORDENT
+```
+
+Les deux portes sont dans `DEFAUT` de `scripts/run-all-gates.py` (donc dans
+`npm run verify:all`) et dans `package.json`; la liste des portes du lot est
+LUE dans `package.json`, jamais recopiee. Les ancres de la morsure vivent dans
+`scripts/registre-mutations-haccp.py` (ficher de DONNEES: le poste rogne les
+emissions longues et une ancre mal transcrite se presente comme un « ne mord
+pas », la faute du 09/09) et chaque ancre est COMPTE sur les octets relus avant
+d'etre jugee.
+
+### 11.7 Ouvert, consigne (et non oublie)
+
+- **`POST /api/haccp/scan` est la TROISIEME porte decriture de `batches` et
+  elle est hors contrat.** Relu a l'octet (`src/routes/haccp.ts` L168-L195):
+  `let inventoryId = "UNKNOWN"`, `lotNumber = "Inconnu"`, `quantity` absent,
+  puis `INSERT INTO batches` direct — sans `clefEtrangere`, sans `dateISO`.
+  Ces lignes ne remontent JAMAIS dans `GET /api/haccp/batches` (JOIN interne):
+  c'est la classe exacte du defaut T2/Sprint 7 (« une colonne a TROIS portes,
+  une seule gardee »), consignee ici faute de fixture: la route exige Ollama
+  (relue: `400/415/500` sans modele), donc `C8` ne peut que verifier quelle
+  SURVIT. Juger cette porte demande un faux modele Ollama ou linjection de la
+  sortie — a poser avec son fixture, pas en relachant la porte de `batches`.
+- Les chemins de lecture `documents/upload` (voie multer) et `scan` restent
+  NOMINAUX: ils ne sont pas juges, seulement declares vivants par C8.
+- `verify:all` est lance avec les deux nouvelles portes; son etat doit etre lu
+  dans sa sortie, pas deduit de 11.6.
+- Reproduction CI: le runner GitLab est x86_64, `binfmt/qemu` non enregistre
+  sur ce poste → le delta d'architecture reste **non testable ici** (piege
+  deja consigne).
+
+
+## Sprint 10 - `verify:forecast` : une porte rouge qui ne jugeait rien, et un mode qui ment sur ses donnees (13 sept.)
+
+### 10.1 Le rouge etait vrai, sa cause etait fausse
+
+Le lot rendait `ROUGES=1` sur `verify:forecast`. Ce n'etait pas un defaut du
+produit et pas un defaut d'harnais: la sonde `probe-forecast-real.py` s'arrete
+a juste titre (`rc=2`) quand **aucun** plat du client ne tombe dans la fenetre
+de 14 jours. Les sept plats sont dates des 06-12/09; nous sommes le 13.
+
+Ce qui etait faux, c'est le **contenu du mot** « graine ». Le contrat de la
+sonde — « base reelle du client, aucune graine, sinon tu mesures un scan vide »
+— avait ete ecrit pour empecher la tricherie la plus rentable du secteur: un
+tableau de besoins a zero rendu VERT par ce qu'on a appele un scan vide
+chronometre. Il interdisait donc TOUTE transformation des donnees. Or la base
+n'est pas vide: **6 recettes, 18 lignes d'ingredients, 0 orphelin, gramatures
+0,08..0,22, rendements 92-98 %**. Le blocage est purrement **calandrial**.
+Rendre `rc=2` dans cet etat, c'est rendre une ABSENCE de mesure avec le meme
+code qu'un ECHEC produit — et le lecteur doit ouvrir un log pour decouvrir que
+rien n'est casse.
+
+### 10.2 Le mode `--semer=decaler` : la plus petite transformation qui ne fabrique rien
+
+`caler_planning_sur_aujourdhui()` ne touche qu'**une colonne**, `menu_planning
+.date`, et par un **decale UNIQUE et deterministe** (le plus vieux plat tombe a
+aujourd'hui, ici +7 j). Les distances RELATIVES entre les plats sont preservees
+: le calendrier du chef garde sa forme.
+
+Aucune gramature, aucun couverts (`recipe_json`), aucun rendement, aucun prix,
+aucun stock, aucun article n'est invente. L'oracle reste ecrit a la main, en
+dehors de la route. Le mode est **OFF par defaut** : sans lui, une base sans
+plan rend toujours `rc=2`, et le garde `prises == 0` survit.
+
+Deux compte-rendus ont du etre corriges pour ne pas mentir, et c'est la
+veritable faute de ce sprint (consignee par ce qu'elle a produit):
+- la banniere affirmait « base reelle du client (aucune graine) » **alors que
+  le mode tournait** → elle rend desorais `CALAGE CALENDRIAL (dates seules)`;
+- le compte-rendu de l'oracle affichait `+14 j` alors que la mesure se jouait a
+  `horizon=0` → il rend la fenetre **reellement jouée**.
+
+Un compte-rendu qui ne dit pas la transformation qui a eu lieu est exactement
+la classe de defaut que ce depot poursuit: un PASS rendu par ce qu'on ne nomme
+pas.
+
+### 10.3 Le rouge que la morsure a rendu etait MIEN (la phase qui compte)
+
+Premier lancement en `--horizon=0` : `ECHEC — 2 checks`. Deux lectures
+etaient possibles — la route est cassée, ou l'oracle juge une autre fenetre
+que celle que la route a servie. La deuxieme etait la bonne: j'avais sérré
+l'oracle sur 0 jour sans rien dire a l'appel `GET /api/purchasing/forecast`,
+qui lui demandait son defaut de 14. L'oracle attendait `13.574`, la route
+rendait `30.149`.
+
+C'eut ete le defaut le plus facile a rater de tout le sprint: le vert de la
+porte dependait d'un desaccord entre deux moities que je venais d'introduire.
+Corrigé par les DEUX cotes (`?horizon=` propage a l'appel et au check de la
+fenetre), et non par un relachement du seuil.
+
+### 10.4 Morsure : 4 voies jouables mordent, 2 voies ne peuvent pas mordrer
+
+`scripts/negative-test-forecast-graine.py`, en `--semer=decaler --horizon=0`
+(serre volontairement: a 14 jours, un besoin qui fuite hors fenetre y rentre
+quand meme et le check « pas de fuite » est satisfait par la taille de la
+fenetre au lieu de la juger):
+
+| Voie | Mutation | Etat |
+|---|---|---|
+| sortie du besoin | `besoin_recettes: 0` | **MORD** |
+| rendement (diviseur) | `const pct = 100` | **MORD** |
+| couverts planifies | `const covers = 1.0` | **MORD** |
+| gramature non numerique | `: 1` au lieu de `: 0` | **MORD** (depuis le fixture) |
+| borne basse de la fenetre | predicate toujours vray | **REDOUNDE** par construction |
+| clef vide du planning | garde decalee | **INATTEIGNABLE** par construction |
+
+De verrous d'harnais, herites des lecons consignees: le source est restaure
+dans un `finally` et **confrontee au sha d'origine** (reverifiee depuis:
+`git diff` sur `suppliers.ts` est VIDE et les quatres litéraux de mutation
+sont absents du fichier); le harnais refuse de demarrer si un fils de la sonde
+tourne encore (« un PASS rendu par une instance qui n'est pas la tienne n'est
+pas une mesure »); et le controle final rejoue le code retabli — un harnais qui
+ne retablit pas un etat jouable ne prononce pas sa morsure (`rc=6`).
+
+#### 10.4bis AMENDEMENT au 10.4 — DEUX des trois causes consignees etaient FAUSSES
+
+La regle du depot: « une mesure qui contredit un verdict consigne doit etre
+RE-MESUREE et le consensus corrige, pas herite ». Le 10.4 affirmait que trois
+branches etaient « non exercees par les donnees du client », causes « prouvees
+par les octets de la base ». Deux des trois causes etaient fausses, et la
+relecture qui les casse est dans le SOURCE du SQL, non dans les donnees:
+
+- **La gramature (`M4`) n'etait pas un angle mort de donnees: elle etait
+  JOUABLE.** Le client n'a que des `real` entre 0,08 et 0,22, done la branche
+  `qpp > 0 ? qpp : 0` n'etait pas oubliee, elle n'etait pas **exercee** — et
+  elle pouvoit l'etre licitement: `recipes.ts` ecrit `ing.quantity_per_person
+  || 0` sur ses DEUX voies d'insertion. Une gramature a 0 est un etat que LE
+  PRODUIT fabrique (le chef laisse le champ vide). Le fixture la depose, la
+  voie **MORD** desormais. Ce que la cause consignee avait de faux: elle
+  declarait une limite de la base la ou c'etait une limite du harnais, et elle
+  **condamnait une voie qu'on pouvait ouvrir**.
+- **La borne basse (`M5`) n'est pas genee par les donnees: elle est DOUBLÉE.**
+  Le SQL porte `AND mp.date >= DATE(?)` ET `AND DATE(mp.date) >= DATE(?)`,
+  deux conditions equivalentes. Muter l'une laisse l'autre exclure les memes
+  lignes: la sortie est identique pour TOUTE mutation d'une seule des deux.
+  Aucune quantite de donnees ne la fait mordrer. La cause « 0 plat avant la
+  borne » etait vraie comme observation et **fausse comme explication** — elle
+  accusait le hasard des donnees pour un fait de STRUCTURE, et elle cachait
+  l'action utile: une des deux conditions est du **code mort**, le refactoring
+  (en supprimer une) est la seule sortie, pas un fixture.
+- **La clef vide (`M6`) etait bien inatteignable, mais pas pour la cause dite.
+  ** Ce n'est pas le nombre de lignes a `recipe_id` vide: c'est la
+  `JOIN recipe_ingredients ON ri.recipe_id = mp.recipe_id` qui tue la ligne
+  AVANT la garde — une ligne a clef vide ne joint AUCUN ingredient, done ne
+  peut pas modifier la sortie. Muter cette garde est NEUTRE par construction;
+  la rendre jouable exigerait de retirer la jointure, done de **truquer la
+  mesure**. La cause « 0 ligne a clef vide » etait comptee sur la copie du
+  client, ce qui rendait l'impossibilite contingentale alors qu'elle est
+  structurelle.
+
+Le compte-rendu rend desormais TROIS etats au lieu de deux — un « ne mord pas »
+de donnees, un constat de `redundance`, un constat d'`inatteignabilite` — parce
+que les melanger sous un seul « 3/6 angles morts » effaca la hierarchie: la
+premire est une dette de fixture, la deuxieme une demande de refactoring, la
+troisieme une limite legitime du instrument.
+
+Ce qu'il **ne faut pas** faire, et c'est la moitie utile du resultal: le `NULL`
+de gramature ne peut venir d'aucune voie d'ecriture du produit (`|| 0` le
+convertit). Un `INSERT` brut qui le forcerait eut rendu un PASS sur une branche
+que personne ne peut ecrire — un temoin sans accusable. La gramature a 0 exerce
+LA MEME branche avec une donnee que le produit ecrit lui-meme.
+
+
+#### 10.4ter LA GARDE ANTI-NO-OP DU FIXTURE, FALSIFIEE PAR SES TROIS VOIES
+
+`--fixture=branches` pose deux lignes pour que la VOIE de M4 puisse être
+jouée (voir 10.4bis). Reste une question que rien ne tranchait: si le fixture
+est demandé et ne pose rien (`fixture_exercer` rend `(0, 0, None)`), la
+course verte serait un menonge — la porte pretendrait juger la gramature
+sans l'avoir exercée. J'ai donc ajouté une garde: `rc = 3` dans ce cas.
+
+Mais une garde qui ne peut pas sonner n'est pas une mesure (piege des
+« ancres de mutation mortes » du Sprint 8), et je n'avais AUCUNE preuve
+qu'elle sonne. Deux tentatives de la déclencher par copie de la base du
+client (ôter les articles d'inventaire libres pour que le fixture ne trouve
+plus où poser) ont rendu `rc = 2`: l'arrêt « l'oracle ne rend aucun besoin »
+prend la place AVANT elle. La copie ne prouvait rien — elle ne montrait
+qu'un voisinage.
+
+`scripts/falsifier-garde-fixture.py` tranche en jouant la BRANCHE, et non
+une copie: il relit les octets de la sonde, retire la ligne de sortie de
+module sous double controle (`ancre trouvee 1 fois`, sinon abstention),
+compile, execute dans un namespace etrange, puis remplace `fixture_exercer`
+par une imitation de no-op. TROIS voies, et chacune est exigée:
+
+| voie | attente | obtenu |
+|---|---|---|
+| fixture réel | `rc = 0` | 0 |
+| fixture demandé, ne pose rien | `rc = 3` | 3 |
+| no-op sans le drapeau | `rc ≠ 3` | 0 |
+
+La premiere voie est ce qui empeche la garde d'être un etat fige: sans
+elle, un `rc = 3` permanent ressemblerait à une réaction.
+
+DEUX defauts MIENS sont tombés pendant cette falsification, et c'est sa
+valeur:
+
+1. **Import dynamique impossible.** Le fichier de la sonde finit par
+   `sys.exit(main())` AU NIVEAU MODULE, sans garde `if __name__ ==
+   "__main__":`. Un import (ou un `exec` brut) joue donc la course avec les
+   arguments du CONTROLEUR et lève `SystemExit(2)` avant tout: la premiere
+   version du script a rendu `PD1_RC=2` en n'ayant joué qu'une course SANS
+   drapeau (`+14 j`, calage éteint) — un solde qui n'était pas un verdict.
+   Le tracé l'a prouvé, pas l'hypothèse.
+2. **Lecteur myope.** Après avoir retiré `sys.exit`, `main()` RETOURNE son
+   code au lieu de quitter; mon auxiliaire ne lisait que `SystemExit.code`
+   et rendait donc **0 dans tous les cas**. Le « no-op = 0 » que j'allais
+   consigner comme « garde morte » était l'artefact d'un lecteur cassé, pas
+   un fait sur la sonde. Corrigé en lisant la valeur retournée, il donne 3.
+
+C'est le second jour où un contrôleur qui ne peut pas rougir me fait
+consigner un verdict faux (le premier: le « 3/6 » rendu par une course qui
+n'avait pas joué le calage). La regle se resserre: **avant de croire un
+solde, vérifier que le solde peut changer** — ici, une voie attendue à 3 et
+une voie attendue à 0 dans la même course.
+
+ANGLE MORT ASSUME, non vendu comme mesure: aucun état client connu
+n'atteint ce no-op. La voie est prouvéee PAR SIMULATION (`imitation de
+defaut`, donnée inventée), pas par une donnée du client; le script
+n'entre donc dans AUCUN lot de portes, c'est un controle de voie.
+
+### 10.5 Le piege qui s'est re-produit, et il merite sa regle
+
+DEUX fois dans ce sprint j'ai cru un changeement applique alors que je
+l'avais seulement **ecrit** : le patcheur de compte-rendu tournait encore dans
+sa version d'avant (« 3/6, angles morts » rendu apres son correctif), et le
+branchement du manifeste etait annonce avant son execution. Le reflexe qui
+manque n'est pas d'ecrire moins, c'est de ne jamais rendre un etat sans avoir
+joue le script qui le produit. `scripts/finaliser-forecast.py` retire d'ailleurs
+les sept patcheurs qui ont servi: un script de controle qui ne controle plus
+rien est exactement la « ancre de mutation morte » du Sprint 8.
+
+### 10.6 Preuves
+
+- `python3 -m py_compile scripts/*.py` : 0 | `npx tsc --noEmit` : 0 (log de 0 octet)
+- morsure: `MORSURE_RC=0`, 3 voies mordues + 3 causes, restauration verifiee au sha
+- la sonde sans mode rend toujours `rc=2` (le contrat d'origine survit) et avec
+  le mode **9/9**, `14 articles avec besoin`, `21 lignes de plan` confrontees a
+  l'oracle
+- deux portes au manifeste: `verify:forecast` (mode qui mesure) et
+  `verify:forecast-mord` (la morsure), les deux au lot
+
+### 10.7 Ouvert, consigne
+
+- Les DEUX voies qui ne mordent pas ne sont PAS une seule dette. `M6`
+  (clef vide) est une limite legitime du instrument: la jointure tue la
+  ligne avant la garde, aucune donnee ne la rend jouable sans truquer la
+  mesure. `M5` (borne basse) est une DEMANDE DE REFACTORING: le SQL porte
+  deux conditions equivalentes, l'une des deux est du code mort et le gate
+  ne peut pas la juger — la sortie est d'en supprimer une, pas d'ecrire un
+  fixture. Les confondre sous « il faut un second jeu de donnees » etait
+  la faute de compte-rendu du 10.4.
+- `verify:forecast` juge la voie API par la copie de travial; la voie UI
+  (`Purchasing.tsx`) n'est pas reprise par ce mode.
+
+## Sprint 9 - Les lignes a la creation: les DEUX portes restantes de `document_items` (13 sept.)
+
+### 9.1 La carte des routes jugees avait un angle mort, et il etait GROS
+
+Le Sprint 8 avait apprime a faire la carte des routes jugees en comparant les
+chemins declares de `src/routes/*.ts` aux chemins cites dans `test/e2e/`. Cette
+carte rendait `documents.ts` "couvert": le spec `documents-validate.spec.ts`
+joue `POST /api/documents` avec **une ligne PARFAITE** et verifie que le
+document sort. Il nomme donc le chemin dans le texte du spec, et la carte le
+croit juge.
+
+Le premier calcul de ce sprint a rendu une liste de cinq chemins "sans spec";
+**quatre etaient des faux positifs** (couverts ailleurs, regex inadaptee aux
+gabarits). Le cinquieme, `POST /api/purchasing-flow/...`, etait reel. Et
+surtout: **etre cite dans un spec ne veut pas dire etre juge**. La porte
+`POST /api/documents` etait citee en acceptant `quantity: "beaucoup"`,
+`unit_price: "abc"`, `inventory_id: "cle-inexistante"` et `items: {}`.
+
+La lecon se consigne: **la carte des routes jugees doit etre jugee au CONTENU
+des assertions, pas a la presence du chemin dans le spec.** Une route "couverte"
+par un seul cas nomimal est une route non couverte avec un compte-rendu
+rassurant.
+
+### 9.2 Ce que la sonde a rendu AVANT (fait, pas raisonne)
+
+`node scripts/probe-document-items-voices.mjs`, sur l'instance reelle:
+
+| Entree | Avant | Sens du defaut |
+|---|---|---|
+| `quantity: -5` | `200`, ligne ecrite **`-5`** | solde et total partent en negatif |
+| `quantity: "beaucoup"` | `200`, ligne ecrite **`0`** | commande perd 3 douzaines SANS message |
+| `unit_price: "vingt-cinq"` | `200`, prix **`NULL`** | facture amputee; et `unit_price` sert DEUX usages (prix facture / tarif propose) |
+| `inventory_id: "cle-qui-n-existe-pas"` | `200`, ligne **orpheline** | rien ne dit que le prix n'a jamais pu etre repris |
+| `quantity: "  "` / `""` | `200`, prix **`0`** (le vide devient gratuit) | l'UI faisait `parseFloat(x)||0` AVANT d'envoyer |
+| `total_amount: "mille deux"` | `200`, total **`0.00`** | le document est VERT et fausx |
+| `items: {}` (non-tableau) | **`500`** | un payload mal forme de l'app peut tuer le travial du chef |
+
+Le cas le plus cher n'est pas la 500: c'est `beaucoup -> 0`. Il produit un
+**200** avec un document vert, une ligne a zero, et aucun moyen, cote chef, de
+savoir que la facture ne dit pas la verite.
+
+### 9.3 Le contrat (et pourquoi il n'est PAS un rejet sec)
+
+Le patron du depot est le "triade" du Sprint 7 (`import-confirm`): ce qui ne
+passe pas est **nomme a la reponse**, pas perdu. Mais les lignes de document
+portaient DEUX contrats consignés que le patron du Sprint 7 ne peut pas
+ecraser:
+
+- **V2**: une ligne au prix inexpleitable doit SURVIVRE en base et etre nommee
+  par `/validate` (`prix_non_exploitables`).
+- **V3**: la valeur brute doit rester en base telle quelle.
+
+Le premier brouillon de `jugerLignesDeDocument` jetait la ligne (400 sec). C'eut
+ete un regress de contrat, et il eut ete invisible: les 84 tests jouaient la
+voie nominale. Le contrat final:
+
+1. la ligne **reste**; seul le champ inexpleitable se neutralise,
+2. le **BRUT est conserve** dans `unit_price_brut` (nouvelle colonne,
+   `ensureColumn`) pour que `/validate` puisse encore la nommer AVEC la valeur
+   lue,
+3. un prix neutralise **n'ecrase plus le tarif de reference** de l'article (le
+   piege du `NULL` silencieus de node-sqlite3: `unit_price: null` dans le `SET`
+   aurait efface un prix sain),
+4. le quantite invalide est **refusee** (`400`): une ligne a `0` est une
+   ligne-mensonge, et une ligne negative est un solde fausx — la, le triad
+   cede la place au refus sec parce qu'il n'existe pas de "quantite brute"
+   exploitable plus tard,
+5. `items` non-tableau -> `400` et non `500`, et la transaction est **annulee**:
+   `items` etant un champ OPTIONNEL, l'ancien code laissait vivre le document
+   SANS lignes (defaut G).
+
+La clef `inventory_id` est jugee **contre la base** et non contre la forme:
+l'app envoie des clefs qui ont pu sortir de l'inventaire depuis la commande,
+et l'app sait deja afficher ces lignes-la ("article sorti de l'inventaire
+depuis la commande"). Un rejet sec eut casse le flux du chef.
+
+### 9.4 La porte que personne ne regardait: le parse cote CLIENT
+
+`DocumentManager.tsx` faisait:
+
+```ts
+quantity: parseFloat((item.quantity as any)?.replace(",", ".") ?? "") || 0,
+unit_price: parseFloat((item.unit_price as any)?.replace(",", ".") ?? "") || 0,
+```
+
+Trois defauts dans une ligne:
+- `|| 0`: le **vide devient gratuit** (0, pas "pas de prix"),
+- `parseFloat`: du texte devient 0,
+- le `replace(",", ".")` est **cote UI**: une autre voie d'appel (et la sonde)
+  n'a pas cette conversion et casse.
+
+Corrigé: **les champs partent bruts**, la conversion francaise (`2,5`) vit
+desorais dans le serveur (`nombreDecimal` accepte les deux ecritures), et
+l'UI n'invente plus jamais un `0`. C'est le meme enseignement que le Sprint 8
+("la clef du serveur est un contrat, pas une convention"): la validation qui
+vit dans le composant n'est pas une validation, c'est une habitude.
+
+### 9.5 Preuves
+
+- `npx tsc --noEmit`: **0 erreur** (verifie par octets: fichier de log de
+  0 octet, `TSC_RC=0` au reel — un `TSC_RC=1` rendu au meme instant etait le
+  rendu corrompu d'un resultat perime, d'ou la regle "trancher par les octets
+  du fichier de log, jamais par le rendu").
+- `test/e2e/document-items-contract.spec.ts`: **7/7** (K1 huit saisies, K2
+  solde non-vide, K3 clef absente, K4 melange/partial, K5 total + `items`
+  non-tableau, K6 negative, K7 orphelines + non-regress de la chaine d'achat).
+- `scripts/negative-test-document-items.py`: **12/12 mutations MORDENT**.
+  Quatre groupes joues en parallele par fichier source; les groupes qui
+  touchent `documents.ts` portent le verrou d'instance (`instance-guard.mjs`,
+  `EADDRINUSE` -> mort) parce qu'un fils residuel rend un PASS rendu par
+  l'instance d'un autre.
+- Suite existante rejouee apres le changeement: `73/73` unitaires, `84/84`
+  e2e, `npm run build` vert, sonde `probe-document-items-voices.mjs` verte.
+  **Aucun des 157 tests consignes n'a bouge**: le contrat nouveau n'a casse un
+  seul verdict precedant (V1-V6 du validateur, G de la chaine d'achat).
+- Trois portes au manifeste: `verify:document-items`,
+  `verify:document-items-mord`, et le contrat `verify:document-items-voices`
+  (celui-ci etait dans `DEFAUT` sans etre dans les `scripts` du manifeste).
+
+### 9.6 Pieges traverses (ce qui a menti pendant le sprint)
+
+- Le **poste corrompt le rendu** et **rogne les emissions longues**: deux
+  versions d'un patcheur ont ete ecrites "a l'air correctes" dans le rendu et
+  etaient cassees sur le disque. Trancher par `sha256` + compteurs de motifs
+  dans le kernel, jamais par ce qui s'affiche.
+- Le **patcheur a flou-matche** trois sites d'un seul coup (`|| 0` / `?? ""` /
+  `parseFloat`) et a introduit du faux dans trois fichiers. D'ou: substitutions
+  par **chaine exacte verifiee** (`count == 1`) dans un script, et jamais le
+  flou-matching pour une zone qui porte un contrat consigne.
+- Un "editeur concurrent" accuse a tort: `diag-manifeste.py` a prouvé que
+  `package.json` etait **identique a HEAD** — c'etait MA propre insertion
+  fautive (virgule trainante avant `}`), et le rendu "manifeste en place:
+  3 CLES ALIGNEES" etait un compte-rendu que je n'avais jamais joue. La garde
+  d'abention du script a empedché l'ecrasement; la regle d'attribution a du
+  etre corrigee DEUX fois (mes lignes ajouteses etaient declarees
+  "etrangeres"). **Une mesure qui contredit un verdict consigne se re-mesure;
+  le script n'avait pas raison de rester faux pour me contenter.**
+- La garde des caracteres a refuse `0xFE0F`: c'etait un selecteur de variation
+  **preexistant** (les `⚠` des textes FR). Elle controlait l'heritage du
+  fichier au lieu de ce que j'ecris. Corrigee en: verifier mes lignes inserées
+  + exiger qu'aucun caractere anormal ne soit INTRODUIT.
+
+### 9.7 Ce qui reste ouvert (consigne, pas oublie)
+
+- La voie `PUT /api/documents/:id` et `PATCH` (modification d'un document
+  existant) partagent-elles le module? A verifier par la carte au CONTENU, pas
+  par la presence du chemin dans un spec.
+- Les lignes "orphelines legitimes" (article sorti de l'inventaire depuis la
+  commande) sont rendues visibles par l'app; elles ne sont PAS encore un etat
+  nomme dans `/validate`.
+- La porte `POST /api/purchasing-flow/{id}/to-supply` (deuxieme porte) est
+  gardee par le MEME module; elle n'a pas son propre spec de contrat — seule
+  sa mutation `P1 bis` prouve qu'elle est reliee, pas qu'elle est jugee dans
+  ses details.
+
+## Sprint 8 - POST /api/inventory/consume : la route que personne ne jugeait (12 sept.)
+
+### 8.1 Ce qui a ete trouve, et pourquoi c'etait invisible
+
+La carte des routes jugees se faisait en comparant les chemins declares de
+`src/routes/*.ts` aux chemins cites dans les specs de `test/e2e/`. Le premier
+calcul a rendu `0 chemins couverts` sur un spec de 500 lignes (regex inadaptee
+aux gabarits `\`${BASE}/...\`` + piege du rendu du poste) : il a fallu trancher
+par octets dans le kernel. La veritable liste des routes **sans aucun test**
+comptait 40 entrees. Parmi elles, `POST /api/inventory/consume` n'etait pas la
+plus exotique : c'est le decrement de stock que `ProductionPlan.tsx` (ligne ~102,
+`handleConsumeStock`) appelle quand le chef valide un chariot de production. Elle
+n'avait **aucun test, aucun 400 sur les entrees, et ignorait le compteur de
+lignes touchees**.
+
+L'ancien corps, en substance :
+
+```ts
+for (const item of items) {
+  if (!item.inventory_id || typeof item.quantity !== "number") continue;  // (a)
+  await db.run("UPDATE ... WHERE id = ?", [...]);                          // (b)
+}
+res.json({ success: true });
+```
+
+- (a) **sigillait** l'entree malformee : une quantite absente, en texte, nulle ou
+  **negative** (qui, elle, REMPLISSAIT le stock) ne levait aucun signal et la
+  reponse restait `{success:true}`. Le chef voyait « Stock out validated ».
+- (b) `db.run(...)` rend `changes: 0` sur une clef inexistante **sans jeter**
+  (etabli par sonde). Une clef inconnue laissait donc les AUTRES lignes deja
+  consommees et repondait `success:true` : le decrement etait fait a moitie, en
+  silence, et le stock du chef etait faux sans aucun message.
+
+### 8.2 Deux de mes theses etaient FAUSSES, et la sonde les a defaites
+
+Avant de mesurer, j avais ecrit dans le commentaire de la route : « `BEGIN
+TRANSACTION` n existe pas en SQLite, le `ROLLBACK` du catch etait un NO-OP qui
+laissait les decrements graves ». **Faux.** La grammaire SQLite est `BEGIN
+[DEFERRED|IMMEDIATE|EXCLUSIVE] [TRANSACTION]`, et la sonde
+`scripts/probe-consume-semantiques.mjs` rend, sur `id TEXT PRIMARY KEY, q REAL
+NOT NULL` :
+
+```
+begin_transaction    {"ok":true,"changes":0}
+upd_dans_txn         {"ok":true,"changes":1}
+en_transaction       {"q":123}
+apres_rollback       {"q":5}        <- annule REELLEMENT
+upd_nan_not_null     {"ok":false,"err":"NOT NULL constraint failed: t.q"}
+get_clef_inconnue    undefined
+```
+
+Deux lecons, toutes deux payees ici :
+
+- **Ce que la sonde ne juge pas n'est pas un verdict.** Mon jugemoment portait
+  sur « le mot `TRANSACTION` est-il dans la grammaire », et non sur ce qui
+  decide : la **valeur de la ligne apres l annulation**. Le juge correct a rendu
+  `123 -> 5`, donc la forme est valide. Je garde `BEGIN IMMEDIATE` pour une
+  autre raison (le verrou d ecriture est pris a l entree, donc pas de
+  `SQLITE_BUSY` en cours de lot sous WAL alors que le webhook HACCP ecrit en
+  continu) et je la dis **non mesuree** : si ce choix doit un jour etre arbitre,
+  il l est par un A/B sous concurrence, jamais par une impression.
+- Seconde these fausse : « un NaN s ecrit dans une colonne `REAL` sans se
+  plaindre ». Vrai sans contrainte ; ici la colonne est `NOT NULL` et **jette**.
+  Le garde amont sur `Number.isFinite` ne sert donc pas a empecher un NaN grave
+  (il rend un 400 lisible au lieu d un 500 sorti du `catch`). Le commentaire de
+  la route porte desorais cette correction, et non ma version initiale.
+
+### 8.3 Le contrat pose (`test/e2e/consume-contract.spec.ts`, 7 tests)
+
+Chaque regle est doublee par DELTA puis RETIRER (poster par la MEME route que
+l UI, exiger le mouvement exact relu en base, puis l inverse et le retour a la
+ligne de base). La relecture passe par `GET /api/inventory`, **la voie de
+lecture de l app**, et non par un driver `sqlite` invente par le test.
+
+- **C1** mouvement EXACT en base (10->7, 4->2.5) ; `items` rendu = valeurs LUES
+  en base ; quantite nulle refusee sans deplacement aucun.
+- **C2** clef inconnue -> 400 + `unknown:[index]` + **aucune** ecriture partielle.
+- **C3** dix entrees malformees (absente, texte, vide, nulle, negative,
+  `1e999`, clef absente / vide / numerique / nulle) -> 400 + `refused:[0]`, stock intact.
+- **C4** lot melange : refus notifie, **plus l angle mort ferme** (voir 8.4).
+- **C5** `items` absent, non-tableau, vide, `null` -> 400 et **non** 500.
+- **C6** consommation au-dessus du stock -> borne a 0, jamais une quantite negative.
+- **C7** la forme exacte que poste `ProductionPlan.tsx` (payload recopie tel quel).
+
+### 8.4 Preuve de morsure : 10/10, et le premier trou etait dans mon harnais
+
+`scripts/negative-test-consume-contract.py` (`npm run verify:consume-mord`) nie
+une ligne precise de la route par mutation (DEUX par voie refusee, dont la borne de clampe et le
+champ `unknown` collecte/jamais rendu), dans une copie isolee (`node_modules`
+symlinké), et exige rc!=0 **plus le test vise nomme** dans la sortie.
+
+- ⚠ **M4 n a pas mordu a la premiere tentative, et c est moi qui avais tort, pas
+  la mutation.** Elle faisait `res.json({ ..., items: <recitation du corps de la
+  requete> })` au lieu de la relecture : le spec rendoit `7 passed`. C1 jugeait
+  `items.length` et la relecture separate, jamais les **valeurs** de la reponse.
+  Un PASS creux de plus, et il etait dans l harnais lui-meme. Corrigé par
+  `expect(rendues.map(l => l.quantity)).toEqual([7, 2.5])`, c est-a-dire les
+  quantites de la BASE (7 / 2.5) et non celles envoyees (3 / 1.5). M4 rougit
+  depuis (rc=1).
+- **Angle mort consignsé et non mute** (`M8`, commenté dans le script) : le
+  drapeau `en_transaction` du `catch` n est exerce que si une ecriture leve entre
+  `BEGIN` et `COMMIT`. Aucune voie d entree connue de cette route ne produit
+  cette levee (les payloads sont valides avant le premier `UPDATE`, et la
+  relecture suit un `COMMIT` deja reussi sur des clefs verifiees). Ne PAS
+  conclure « garde inutile » sans avoir demande quelle entree l atteint : c est
+  exactement ainsi que la porte 3 des prix fournisseurs a ete trouvee. La
+  mutation `M2` juge en revanche l annulation **atteignable** (la voie des clefs
+  inconnues) et elle mord.
+- **C4 porte l angle mort ferme** : deux lignes valides ecrites, dont une qui
+  deborde son stock et se clampe a 0, plus une troisieme clef inconnue -> les
+  DEUX decrements doivent disparaitre. Si une seule annulation sautait, la ligne
+  clampee survivroit. Le lot « valide + malforme » seul, lui, **ne prouve pas
+  l atomicite** (le 400 part avant le premier `UPDATE`) ; le commentaire du test
+  le dit pour qu on ne le compte pas comme une preuve d annulation.
+
+### 8.5 Pieges d harnais retombes dans ce sprint (tous deja connues, tous reels)
+
+- `lignes()` trioit les ids par ordre lexicographique : `consume-...-10` <
+  `consume-...-9`. Le test devenoit **faux selon le numero de graine**, donc
+  selon l ordre des tests precedents. Corrigé : l ordre est celui des ids passes
+  en argument, avec un `expect(absent)` explicite par id.
+- Les attentes numeriques ecrites « de tete » (`toEqual([2.5, 7])`) ont rougi
+  deux fois : `10-3 = 7`, et non `2.5`. Un chiffre d attente se **calcule**.
+- Port d abord figé a `4134`, puis `portLibre()` + `attendrePortLibre()` (le
+  meme contrat que `purchasing-chain.spec.ts`) : un petit-fils `tsx` survivant a
+  `SIGTERM` vole le port, l imposteur ne bind pas, et la porte juge alors le fils
+  remanant, qui porte lui le BON jeton d instance. Le verdict rendu seroit « la
+  mutation ne mord pas ».
+- Le rendu du poste a de nouveau rendu des fichiers « vides » ou a identifiants
+  mutés (`process.exit`, accents rendus en sequences d echapement) alors que les
+  octets etoient intacts :
+  chaque verdict de ce sprint a ete pris par sha256/octet dans le kernel ou par
+  execution, jamais par ce qu un outil affiche.
+
+### 8.7 Sprint 8.2 - POST /api/inventory etait le PUT du Sprint 6, en pire (meme jour)
+
+La carte des routes sans contrat (8.6) designoit `POST /api/inventory` comme
+zone a **voies d'ecriture multiples**. Elle en a TROIS, toutes dans le code de
+l'UI, et la sonde `scripts/probe-post-inventory-voices.mjs` les a jouees avec
+**leurs payloads reels recopies depuis les composants** (et non des payloads
+inventes par la sonde — la regle consignee de l'import de mercuriale) :
+
+- **V1** `InventoryAudit.tsx` handleAddSubmit (~280) : le formulaire d'audits.
+- **V2** `DocumentManager.tsx` handleQuickAdd (~138) : l'ajout rapide depuis une
+  ligne de facture. Poste `{name, unit, category, minStock, unit_price}` —
+  **ni `quantity` ni `status`**.
+- **V3** `HaccpModules.tsx` saveBatch (~98) : cree l'article d'un lot HACCP.
+  Poste **`status:'normal'`**.
+
+Verdicts de la sonde AVANT correctif (tous rendus, aucun suppose) :
+
+| Cas | RENDU | Ce que ca veut dire pour le chef |
+|---|---|---|
+| V2 (sans `quantity`) | **500**, `ligne_en_base=AUCUNE` | **l'ajout rapide de l'ecran facture est mort** : `undefined` part au binding sur une colonne NOT NULL |
+| `quantity:"beaucoup"` | **200**, relu `"beaucoup"` (`typeof=text`) | l'article existe avec un stock en TEXTE |
+| `/api/alerts` sur cette ligne | **absente** (`[]`) | `quantity <= minStock` compare texte a reel : **un stock reellement bas ne s'alerte plus** |
+| V3 (`status:'normal'`) | 200, relu `normal` | une etiquette que regle d'aucune ne definit; et le PUT, lui, **refuse** cette valeur |
+| clef deja prise | 500 « Failed to create » | un conflit d'identifiant presente comme une panne serveur |
+| `name` absent / `name:42` | 500 | le chef ne sait pas quoi corriger |
+| `name:"   "` | **200** | deux lignes indiscernables et introuvables |
+
+#### La regle « node-sqlite3 JETTE sur `undefined` » etait incomplete
+
+Elle est consignee au Sprint 6 comme justification du « ne jamais passer un
+`undefined` a l'UPDATE ». La sonde `scripts/probe-binding-undefined.mjs` la
+corrige par l'experience (colonne NULLABLE vs NOT NULL) :
+
+```
+insert_undefined_nullable   {"ok":true,"changes":1}   -> la ligne ressort NULL
+insert_undefined_notnull    {"ok":false,"err":"NOT NULL constraint failed"}
+update_undefined_nullable   {"ok":true,"changes":1}   -> la colonne DEVIENT NULL
+```
+
+Donc `undefined` **n'a pas un comportement unique** : il jette sur NOT NULL et
+**ecrit NULL en silence** sur une colonne NULLABLE. C'est le pire des deux pour
+le PUT (`unit_price` est NULLABLE : un PUT partiel qui le laisserait passer
+**efface le prix** sans aucune erreur), et c'est ce qui rend le POST rouge sur
+`quantity`. Un `undefined` n'entre donc plus nulle part, et « une erreur le
+dira » n'est **pas** une garantie.
+
+#### Deux decisions que j'ai prises puis defaites par mesure
+
+- **`null` ne veut pas dire « absent ».** J'avais d'abord ecrit « absent ou
+  `null` = defaut du schema ». C'etait faux pour deux raisons : (a) le
+  contract a trois etats du PUT distingue justement l'omission du garbage, et
+  (b) le premier rendu de la sonde l'a dit sans que je le cherche —
+  `JSON.stringify(Infinity)` et `JSON.stringify(NaN)` rendent `"null"`, donc un
+  reel Infinity/NaN de saisie **arrive toujours comme `null`** et jamais comme
+  un nombre. Le traiter comme une omission offroit un defaut compatissant a
+  une saisie que l'UI n'a pas pu serialiser. Le spec P8 juge maintenant les
+  DEUX branches (`null` -> 400 nomme ; omission -> 200 + defauts), et un cas
+  par champ numerique.
+- **Le `status:'normal'` de V3** : j'ai failli l'ajouter a l'enum (la regle
+  consignee dit qu'un enum doit inclure ce que la voie d'ecriture de l'app y
+  depose). Verifie au lieu de supposer : **aucune** regle du depot ne definit
+  `normal` (`grep` des comparaisons de statut rend un seul consommateur,
+  `status === "critical"` dans `inventory.ts`), il n'existe dans aucun des
+  quatre jeux de l'UI ni de l'init, et les trois autres voies ecrivent
+  `ok`/`low`/`critical`/`active`. La regle de l'enum reste donc ferme et V3
+  recoit un **400** : c'est le cote HACCP qui envoie une valeur inventee qu'il
+  faut corriger la, pas le stock qui doit l'admettre. La decision est signee
+  par un test (P3, mutation M3).
+
+#### Source unique des regles de forme (la lecon des trois portes, appliquee)
+
+`src/shared/inventory-fields.ts` porte desorais les bornes de
+`quantity`/`minStock`/`unit_price`/`yield_percent`, le jeu ferme `STATUTS`, les
+colonnes texte, et `statutDeparse` (la MEME regle que l'UI d'InventoryAudit,
+pour que le serveur ne puisse pas contredire l'ecran). Le POST et le PUT la
+lisent : une borne recopiee deux fois se perime en silence (avant: les
+`BUDGETS` de `audit-perf.mjs`, puis le prix fournisseur a trois portes).
+**Ce qui est partage est seulement ce qui est reellement identique** : les
+boucles de validation restent dans chaque route parce que leurs semantiques
+sont differentes (le PUT est PARTIEL : une colonne absente n'y est pas touchee ;
+le POST est une CREATION : une colonne absente recoit le defaut du schema). Les
+fusionner en un seul « validateur » aurait casse la moitie des tests du Sprint 6.
+
+#### Ce que le contrat rend maintenant (`test/e2e/post-inventory-contract.spec.ts`, 9 tests)
+
+P0 ligne de base + relecture en base ; P1 V2 cree (fin du 500) ; P2 texte refuse
++ **les DEUX sens de la regle d'alerte** ; P3 enum ferme + statut derive ; P4
+name refuse ; P5 clef prise -> **409** sans ecraser ; P6 bornes/non-nombres +
+chaine numerique admise et **stocquee en nombre** ; P7 la reponse rend la ligne
+RELLE ; P8 jamais de 500 sur une saisie, et la moitie « saisie minimale
+legitime » qui sans lui un 400 generaliste passerait pour un contrat.
+
+Preuve de morsure `scripts/negative-test-post-inventory-contract.py`
+(**11/11**, `npm run verify:post-inventory-mord`), installee dans `verify:all` avec les
+quatre portes du Sprint 8. Deux de ses lecons :
+
+- **M5 a ete retiree, et le motif est une mesure.** Elle nioit le
+  `if (brut === null) return undefined;` du helper numerique et rendoit
+  `9 passed`, deux fois, avec un cas par champ. Raison etablie en rejouant le
+  predicat : sous mutation le helper rend `NaN`, et la route refuse DEJA tout
+  `!Number.isFinite` par son propre `refus.push`. Les deux mondes donnent le
+  MEME verdict observable : **les deux voies ne commandent rien de distinct**.
+  Ce n'est pas un harnais faible, c'est une garde **redondante** (elle est ce
+  qui empeche qu'un changement dans l'une des deux rouvre la faille) ; elle
+  n'est pas jugeable par mutation, et le consigner vaut mieux qu'une mutation
+  forcee qui « mordroit » par un effet de bord non demande.
+- **angle mort de P7 corrige par la loi du depot** : juger « la reponse ne
+  recite pas la requete » avec des champs identiques dans les deux mondes rend
+  M6 aveugle. Il fallait un champ que le client **n'envoie pas tel quel** (le
+  nom a trimmer, le statut a minusculer) ; sans ce deviant, `9/9` etait creux.
+
+#### Reste ouvert, honnetement
+
+- `/api/inventory/bulk` est appele par l'UI (`InventoryAudit.tsx:156`) mais
+  **n'est declare dans AUCUN routeur** : l'import CSV d'inventaire ne peut pas
+  fonctionner. Soit la route manque, soit l'appel est mort — a trancher avec le
+  chef d'atelier avant d'ecrire un contrat sur du vide.
+- `POST /api/documents` (import de facture) : la sonde
+  `scripts/probe-document-items-voices.mjs` existe et n'a pas encore eu son
+  verdict rendu. Les colonnes `document_items.quantity` et
+  `received_quantity` sont `NOT NULL`, or l'UI initialise ses lignes a
+  `quantity:""` : si la route ne convertit pas, l'import de facture meurt en
+  500 sur un champ que le chef n'a pas a remplir. A jouer AVANT toute decision.
+- Les routes Ollama ne sont jugeables que sur leur contrat (deux branches
+  modele present/absent), pas sur leur contenu.
+
+### 8.6 Ce qui reste ouvert (non verifie)
+
+- Les **39 autres routes** sans test de contrat (liste reproductible en comparant
+  `src/routes/*.ts` aux specs de `test/e2e/`). Trois sont des zones a **voies
+  d ecriture multiples**, la classe de faute la plus chere du depot :
+  `POST /api/inventory` (aucune validation d entree, aucun 400, ecrit du texte
+  dans une colonne `REAL` par affinite dynamique — exactement le contrat deja
+  pose pour le `PUT` de ce fichier), `POST /api/robots/assign`, et
+  `POST /api/haccp/*` (`temperature`, `scan`, `corrective-action`, qui nourrissent
+  l audit HACCP du chef).
+- **POST /api/documents (import de facture) : verdicts rendus, contrat NON encore pose.**
+  La sonde rejouable `scripts/probe-document-items-voices.mjs` (relecture EN
+  BASE, sa premiere version reliait par `GET /api/documents/:id` qui rend du
+  HTML → elle croisait « relecture impossible », un verdict creux) rend, sur le
+  payload REEL de `DocumentManager` handleAddItem (~107 initialise chaque ligne
+  a `quantity:""`, `unit_price:""`):
+  - A/B/C lignes en chaines VIDES ou texte -> **200 et la ligne est en base en
+    `typeof=text`** (`''` / `'beaucoup'`) alors que `document_items.quantity` est
+    `REAL NOT NULL` (l'affinite dynamique de SQLite ne verifie rien). Un total de
+    facture calcule sur ces lignes est un chiffre invente.
+  - D/E/F quantite absente, `items` absent ou non-tableau -> **500 « Failed to
+    save document »** (message fourre, le chef ne sait pas quoi corriger).
+  - G `inventory_id` inexistante -> **200 + ligne orphelinee en base** (aucune
+    cle etrangere n'est verifiee a l'INSERT).
+  - H `total_amount:"42,50"` survit en TEXTE dans une colonne REAL ('42.50' est
+    lui converti par l'affinite). L'UI corrige la virgule avant d'envoyer
+    (`toString().replace(",", ".")`), mais une voie d'import ou un poste tierce
+    ne le fait pas.
+  Ce qui EST deja juge par ailleurs : le 500 du texte non numerique a la
+  VALIDATION (M3 de `verify:documents-validate`) et la clef rendue a la
+  creation. Ce qui ne l'est PAS : la forme des LIGNES a la CREATION. C'est le
+  prochain contrat, avec la meme triade (refus nomme + `rejetees:[{index,raison}]`
+  + rien d'ecrit sur un refus) que l'import de mercuriale.
+- `/api/agent/command` lance un Chromium `headless:false` : hors suite e2e, a
+  couvrir sous `xvfb` dans un dedie.
+- Les routes Ollama (`/api/ai/chat`, `/api/voice`, `/api/inventory/analyze`,
+  `/api/anti-waste/generate`) ne sont jugeables que sur leur **contrat** (statut
+  explicite + les deux branches modele present / absent), pas sur leur contenu.
+
+
+## Sprint 7 - La colonne de prix fournisseur a TROIS portes d'ecriture, et une seule etait garde (12 sept.)
+
+### 7.1 La lecon du jour, une seule phrase
+
+Un contrat tenu sur la voie que l'on a sous les yeux n'est pas le contrat du
+produit: **la colonne `supplier_prices.raw_unit_price` / `calculated_price_per_ref`
+est ecrite par TROIS routes**, et le Sprint 6 ne jugeroit que la premiere.
+
+| Porte | Route | Etat a l'entree du sprint |
+|---|---|---|
+| 1. Saisie unitaire | `POST /api/supplier-prices` | contractee (Sprint 6) |
+| 2. Import de mercuriale | `POST /api/supplier-prices/import-analyze` + `.../import-confirm` | **ouverte** |
+| 3. Validation de facture | `POST /api/documents` + `/api/documents/:id/validate` | **ouverte** |
+
+Les trois debouchent sur le MEME liseur de decision: `GET .../comparison`
+designe le fournisseur au meilleur `calculated_price_per_ref` et
+`FichesTechniques.tsx` (~1791) chiffre un devis « optimise » avec ce prix elu.
+`Purchasing.tsx` (~1069) en tire le KPI « economies actives ». **Le cuisinier
+achete et chiffre ce que la colonne dit.**
+
+### 7.2 Le signal qui a ouvert la porte 3 (a retenir pour tout harnais de mutations)
+
+La preuve negative de la porte 1 rendit `M7 ... rc=0`: retirer `v >= 0` du
+predicat d'election ne faisit rougir AUCUN test. Lecture facile: « harnais
+faible ». Verdict exact: **une mutation qui ne mord pas signale soit un garde
+redondant, soit une VOIE DE COMMANDE QUI MANQUE A LA MESURE** — ici aucune des
+deux portes connues ne pouvait faire passer un negatif jusqu'a la comparaison.
+Chercher cette voie a fait apparaitre `documents.ts:199-215`, ou l'absence de
+garde etait la plus chere des trois:
+
+```
+D1_VALIDE_CODE=200 D1_PRIX_STOCK=-12 D1_BADGE_VERIFIE=1 D1_MEILLEUR_PRIX=-12
+D3_VALIDE_CODE=500   D1_DOC_CODE=200 (reponse `id: undefined`)
+```
+
+soit, mot pour mot: un MONTANT NEGATIF entre en base **CERTIFIE « releve sur
+facture »** (or ce badge est exactement ce sur quoi le chef decide de croire un
+tarif), un montant NON NUMERIQUE fait MEURIR toute la validation en 500 (le
+document restait PENDING, le stock non majore, et l'operateur ne savait pas
+quelle ligne corriger), et la reponse de creation recitoit la requete (`res.json({ id })`
+au lieu de `docId`) donc le `/validate` SUIVANT meurait en 404 sur un document
+qui venait d'etre cree.
+
+### 7.3 Ce que la porte 2 (import) a rendu de son cote
+
+Sondee AVANT correctif (`scripts/probe-supplier-import-contract.mjs`), sur un
+serveur reel, lignes POSEES par la route d'import puis RELLEES par les voies de
+lecture de l'app:
+
+```
+I1_CODE=200 I1_LIGNES_EN_BASE=0      cle etrangere fantome -> 200, donnee perdue
+I6_CODE=200 I6_LIGNES_EN_BASE=0      idem pour matched_inventory_id
+I2_CODE=200 I2_PRIX_STOCK=-12        prix negatif ecrit par l'import
+I3A_RAW_PRICE_RENDU=0                l'analyse FABRIQUAIT un 0 sur un texte
+I3B_ELUE={"p":0,"c":0,"u":"kg"} I3B_MEILLEUR_PRIX=0 I3B_ECONOMIE_PCT=100
+I4_UNITE_STOCK="g" I4_PRIX_STOCK=1 I4_CALC=1000 I4_FACTEUR_X1000=1
+```
+
+Trois pieces meriterent d'etre isolees, chacune ayant son propre piege de mesure:
+
+1. **`I3A_RAW_PRICE_RENDU=0` et le defaut en amont.** `import-analyze` faisait
+   `Number(itm.raw_price) || 0`: un prix de CSV illisible devenait un prix de
+   **0 € presente au chef comme une ligne valide a cocher**, qu'il validait a
+   l'ecran, et `import-confirm` l'ecrivait. Le juge de Sprint 6 (la porte 1)
+   ne pouvot pas le voir: il n'arpente pas cette voie. Juger ce chemin exige
+   de poster a `import-confirm` **le match RENVOYE par `import-analyze`**
+   (`Purchasing.tsx` poste `matches: importMatches` sans le retoucher) — pas un
+   payload invente par le test. Une sonde qui invente son propre payload juge
+   un chemin que le produit n'emprunte jamais.
+2. **`I4_FACTEUR_X1000=1`, et le defaut que `inv ? inv.unit : "kg"` ne couvre
+   pas.** Le defaut ne masquait que l'ABSENCE DE LIGNE, pas l'unite VIDE (la
+   colonne est `NOT NULL` mais la voie de creation d'inventaire y depose `""`,
+   verife par relecture: `UNITE_EN_BASE=""`). Le convertisseur rendant 1 pour
+   tout inconnu, `1` par « g » face a un article sans unite partait a `1000`
+   en base et la comparaison le DESIGNAIT gagnant. La regle n'est pas « fermer un
+   enum » (la saisie reelle vient d'une facture: « bouteille », « paquets »,
+   « sachets ») mais **cesser de PRONDRE un prix par reference quand la
+   conversion n'est pas defendable**: `null` est un aveu lisible, `1000` etait
+   un mensonge confronte aux autres fournisseurs.
+3. **La virgule decimale, jugee dans l'AUTRE sens.** `J6` verife que `"3,50"`
+   est ACCEPTE et rendu `3.5`, parce que c'est ce que la PROPRE voie d'import
+   de l'UI applique avant de parser (`Purchasing.tsx` ~408:
+   `line[priceIdx]?.replace(',', '.')`). Sans ce contre-controle, `J5` est
+   satisfait par un correctif qui refuse TOUT ce qui est texte — et le poste de
+   travail du cuisinier meurt avec un 400 impeccable.
+
+### 7.4 Les trois pieces de contract que ce sprint a posees
+
+- **Une seule predicat de prix, partagee par les trois portes**:
+  `prixOuNul(brut)` dans `src/shared/util.js` (`PRIX_MAX` compris). Une borne
+  recopiee dans trois fichiers se perime en silence — la lecon des `BUDGETS`
+  recopies par `audit-perf.mjs`, appliquee ici a un nombre de prix au lieu d'un
+  quota de requetes.
+- **Un compte-rendu qui NOMME ce qu'il ecarte.** `import-confirm` rend
+  `{ importees, ignorees, rejetees: [{index, raison}] }` avec des raisons
+  DISTINGUEES (`prix_absent` / `prix_non_numerique` / `prix_invalide` /
+  `unite_absente` / `article_non_apparie` / `article_inexistant`) parce que le
+  chef ne corrige pas la même chose. `import-confirm` de zero ligne exploitable
+  est un **400 et non un 200**. Zero ligne ecrite n'est jamais une reussite:
+  `resultat?.changes !== 1` jette la transaction.
+  ⚠ La faute que j'ai commise et que le spec a rattrape: `prixNonExploitables`
+  etait **collecte et jamais rendu** dans `documents.ts`. Une variable
+  remplie et non exportee est un PASS creux: le harnais croit juger un refus
+  notifie alors que la route le tait (`V2_LA_LIGNE_REJETEE_EST_NOMMEE_ET_NON_TUEE`).
+- **Le REPLI d'une election est une moitie de contrat DISTINCTE de l'election.**
+  Quand aucune ligne fournisseur n'est electionable, `best_price` retombait sur
+  `currentPrice` **sans le controler** (mesure: `D1_MEILLEUR_PRIX=-12`), donc un
+  devis a `-12 €`. Le correctif de Sprint 6 avait remplace `null` (que l'UI
+  convertssait en 0: un ingredient GRATUIT) par `currentPrice`: le nombre etait
+  VRAI mais NON VERIFIE. Les DEUX branches devaient porter le garde; l'UI de
+  FichesTechniques ne lisant que `best_supplier_price.calculated_price_per_ref`
+  (verife par lecture des consommateurs de `best_price`), rendre `null` +
+  `prix_exploitable` est sir. Et `V6` verife l'inverse: avec un prix de
+  reference SAIN, le repli doit rester UTILISABLE (`best_price = 12`), sinon «
+  null partout » satisferait `V5` et viderait le tableau comparateur.
+
+### 7.5 Preuves du sprint (verdicts LUS, non inferes)
+
+- `test/e2e/supplier-import-contract.spec.ts` — 9 checks J1..J9 (un fournisseur
+  par test: les lignes de tarif s'accumulent dans la base de L'INSTANCE, donc
+  un test qui depend du compte de lignes d'un autre est dependant de l'ordre).
+- `test/e2e/documents-validate-contract.spec.ts` — 6 checks V1..V6 (V5 est
+  l'unique voie d'atteinte du repli: un article au `unit_price` corrompu — la
+  voie de creation ne le borne pas — plus une ligne non convertible pour qu'un
+  groupe existe. Une premiere version de V5 passait par une facture INVALIDE:
+  ses lignes etant refusees AVANT, aucun groupe n'existait et le test jugoit
+  le VIDE).
+- `test/e2e/supplier-price-contract.spec.ts` porte desorais **S6b** (l'election
+  choisit le MINIMUM, oracle ecrit a la main: 12/3,5/9 -> 3,5 et `savings_percent`
+  = 83) et **S6c** (semence DIRECTE en base par `open({filename, driver:
+  sqlite3.Database})`, l'API du depot — pas un `sqlite3.open()` invente). S6c
+  est la reponse a « une mutation ne mord pas »: le prediat `v >= 0` protege les
+  BASES DEJA LIVREES, et il ne peut etre atteint qu'en ecrivant comme un vieux
+  fichier de client. Il est prouve par `expect(res.changes).toBe(1)` AVANT de
+  juger quoi que ce soit, sinon le test jugerait le vide.
+- Trois preuves negatives: `npm run verify:supplier-price` (**8/8**), `npm run
+  verify:supplier-import` (**8/8**), `npm run verify:documents-validate`
+  (**5/5**), plus `verify:installeur` (l'installeur rejoue en COPIE ISOLEE avec
+  `npx tsc` dans la copie, jamais sur l'arbre de travail).
+- Deux pieges de harnais rencontrés et consignes, parce qu'ils font mentir le
+  verdict dans le sens tranquille:
+  1. **le token exigi doit etre celui du check qui DETECTE la faute**, pas le
+     titre de la mutation. M4 (retrait du `continue` d'electionabilite) faisit
+     rougir `J7` et non `J5`; exiger le token de `J5` aurat declare « ne mord
+     pas » une mutation qui mord.
+  2. **une mutation mise dans le mauvais harnais se presente comme un « ne mord
+     pas »**. La mutation du MINIMUM (`if (bestPriceEntry === null || ...)` ->
+     `if (bestPriceEntry === null)`) a d'abord ete mise dans le harnais de
+     l'import, alors que son oracle `S6b` vit dans l'AUTRE spec que ce harnais
+     ne lance pas. Elle a ete deplacee la ou son check existe.
+  3. Dans un meme test, juger le **drapeau AVANT le nombre**: Playwright stoppe
+     au premier `expect` fautif, donc deux mutations differentes qui trébuchent
+     le même premier expect cessent de se discriminer.
+- Un `npx playwright test` complet rendu **rouge par le produit et non par mon
+  code**: `routes.spec.ts` (herite) attendait `404` sur une cle etrangere de
+  CORPS. Le contrat rend `400` nomme, et c'est 400 qui est juste (404 designe
+  la ressource adressee par l'URI, pas une reference du payload; la voie
+  unitaire et l'import jugent desorais la même cle de la même facon — la
+  PARITE des portes est le fond du defaut). L'attendu a ete aligne sur le
+  contrat, **consigne dans le test** et non tu, et le test renforce: l'ancien
+  assert verifiait le code HTTP sans jamais juger la raison du refus.
+- Le lot `npm run verify:all` porte desorais **17 portes** (les trois portes du
+  contrat des prix fournisseurs y sont ENTREES, avec le motif ecrit a cote): une
+  liste de portes qui ne contient pas toutes les voies d'ecriture est une liste
+  qui declare jugeable ce qui ne l'est que partiellement.
+
+
+## Sprint 6 - Le port de la fenetre et la voie d'ecriture d'inventaire, juges (12 sept.)
+
+### 6.1 Le client Electron chargeait une URL de convention: le port n'etait DECIDE par personne
+
+**Le defaut, mesure et non raconte.** `electron/main.cjs` ouvrait la fenetre sur
+`http://localhost:3000` en dur, pendant que `server.ts` faisait `PORT++` sur
+`EADDRINUSE` quand personne ne lui avoit demande de port. Sur ce poste le 3000
+est tenu par une autre application (`promo_resto`): notre serveur glissait donc
+en silence sur 3001 et la fenetre affichoit l'application du voisin, sans un seul
+rougissement. Deux causes jumeaux, toutes deux dans le lanceur:
+
+1. la comparaison `stdout.includes('http://localhost:3000')` etait fausse MEME
+   quand tout allait bien: `HOST` vaut `127.0.0.1` par defaut, donc la chaine
+   cherchee ne paroit jamais; la fenetre ne survivoit que grece au filet de
+   secours de production (`setTimeout(..., 2000)`), un pari sur la vitesse du
+   disque et non un compte-rendu.
+2. en production le serveur tournoit DEDANS du process Electron
+   (`require(server.cjs)`) et n'avoit donc AUCUN stdout a offrir au pere.
+
+**Le correctif en trois pieces** (et non deux: la deuxieme seule ne prouvait rien).
+
+- `src/services/ready.ts` publie `COOKDRIVE_READY {json}` sur stdout et, quand
+  `COOKDRIVE_READY_FILE` est pose, un compte-rendu ATOMIQUE (`writeFileSync` sur
+  un temporaire puis `rename`). Ecrit en place, un JSON partiel se lisait comme
+  un defaut du serveur, et le pere le relit des qu'il apparoit.
+- `electron/ready-parity.cjs` est SEUL a lire ce format et decide de l'URL
+  ouverte: le port ANNONCE, jamais le 3000 de convention. `0.0.0.0` et `::` sont
+  des adresses d'ECOUTE: s'y connecter echoue, donc elles deviennent
+  `127.0.0.1` (`hoteConnectable`).
+- le juge de cette logique vit dans `test/unit/ready-parity.test.ts` et PAS en
+  place dans `main.cjs`, pour une raison structurelle: `tsconfig.json` EXCLUT
+  `electron/` et `*.cjs`, donc `npx tsc --noEmit` ne voit jamais ce qui tourne
+  dans le lanceur. Y loger la decision du port auroit produit un correctif sans
+  gate: ni le lint, ni la CI n'auroient rougi sur la ligne qui decide de ce que
+  le cuisinier voit a l'ecran.
+
+**La cle qui ferme le circuit: `glisse`.** Fige `PORT_DEMANDE = PORT` a
+L'INTERIEUR de la fermeture recursive `startListening`, la constante reprenoit
+la valeur de `PORT` a chaque rappel recursif: le serveur avoit bien glisse de
+3000 a 3002 et l'annonce rendoit `glisse:false`, c'est-a-dire le contraire exact
+de l'information que le client attend de ce champ (il s'en sert pour prevenir que
+le port demande etait pris). Ce n'etait pas un soupon: le check `S-b` de
+`scripts/probe-ready-parity.mjs` l'a rendu ROUGE avant le correctif, VERT apres.
+
+**Preuves**: `npm run verify:ready` (sonde de parite serveur/lecteur: VRAI
+serveur lance par tsx, port impose + garde d'identite confrontee, 15/15) et
+`npm run verify:ready-mord` (**9/9**: chaque regle niee dans une copie isolee,
+exige rc!=0 ET le check vise NOMME). Trois pieces d'orfvrerie qui ont servi:
+
+- `check S-b` a mordu sur un defaut REEL du produit, consigne ci-dessus: la
+  version "logique" du correctif (figer le port demande dans la fermeture)
+  etait exactemement le defaut.
+- la preuve negative a rendu deux PASS creux (M4 et M6) la ou je croyois avoir
+  juge. M4 mutoit la moitie MORTE de la paire (le garde de TYPE du statut,
+  alors que c'est le garde d'ENUM qui tient la regle: muter l'autre branche
+  laisse le contrat intact, donc le spec reste vert pour toujours). M6 jugeait
+  une reponse qui recitoit le client en envoyant justemement la valeur deja en
+  base (les deux mondes rendent `7`, verdict identique). Corriges en exigeant,
+  pour M6, un champ que le CLIENT N'A PAS ENVOYE (`name`) et, pour M4, la
+  vraie branche d'enum. Sans l'harnais de mutations, ces deux checks auroient
+  ete des ornements verts.
+- le piege du jour, encor rencontre: `run_probe` lanot `sys.executable` sur un
+  `.mjs`. Le message "unterminated string literal (detected at line 4)" est un
+  message de PYTHON, pas de Node: il faut lire QUI parle avant de conclure que
+  la source est cassee (la copie de l'arbre avoit ete prouvee identique octet
+  pour octet et `node --check` rendoit rc=0). Rendre par un interpreteur et non
+  par un autre est un contrat du harnais, pas un detail.
+
+### 6.2 `PUT /api/inventory/:id`: la voie d'ecriture jugee contre sa contre-partie
+
+**Les quatre defauts, mesures sur un serveur REEL par
+`scripts/probe-inventory-put-partial.mjs` avant tout correctif** (et non
+inferes d'une lecture de code):
+
+1. `S1_CODE=500`: un payload partiel (ne changer QUE le nom) tombait dans le
+   `catch`. La route lisait dix champs de `req.body` et envoyoit les DIX au
+   `UPDATE`; le binding de `node-sqlite3` JETTE sur un `undefined`. Et si ce
+   binding etait relache, `undefined` devient NULL en base: renommer un article
+   videroit sa quantite, son unite et son prix. Les deux issues sont fausses,
+   une seule les evite: ne pas mentionner dans le SET une colonne qu'aucun
+   client n'a envoyee.
+2. `S2_CODE=200` puis `quantity="abc"` RELU depuis la base. L'affinite
+   dynamique de SQLite stocke du TEXTE dans une colonne `REAL` sans se plaindre.
+   Des lors `quantity <= minStock` compare du texte a un reel, et le badge
+   "ok / bas / critique" de l'auditeur devient une etiquette inventee, SANS
+   qu'aucune erreur serveur ne sorte. C'est la famille exacte du KPI
+   `dailyLaborCost` reste fige a 0 pendant des mois (Sprint 4.11): un PASS
+   creux, juge sur la FORME du champ et non sur ce que l'ecriture y depose.
+3. `S3_STATUT="defile"` relu en base: le statut etait une chaine que le CLIENT
+   choisissait. Les quatre voies qui l'ecrivent (les deux badges de
+   `documents.ts` et `suppliers.ts`, l'UI d'`InventoryAudit`) ne produisent que
+   `ok` / `low` / `critical`, et `src/db/init.ts` y met `'active'` a l'init.
+   L'ENUM ferme est donc CES quatre valeurs-la: y omettre `'active'`
+   rejetteroit des lignes que le produit a lui-meme creees. Une regle trop
+   stricte se presente comme un 400 parfaitement propre et casse le client.
+4. `yield_percent` etait remis a 100 par tout PUT qui ne l'envoyoit pas: une
+   saisie de rendement etait effacee par la premiere mise a jour d'un autre
+   champ. Et `scripts/probe-put-yield.py`, la sonde heritee qui jugoit ce
+   champ, ne l'a jamais vu: elle envoyoit toujours le rendement, donc n'exercait
+   jamais le cas de l'ABSENCE. Une sonde ne prouve que la voie qu'elle arpente.
+
+**Le contrat est a trois etats, et non a deux**: un champ peut etre ABSENT (on
+n'y touche pas), NET (on ecrit), ou REJETE (le client a envoy une ordure -> 400).
+Un booleen ne porte pas ces trois etats: d'ou le marqueur `REJETE` de
+`src/middleware/validate.ts`, avec `optionalNumber` / `optionalText` /
+`optionalEnum`, qui NETTOIENT (un nombre est CONVERTI et borne, jamais passe
+brut; un texte blanc est refuse et non "une chaine vide legitime"). Les 400
+rapportent `refused: [colonnes]`: un refus muet fait perdre la saisie du
+cuisinier sans qu'il sache quoi corriger.
+
+**Deux autres pieces de contrat** au meme endroit:
+
+- le corps de reponse RELIT LA BASE (`item: relu`) au lieu de reciter `req.body`.
+  Avant: `S4_RELECTURE=12.5` pendant que la reponse pretendait avoir mis 7. Sans
+  cette relecture, une ecraserie en base reste invisible a l'ecran.
+- un `UPDATE` de zero ligne n'est plus un succes: `resultat.changes !== 1` sort
+  en 404. Le compteur de lignes touchees est le seul temoin independant du corps
+  de reponse (le 500 de S1 le prouve: une route peut mentir a la fois sur ce
+  qu'elle ecrit et sur le fait de l'avoir ecrit).
+
+**Preuves**: `test/e2e/inventory-put-contract.spec.ts` (6 tests; ils jugent des
+DELTAS et non des formes: la valeur d'une colonne NON envoyee est comparee a la
+ligne de base relue depuis la BASE, et un refus est verifie ANTERIEUREMENT a
+toute ecriture) + `npm run verify:inventory-put` (**9/9** mutations mordent).
+Le contre-controle le plus rentable de ce spec est celui que la preuve negative
+a impose: juger la relecture exige un champ que le client n'envoie pas.
+
+### Etat des portes (12 sept., HEAD Sprint 6)
+- `npx tsc --noEmit` : **0 erreur** · `npx vitest run` : **73 tests / 6 fichiers** ·
+  `npx playwright test` : **41 passed** (1 worker, 19,6 s) · `npm run build` :
+  chunk d'entree **593,95 kB** (192,32 kB gzip).
+- 14/14 preuves vertes, verdicts **LUS et non inferes** : `verify:sse` ·
+  `verify:perf` · `verify:http` · `verify:bundle` · `verify:ratelimit` ·
+  `verify:ci` **20/20** · `verify:indices` · `verify:instance-guard` **14/14** ·
+  `verify:instance-mord` **3/3** · `verify:purchasing` **9/9** ·
+  `verify:forecast` · **`verify:ready` 15/15** · **`verify:ready-mord` 9/9** ·
+  **`verify:inventory-put` 9/9**.
+- `npm run verify:all` (nouveau) lance le lot et rend `GATES=`, une ligne
+  `RC <porte> <rc>` par porte, puis `ROUGES=<n>`. Le contrat de ce script est la
+  raison de son existence : les budgets/lists de portes sont **LUS** dans
+  `package.json` et une porte absente du manifeste rougit le lot
+  (`PORTES_INCONNUES`, rc=2) au lieu de passer inapercue. Verifie dans ses deux
+  directions (lot reel rc=0 / nom invente rc=2).
+- ⚠ Faute rencontre et corrige PENDANT la redaction de ce harnais : le resum
+  final etait ecrit `rouges = [g for g, rc in verdicts]`, c'est-a-dire
+  **toutes** les portes. Le lot vert aurat rendu `ROUGES=14`. Un resum qui
+  enumere mal est un resum qui ment, et il ment dans le sens tranquille.
+- Nouveaux fichiers : `src/services/ready.ts`, `electron/ready-parity.cjs`,
+  `test/unit/ready-parity.test.ts`, `scripts/probe-ready-parity.mjs`,
+  `scripts/negative-test-ready-parity.py`,
+  `test/e2e/inventory-put-contract.spec.ts`,
+  `scripts/probe-inventory-put-partial.mjs`,
+  `scripts/negative-test-inventory-put.py`, `scripts/run-all-gates.py`.
+
+## Sprint 5 — Refermer la chaine logistique (10 sept.)
+
+### 5.1 Du plan de menu au stock : `besoin → commande → reception`
+
+**Le defaut de la chaine, mesure et non raconte.** `GET /api/purchasing/forecast`
+recopiait `besoin_recettes: 0` pour CHAQUE ligne sans jamais lire `menu_planning`.
+La colonne « Besoin Recettes » du tableau Achats et la suggestion de commande
+(`minStock - quantity + besoin_recettes`) ne dependaient donc d'AUCUN plan : le
+cuisinier qui prepare le service du lendemain voyait une colonne a 0 et
+commandait a l'oeil. C'etait de l'affichage, pas du metier.
+
+Le besoin calcule desormais, par article : **SOMME sur les plats planifies de
+(couverts x gramature par personne) / (rendement/100)**, sur la fenetre
+`[aujourdhui, aujourdhui + horizon]` (horizon borne, defaut 14 j, `?horizon=`).
+Deux conventions **decisionees** et non heritees :
+- la fenetre **part d'aujourdhui** et non du seul jour courant : la base du client
+  a ses plats en J+1..J+6 et RIEN au jour du jour (un besoin calibre sur le jour
+  courant eut commande 0) ;
+- l'**horizon est borne** : sans luy, un planning saisi sur trois semaines
+  eut commande trois semaines de stock d'un coup.
+La reponse passe de `tableau` nu a `{ items, window }` : le `window` est la piece
+qui rend le chiffre **verifiable** (« besoin sur 14 jours a partir du … ») au lieu
+d'un nombre sans origine.
+
+**Les couverts vivaient dans `recipe_json`** (il n'y a PAS de colonne `couverts`)
+et la voie d'ecriture les rendoit illegibles, par deus fautes de la famille « cle
+dissociee entre ecriture et lecture » (la meme que `dailyLaborCost`, 4.11),
+debusquees par le test et non par la lecture :
+1. `MenuAnalysis` envoie `recipe_details` ; la route ne lisait que `recipe_json`
+   → la colonne restait `null` pour toute saisie venue de l'ecran.
+2. **Pire** : `JSON.stringify(recipe_json)` re-serialiait une deïa serialisée. Un
+   seul parseur rend alors une **chaine**, dont `.couverts` est `undefined`, et les
+   couverts retombent a **1** : le besoin sort divise par le nombre de convives
+   (**120 au lieu de 2 400** pour 20 couverts x 120 g) — un chiffre plausible et
+   faux, sans aucun rougitrement possible a l'ecran ni dans les logs.
+Corrections : `normalizeRecipeJson()` (les deus noms de champ acceptes, **ne
+re-stringifie pas**) ; `coversOf()` relit par ailleures le double-encodage DEJA
+present dans les bases livrees (tolerance de la donnee legacy, pas cache de la
+faute). Le « contre-controle » (ligne legataire) du spec est ce qui donne a la
+mutation M5 de quoi rougir : sans luy, la mutation etait un no-op sur des
+donnees fraiches et le harnais annoncait « ne mord pas » pour une faute qui etait
+ailleurs.
+
+**Le bon enregistroit le NOM au lieu de l'`inventory_id`** (`Purchasing.tsx` :
+`items.map(i => ({ inventory_id: i.name, … }))`). Le document se cree, son detail
+aussi, tout reste **VERT** et la jointure d'inventaire est creuse : le jour ou
+quelqu'un valide ce document, l'`UPDATE inventory … WHERE id = <nom>` ne touche
+AUCUNE ligne, sans la moindre erreur serveur. `POST /api/purchasing/order` resout
+donc chaque ligne contre `inventory` et fait rougir une **400** si l'une ne resout
+pas (`unknown_items` est rapporte) : la route est le contrat de la cle.
+
+**La chaine s'arrestait au PDF : aucun chemin du bon vers le stock.** Le
+cuisinier imprimait, rangeait, et devoit ressaisir la facture dans l'autre vue
+pour que le stock bouge. Nouvelles routes : `GET /api/purchasing/orders` et
+`POST /api/purchasing/orders/:id/receive`.
+- **Idempotence** : une ligne deja receue en totalite n'est PAS recomptee
+  (double-clic ou retry reseau ; le statut **reste** `RECEIVED`, donc rien ne
+  rougit a l'ecran sans le garde).
+- Le statut se juge sur le **solde cumule** et non sur le lot du coup : un no-op
+  ne doit pas retrograder `RECEIVED` en `PARTIAL`.
+- La reception **n'escrit pas** `unit_price` ni `supplier_prices` : le prix est la
+  verite de la FACTURE, pas celle du bon. Les deus voies se battaient le meme
+  champ et la derniere gagnante eust fausse le cout matiere pour des mois.
+
+**Deus gardes ajoutees a `POST /api/documents/:id/validate`** (lui aussi un
+mouvement de stock) : un document **deja valide** est refuse (409) — sans luy, un
+double-clic sur « Valider » additionnait la marchandise **deus fois** ; un
+`COMMANDE` **ne se valide pas** (409, liste blanche des types validationables) —
+un bon porte des quantites *prevues* et non receues, validee par megarde puis
+receptionnee il additionnait deus fois. Et cote UI, `handleValidate` avoit un
+`if (res.ok)` **sans branche d'echec** : un refus ne faisoit RIEN a l'ecran, le
+cuisinier cliquoit, rien ne bougeoit, il recliquoit — une route qui refuse doit
+se **dire** (`toast` du message du serveur).
+
+### 5.2 La vue (un panneau manquant est un echec, meme si les gates numeriques passent)
+
+`Purchasing.tsx` : onglet « Reception » (badge de compte), detail des lignes
+(designation, quantite commandee, recue) et bouton « Receptionner » derriere un
+`ConfirmDialog` (point d'`alert()`). Le badge « hors inventaire » se juge sur
+**`in_stock`** — la colonne qui dit la verite metier, et non sur
+`inventory_id IS NULL` : une cle **peut** estee posee (le bon a ete cree quand
+l'article existoit) et ne plus rien resoudre depuis. Pareillement, une ligne dont
+l'article a quitte l'inventaire ne sera **jamais** receptionnable : la laisser
+compter dans le solde, c'est un bon qui reste `PARTIAL` tousjours et qu'on ne peut
+plus cloturer ; elle reste signalee a l'ecran et son `received_quantity` reste vide.
+
+### 5.3 Mesures, preuves et pieges (le detail)
+
+**Index** (`scripts/probe-index-forecast.py`) : `DATE(col)` est **non sargable** —
+gain mesure **−0,6 %** (l'index ne peut pas s'appliquer sous une fonction). La
+variante sargable donne un plan **PLEIN**
+`SEARCH mp USING INDEX ix_menu_planning_date (date>? AND date<?)` (+67 %). Le filtre
+porte DONC **les deus predicats** (mesme arbitrage que `staff_schedule` a deus
+index) : l'un indexable pour la vitesse (p50 0,136 → 0,084 ms a 1 040 lignes),
+l'autre en `DATE()` pour la justesse sur une date heritee non zero-paddee
+(`'2026-9-15'` seroit exclu en comparaison binaire : un plat planifie qui ne
+commande rien).
+
+**Installe, pas degrade** (`scripts/probe-index-forecast-installe.py`, 14 checks) :
+l'index existe en base, le plan l'exploite avec le predicat **plein**, la requete
+emise rapporte des lignes (point de scan vide), `recipe_json` est du JSON lisible.
+
+**Base reelle du client** (`npm run verify:forecast`, 9 checks, **aucune donne
+semee**) : copie via `sqlite3.backup()` (WAL !), oracle Python independant, 9
+articles avec un besoin non nul. ⚠ **Les compteurs de la graine mentent** : sans
+`con.commit()`, la connexion qui a insere voit ses 1 040 rangees (verdicts VERTS)
+et une connexion rouverte n'en voit AUCUNE — le bench rendoit des millisecondes
+sur un scan vide. Le contre-controle par **seconde connexion** est desormais
+obligatoire.
+
+**Preuve negative** (`npm run verify:purchasing`) : **9/9 mutations mordent**
+(rc=1 + le check vise nomme). Pieges rencontrez :
+- un motif **recopie a la main** qui ne correspond plus laisse la mutation SANS
+  EFFET tout en annoncant un verdict → les motifs sont derives par regex et le
+  **compte d'occurrences est exige** (M3 : les deus bornes, la paire) ;
+- une mutation qui declenche un **500 general** fait rougir TOUT le test et ne
+  prouvait plus le garde vise → les mutations sont **semantiques** et non
+  syntaxiques, la requete doit rester vivante ;
+- elargir **une seule** des deus bornes est un **no-op voulu** (defence en
+  profondeur) : la mutation porte sur la PAIRE ;
+- **ports** : un port figure a la main + `kill(SIGTERM)` = le run suivant juge une
+  instance **perimee** qui n'a pas la source mutee → la mutation ne rougit pas
+  (rc=0 facte) et le harnais annonce a tort « ne mord pas ». Le port est **demande
+  a l'OS** (`listen(0)`) et le run attend que l'OS l'ait rendu.
+
+**Le harnais lui-meme** : `test.beforeAll` attendoit la **mort** du serveur
+(`serveurFini = await new Promise(...)` resolu a l'`exit`) → hook timeout a 90 s
+garanti ; et `const BASE = \`…${PORT}\`` evalue au niveau module **figeoit** `PORT`
+a 0 → le port est ephemere, la base est assignee apres.
+
+**La page blanche** (`scripts/diag-page.mjs`) : un test qui juge le **rendu** doit
+demarrer en `NODE_ENV=production`. En dev, la CSP (`script-src 'self'`) bloque le
+script *inline* de react-refresh, React n'entre pas, `#root` reste a 0 enfant :
+`boutons: 0` en dev contre `boutons: 1` en production. Le harnais Motion avoit deja
+consigne ce reglage ; le consignaire du nouveau spec l'a oublie, d'ou un faux
+negatif qui accusoit l'onglet d'estre absent.
+
+**Selecteurs** : les libelles portent l'accent circonflexe (« Réception ») et le
+badge colle un chiffre au nom accessible (« Réception1 »). Un
+`getByRole({ name: /Reception/ })` **sans accent** ne matche RIEN ; avec accent et
+en recherche partielle, il matche AUSSI « Réceptionner ». La selection se fait donc
+par DOM (`querySelectorAll` + `textContent`) et le **dialogue** se reconnait a son
+**titre** — les deus boutons s'appellent « Réceptionner », le dialogue a un titre
+unique (`closest('[role=dialog]')`).
+
+### 5.4 Le harnais peut mentir : l'instance que le test juge n'est pas celle qu'il a lancee
+
+`verify:purchasing` a rendu **8/9** dans un lot de sept portes lancees d'une
+seule chaine, M5 (le re-parse du double-encodage) etant signale « ne mord pas ».
+M5 mord. Verifie hors lot (sonde ponctuelle : `Expected: 840 / Received: 120`
+sur le check K de la ligne double-encodee), puis deux passes seules du harnais :
+**9/9** chaque fois. Le 8/9 etait un verdict rendu sur une instance que le test
+n'avoit jamais chargee. Deux causes jumeaux, toutes deux dans l'infrastructure
+de test et non dans le produit :
+
+1. **Translacion silencieuse du port.** `server.ts` faisait `PORT++` sur
+   `EADDRINUSE` sans rien dire. Un harnais qui IMPOSE un port pour juger une
+   source MUTEE voyait donc son serveur partir ecouter un cran plus loin, pendant
+   que le harnais interrogeoit le port impose — c'est-a-dire AUTRE chose.
+   Preuve accidentelle saisie pendant la sonde : le serveur herite de
+   `promo_resto` (qui demandoit `PORT=4173`) a fini **ecoute sur 3000**.
+2. **Verdict sans source.** `res.ok` sur `/api/settings` prouve qu'UN serveur
+   repond sur ce port ; il ne prouve pas que c'est le notre. Le port est demande
+   a l'OS (`listen 0`) puis **referme** : entre le test et le `spawn`, n'importe
+   qui peut le reprendre.
+
+Le defaut est le pire de sa classe parce qu'il est **bidirectionnellement
+silencieux** : un VERT comme un ROUGE peuvent etre rendus par une instance qui
+n'a pas la source jugee. Un harnais de mutations qui annonce « cette faute est
+indetectable par ce test » sur une telle instance est une AFFIRMATION FAUSSE, et
+chaque decision prise dessus (ici : retirer la mutation M5 du harnais, ce que sa
+premiere version avoit fait) est corrompue en amont.
+
+**Corrections** (production + harnais, meme commit) :
+
+- `server.ts` : un port **Explicitement demande** (`PORT` dans l'environnement)
+  est un contrat. Plus de glissement : `process.exit(1)` en nomant la cause.
+  Le defaut 3000, lui, garde le glissement (sinon `npm run dev` et Electron
+  meurent au moindre port occupe — c'est le cote ou de la regle, prouve).
+- `server.ts` : chaque reponse porte `X-Cookdrive-Instance`, pose par un
+  middleware Monte AVANT `compression` (donc avant tout octet tamponne ; le flux
+  SSE le rend aussi, verifie sur le fil). Jeton fourni par l'appelant via
+  `COOKDRIVE_INSTANCE_TOKEN`, sinon genere (UUID) pour le diagnostic.
+- `purchasing-chain.spec.ts` : la boucle d'attente confronte l'en-tete au jeton
+  qu'elle a elle-même fourni, et **rougit immediatement** sur une divergence (le
+  comparer a `null` rendu par une instance absente, et au jeton de l'intrus).
+  Patienter ne rend jamais l'intrus plus conforme. Le message distingue desormais
+  « instance perimee » de « serveur pas pret » — le premier est un defaut
+  d'harnais, le second un defaut de produit.
+
+**Deux sondes nouvelles, exposees en npm** (une par comportement critique) :
+
+- `npm run verify:instance-guard` (`scripts/probe-instance-guard.mjs`) — **14/14**,
+  chaque regle dans ses DEUX directions : identite rendue (200, route inconnue,
+  flux SSE), identite generee et DISTINCTE entre deux instances, mort prononcee
+  sur port impose + l'instance legitime tient toujours son port, et glissement
+  tolere quand personne n'a demande le port.
+- `npm run verify:instance-mord` (`scripts/probe-instance-garde-mord.py`) —
+  **3/3**. C'est la preuve que le garde MORD : bras A controle (sans intrus, le
+  spec est VERT — un controle rouge rend l'experience nulle, les deux bras
+  jugeroient du vide) ; bras B garde armee, un intrus tient le port, le spec
+  ROUGIT et NOMME « instance perimee » ; bras C garde DESARMEE (la confrontation
+  retiree, exactement l'etat historique du fichier), le MEME scenario devient un
+  **faux VERT**. Sans le bras C, le B ne pruve rien : un setup casse imite un
+  garde qui mord. Ce qui discrimine, c'est la PAIRE B/C sur un scenario identique.
+
+Pieges rencontres et consignes, pour les memoriser :
+
+- **Ne jamais conclure d'un seul passage d'un harnais dans un lot.** Un
+  `verify:*` rendu dans une chaine de sept portes partagees ne dispose pas des
+  memes conditions d'isolement que seul. Avant de retirer une mutation au
+  pretexto « elle ne mord pas », la rejouer SEULE et exiger le meme verdict ;
+  a defaut de accord, la reiteration est la premiere regle des preuves.
+- **La premisse d'une sonde n'est pas sa conclusion.** `probe-instance-guard`
+  refusait de tourner si un TIERS tenoit deja le port 3000 — or « 3000 est
+  occupe » est la premisse recherchee, non sa negation. En l'etat, la sonde
+  produisoit un faux negatif et accusoit le produit a tort.
+- **Une copie d'arbre n'est pas un clonage.** `os.makedirs(join(dst, rel))` et
+  non `join(WORK, rel)` : WORK est la racine, dst le miroir de l'arborescence
+  courante. Construit au mauvais niveau, le `copy2` suivant meurt d'un `ENOENT`
+  sur un chemin parfaitement existant — un faux diagnostic de l'arborescence.
+- **Un `fetch` n'est pas une `APIResponse` de Playwright.** `res.status` est une
+  PROPRIETE (undici) et non une methode : appelee, elle jette un `TypeError` que
+  le `catch` d'en bas avale, et l'attente tourne jusqu'au expiration du delai en
+  rapportant un faux « serveur pas pret ».
+- Les caracteres estranges ont une existence, donc des droits : un commentaire
+  redige en UTF-8 peut porter des idees en CJK (U+5360, U+636E observes dans
+  cette sonde) qui ne se voient pas a l'ecran. Detector par dump de codepoints
+  (`ord(ch) > 0x2FFF`), jamais a l'oeil.
+
+### Etat des portes (11 sept., HEAD Sprint 5.3 — garde d'instance)
+- `npx tsc --noEmit` : **0 erreur** · `npx vitest run` : **38** tests (5 fichiers) ·
+  `npx playwright test` : **35 passed** (1 worker, 18,3 s — relire le de compte,
+  un rc seul ne prouve pas qu'un test ait execute) · `npm run build` : ok.
+- 10/10 preuves vertes, verdicts LUS et non inferes : `verify:perf` (p95 stats
+  4,1 ms) · `verify:http` · `verify:sse` (latence capteur->client 6 ms) ·
+  `verify:ratelimit` (429 a la 151e ecriture) · `verify:ci` **20/20** ·
+  `verify:indices` · **`verify:purchasing` 9/9** (le 8/9 du lot etait un faux
+  negatif d'infrastructure) · **`verify:instance-guard` 14/14** ·
+  **`verify:instance-mord` 3/3**.
+- `verify:http` 5a confirme que le middleware d'identite, monte avant la
+  compression, n'a pas reintroduit la tamponnade sur le flux SSE.
+
+### Etat des portes (10 sept., HEAD Sprint 5.1)
+- `npx tsc --noEmit` : **0 erreur** · `npx vitest run` : **38** ·
+  `npx playwright test` : **35** (deus nouveaux specs) · `npm run build` : ok.
+- 10/10 preuves vertes : `verify:perf` (p95 stats 3,7 ms) · `verify:http` ·
+  `verify:sse` · `verify:ratelimit` · `verify:bundle` · `verify:ci` **20/20** ·
+  `verify:indices` · **`verify:purchasing` 9/9** · **`verify:forecast` 9/9** ·
+  `probe-index-forecast-installe` **14/14** (+ `probe-put-yield`,
+  `probe-index-forecast`).
+- Nouveaux fichiers : `test/e2e/{purchasing-chain,reception-view}.spec.ts`,
+  `scripts/{mutation-test-purchasing,probe-forecast-real,probe-index-forecast,
+  probe-index-forecast-installe,probe-put-yield,diag-page}.{py,mjs}`.
+  Nouveaux scripts npm : `verify:purchasing`, `verify:forecast`.
+
+### Sprint 5.2 — la suite logique de la logistique (pour le prochain chat)
+1. **Reception ligne par ligne** : l'UI ne poste que `{ received: [] }` (tout ou
+   rien). Le champ `received_quantity` est prest ; il faut un input par ligne et la
+   saisie des quantites reellement receues (livraison partielle : 3 kg sur les 5
+   commandes).
+2. **Reliquat / stockage** : `inventory` n'a point de date de perequemption consolidee
+   avec la consommation reelle. Rapprocher `dlc`/`dluo` du `besoin_recettes` pour
+   eviter le surstockage et le sous-stockage (pertes et dechets).
+3. **Balance agee** : `document_items.received_quantity` n'est point controle contre
+   la quantite commandee ; prevoir un ecart de reception tolere (avoir).
+
+### Etat des portes (9 sept., HEAD Sprint 4.8)
+- `npx tsc --noEmit` : 0 erreur · `vitest` : **38** · `playwright` : **32** ·
+  `npm run build` : chunk d'entree **591.11 kB**.
+- 7/7 preuves de contrat vertes : `verify:bundle` · `verify:http` ·
+  `verify:perf` · `verify:sse` · `verify:ratelimit` · `verify:indices` ·
+  **`verify:ci` 14/14** (nouveau, expose en script npm et branche dans `lint`).
+- ⚠ Piege d'outillage rencontre pendant cette phase : les literals d'octets
+  Python `b'...\xe9'` ne sont **pas** de l'UTF-8 (`\xe9` est l'octet latin-1
+  isol de « é » ; l'UTF-8 est `\xc3\xa9`). Un tel octet rend le YAML
+  **illisible** par tout parseur et par `git diff`, et l'erreur ne se voit ni a
+  l'ecran, ni dans l'editeur : seul `bytes.decode('utf-8')` (ou le launch du
+  job) la revele. Les fichiers contenant des accents sont donc ecrits par
+  l'interpreteur en texte UTF-8 (`open(..., encoding='utf-8')`) et **verifies
+  par re-decodage**, jamais par un literal d'octets.
+
+### UI/UX Sprint 1 (commit `6fe1c44`)
+1. **Design tokens @theme** : surfaces (4), texte (4), accent émeraude unique,
+   statut (ok/warn/danger/info), catégories menu, ombres (3 niveaux).
+   `brand-*` = alias d'`accent-*` (migration progressive).
+2. **Lazy loading** : 11 vues en `React.lazy` + `Suspense`.
+   Chunk index : 1081 → 860 kB (314 → 266 kB gzip). 11 chunks de vues séparés.
+3. **A11y fixes** : `text-slate-550` (inexistant) → `text-text-faint`,
+   plancher typographique 10px (`.text-caption`), focus ring global `:focus-visible`,
+   `prefers-reduced-motion: reduce`.
+4. **LED unique** : 4× `card-active-*` (120 lignes) → 1× `.card-led` via
+   CSS variable `--led` + `color-mix()`. Variantes amber/blue/purple en 1 ligne.
+
+### UI/UX Sprint 2 (✅ FAIT)
+Selon `UI-UX-PROPOSALS.md` (section 3, propositions UX-2 à UX-8) :
+1. **Toasts empilables + ConfirmDialog** (UX-2) : ✅ 51 `alert()` + 4 `confirm()`
+   remplacés. `ToastProvider` dans `src/components/ui/Toast.tsx`,
+   `ConfirmDialog` pour les suppressions (inventaire, fiches, capteurs, tarifs, docs).
+2. **Composants `ui/`** (UX-8) : ✅ `Button.tsx`, `Modal.tsx`, `Input.tsx`,
+   `Badge.tsx`, `Skeleton.tsx`, `Table.tsx`, `Toast.tsx` dans `src/components/ui/`.
+   Barrel `index.ts` pour les imports centralisés.
+3. **Skeleton screens** (UX-3) : ✅ `<Skeleton>`, `<SkeletonTable>`, `<SkeletonCard>`
+   dans `ui/Skeleton.tsx`. Inventaire : spinner → SkeletonTable.
+4. **Ctrl+K + raccourcis** (UX-4) : ✅ `Ctrl/Cmd+K` = focus recherche,
+   `Alt+1-9` = onglet sidebar, `Esc` = fermer dropdowns.
+5. **Réduction glassmorphism** (UX-6) : ✅ `whileHover y:-5` retiré (KPI + cartes menu),
+   `duration-500` → `duration-150` (19 occurrences), `backdrop-blur-xl/2xl` → `-md`.
+6. **Modales/tableaux fenêtre étroite** (UX-7) : ✅ `Modal` responsive (max-w-3xl,
+   max-h-90vh, plein écran <640px). `Table` avec `overflow-x-auto` + `min-width: 640px`.
+   Header : recherche déjà `hidden md:block` (icône sur mobile).
+
+### Optionnel (si on veut aller plus loin)
+- Durcir `noImplicitAny: true` et dépiler les ~175 `: any` restants.
+- Tests e2e sur les routes restantes (admin, ai, voice, agent/command).
+- Code-splitting plus fin : dynamic import des sous-vues dans MenuAnalysis/FichesTechniques.
+
+### Améliorations post-Phase 2 (commits `9332e80` → `???`)
+1. **Tests e2e étendus** : 7 → 13 tests (recettes, staff, search, anti-waste,
+   epicure, menu-planning ajoutés).
+2. **Validation des inputs API** : `src/middleware/validate.ts` avec helpers
+   `requireString`, `requireNumber`, `requireArray`, `optionalString`.
+   Appliqué sur haccp/documents, recipes, staff, menuplanning.
+3. **Logging HTTP** : `src/middleware/http-logger.ts` (chaque requête logguée
+   avec durée, /health exclu) + `src/middleware/error-logger.ts` (helper logError).
+4. **Code-splitting Vite** : `manualChunks` dans vite.config.ts — jspdf,
+   html2canvas, recharts sortis du chunk principal.
+   Chunk index : 1908 kB → 1081 kB (571 → 314 kB gzip).
+5. **Backup automatique DB** : `src/services/db-backup.ts` — copie horaire de
+   `agent_culinaire.db` dans `backups/`, rotation 5 derniers.
+6. **Health check enrichi** : `/health` renvoie maintenant `dbSize` (Ko),
+   `diskFree` (Go), `memUsed` (Mo) en plus des champs Ollama.
+
+### Optionnel (si on veut aller plus loin)
+- Durcir `noImplicitAny: true` et dépiler les ~176 `: any` restants.
+- Ajouter des tests e2e sur les routes restantes (backup, admin, ai, robots).
+- Code-splitting plus fin : dynamic import des vues lourdes (MenuAnalysis,
+  FichesTechniques) pour ne les charger qu'à l'ouverture du tab.
+
+## 🔙 Points de retour (Git)
+- `a701e70` = état **original** (avant toutes modifs)
+- Chaque phase a ses commits ; `git revert <sha>` pour annuler proprement.
+
+## 🧠 Note de continuité (changement de modèle)
+Le travail Phases 0+1 a été fait avec **Qwen3 32B**. La Phase 2 est reprise
+avec **DeepSeek v4** (plus fort en coding). Ce fichier fait le lien : tout ce
+qui est nécessaire pour reprendre est ici. Ne pas refaire Phases 0/1, elles
+sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
