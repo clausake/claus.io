@@ -1,0 +1,60 @@
+// SPRINT-11 h2 — ingestion des releves de capteur.
+// L'ancien corps faisait `if (token && sensor.webhook_token && ...)` : un poste
+// du reseau qui omettait le jeton postait DONC en silence (le predicat court
+// n'entrait jamais). Et le nombre passe par parseFloat nu : 'abc' etait refuse
+// (bien) mais le NaN serialise par l'UI arrivait deja converti, et une valeur
+// hors plage physique (-400 degres) entrait dans le registre.
+router.post("/api/haccp/webhook/iot-report", async (req, res) => {
+  const { id, token, temperature, battery } = req.body;
+  try {
+    if (typeof token !== "string" || token.trim() === "") {
+      return res.status(403).json({ error: "Jeton de webhook requis." });
+    }
+    const capteurId = clefEtrangere(id);
+    if (capteurId === undefined) return res.status(400).json(estRejete(["id"]));
+    const sensor = await db.get("SELECT * FROM iot_sensors WHERE id = ?", [capteurId]);
+    if (!sensor) {
+      return res.status(404).json({ error: "Sensor not found in registry." });
+    }
+    if (!sensor.webhook_token || sensor.webhook_token !== token.trim()) {
+      return res.status(403).json({ error: "Invalid token" });
+    }
+    const tempVal = nombreDeReleve(temperature, TEMPERATURE_MIN, TEMPERATURE_MAX);
+    if (tempVal === undefined) return res.status(400).json(estRejete(["temperature"]));
+    let batVal: number = sensor.battery ?? 100;
+    if (battery !== undefined && battery !== null) {
+      const b = lireNombre(battery);
+      if (!estNombreExploitable(b, 0, 100)) return res.status(400).json(estRejete(["battery"]));
+      batVal = Math.round(b);
+    }
+    const now = maintenantISO();
+    await db.run(
+      "UPDATE iot_sensors SET last_reading = ?, last_reading_at = ?, battery = ? WHERE id = ?",
+      [tempVal, now, batVal, capteurId]
+    );
+    const logId = nouvelId();
+    await db.run(
+      "INSERT INTO temperature_logs (id, equipment_name, temperature, user, recorded_at, entry_type, sensor_mode, sensor_id) VALUES (?, ?, ?, ?, ?, 'iot', 'online', ?)",
+      [logId, `[IoT] ${sensor.name}`, tempVal, "CAPTEUR IoT Webhook", now, capteurId]
+    );
+    // L'echec de diffusion ne doit jamais faire echouer l'ingestion : la releve
+    // HACCP est deja en base, conforme.
+    try {
+      sensorHub.publishReading({
+        id: capteurId,
+        name: sensor.name,
+        type: sensor.type,
+        equipment_type: sensor.equipment_type,
+        temperature: tempVal,
+        battery: batVal,
+        last_reading_at: now,
+      });
+    } catch (pushErr) {
+      console.error("[SSE] diffusion capteur ignoree:", pushErr);
+    }
+    res.json({ status: "success", message: `Data compiled for ${sensor.name}.`, temperature: tempVal });
+  } catch (err) {
+    console.error("Webhook ingestion error:", err);
+    res.status(500).json({ error: "Server database error" });
+  }
+});

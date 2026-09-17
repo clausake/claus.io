@@ -349,12 +349,44 @@ test("GET /api/admin/db-download telecharge la base", async ({ request }) => {
   expect(res.headers()["content-disposition"] ?? "").toContain("agent_culinaire.db");
 });
 
-test("GET /api/admin/guide-download : 200 si guide présent, 404 sinon", async ({ request }) => {
+// ⚠ CE TEST A ETE REECRIT et sa version precedente etait un PASS creux.
+// L'ancien cas acceptait `[200, 404]` : sur tout clone ou un `git lfs
+// update` a echoue (le runner GitLab fait `git lfs update ... || echo`,
+// il ne met PAS GIT_LFS_SKIP_SMUDGE), le PDF restait un POINT EUR LFS non
+// resolus, la route repondait 404, et la porte restait VERTE alors que la
+// fonctionnalite etait morte pour le client. Un PASS qui ne peut pas
+// devenir FAIL n'est pas une mesure (regle du depot).
+//
+// Le contrat exige donc le PDF REEL. Trois assertions le discriminent, et
+// chacune correspond a un mode de rupture reel et verifie:
+//   - 404            => fichier absent du clone (smudge LFS non tente);
+//   - pointeur LFS   => corps de ~130 octets commencant par
+//                       "version https://git-lfs" (fichier suivi mais non
+//                       resolus) — le cas le plus fourbe, il a un 200
+//                       riendant et un nom de fichier correct;
+//   - corps tronque  => poids < 100 Ko alors que le guide fait ~2,6 Mo.
+test("GET /api/admin/guide-download : sert le vrai PDF (pas un pointeur LFS)", async ({ request }) => {
   const res = await request.get(`${BASE}/api/admin/guide-download`);
-  expect([200, 404]).toContain(res.status());
-  if (res.status() === 404) {
-    expect((await res.json()).error).toContain("Guide");
-  }
+  // 404 n'est PLUS une issue acceptable: il signifie que public/
+  // Executive_Guide.pdf n'est pas materialise dans le clone, donc que la
+  // telechargement est mort chez le client. On le nomme dans le message.
+  expect(res.status(), "404 = public/Executive_Guide.pdf absent du clone "
+    + "(smudge LFS non joue) : le telechargement produit est mort").toBe(200);
+  expect(res.headers()["content-disposition"] ?? "")
+    .toContain("Executive_Guide.pdf");
+
+  const corps = await res.body();
+  // Un pointeur LFS non resolus est un fichier TEXTE de ~130 octets qui
+  // commence par l'entete de specification. C'est l'artefact exact qui a
+  // rendu la porte decorative pendant que le serveur distant avait perdu
+  // l'objet 7cc8630e…
+  const tete = corps.subarray(0, 40).toString("utf8");
+  expect(tete.startsWith("version https://git-lfs"),
+    "le corps est un POINTEUR LFS non resolus (tete=" + tete + ") : "
+    + "le PDF n'a jamais ete tire du depot LFS").toBe(false);
+  expect(corps.subarray(0, 5).toString("latin1"),
+    "un PDF commence par %PDF-").toBe("%PDF-");
+  expect(corps.length, "guide tronque (" + corps.length + " octets)").toBeGreaterThan(100_000);
 });
 
 // --- IA (router ai.ts) : degrade gracefullent sans Ollama --------------
@@ -497,3 +529,44 @@ test("compression: sous le seuil de 1 ko, pas de compression", async () => {
   expect(r.len).toBeLessThan(1024);
   expect(r.enc).toBeUndefined();
 });
+
+test("POST /api/agent/command ne doit pas vendre un echo comme une extraction",
+  async ({ request }) => {
+    const article = "SENTINELLE-RPA-INEXISTANT-42";
+    const res = await request.post(`${BASE}/api/agent/command`, {
+      data: {
+        source: "e2e",
+        type: "MANUAL",
+        data: { action: "review_carts", carts: [{ item: article, price: 42.42,
+          supplier: "FRS-" + article }] },
+        timestamp: new Date().toISOString(),
+      },
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const r0 = body.results?.[0] ?? {};
+    // Le contrat doit declarer sa nature: un echo ne peut pas se faire passer
+    // pour le resultat d'une navigation B2B (mensonge lu dans les octets avant
+    // correction: status "Navigation B2B effectuee", found_price = le prix envoye).
+    expect(typeof body.mode).toBe("string");
+    expect(body.mode).toBe("SIMULATION");
+    expect(r0.verified).toBe(false);
+    expect(r0.source).toBe("echo-input");
+    expect(String(r0.status ?? "").includes("Navigation B2B")).toBe(false);
+    expect(String(body.claus_analysis ?? "").includes("en direct")).toBe(false);
+  },
+);
+
+test("POST /api/agent/command sans panier rend 400, pas un faux succes sur zero ligne",
+  async ({ request }) => {
+    const vides = [
+      { source: "e2e", type: "MANUAL", data: { action: "review_carts", carts: [] } },
+      { source: "e2e", type: "MANUAL", data: { action: "review_carts" } },
+      { source: "e2e", type: "MANUAL" },
+    ];
+    for (const payload of vides) {
+      const res = await request.post(`${BASE}/api/agent/command`, { data: payload });
+      expect(res.status()).toBe(400);
+    }
+  },
+);

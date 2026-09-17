@@ -1,0 +1,41 @@
+// scripts/audit-perf.mjs lignes 53-92
+  53|   for (let i = 0; i < 12; i++) {
+  54|     const t = process.hrtime.bigint();
+  55|     const r = await fetch(`${BASE}${path}`);
+  56|     ts.push(Number(process.hrtime.bigint() - t) / 1000);
+  57|     status = r.status;
+  58|   }
+  59|   ts.sort((a, b) => a - b);
+  60|   console.log(`${label.padEnd(38)} ${String(status)}  p50=${ts[6].toFixed(0)}us  p95=${ts[11].toFixed(0)}us`);
+  61| };
+  62| await bench("GET /api/supplier-prices", "/api/supplier-prices");
+  63| await bench("GET /api/supplier-prices/comparison", "/api/supplier-prices/comparison");
+  64| await bench("GET /api/dashboard/stats", "/api/dashboard/stats");
+  65| await bench("GET /api/anti-waste/critical", "/api/anti-waste/critical");
+  66| await bench("GET /api/search?q=souche", "/api/search?q=souche");
+  67| await bench("GET /api/haccp/production-history", "/api/haccp/production-history");
+  68| 
+  69| console.log(`\n=== 3. cache HTTP des assets statiques (dist/) ===`);
+  70| const idx = await fetch(`${BASE}/`);
+  71| const h = idx.headers;
+  72| console.log(`GET /            : etag=${h.get("etag") ?? "AUCUN"}  cache-control=${h.get("cache-control") ?? "AUCUN (revalide a chaud)"}`);
+  73| const m = (await idx.text()).match(/assets\/(index-[A-Za-z0-9_-]+\.js)/);
+  74| const jsName = m ? m[1] : null;
+  75| if (jsName) {
+  76|   const a = await fetch(`${BASE}/assets/${jsName}`);
+  77|   console.log(`GET ${jsName.slice(0, 24)}…: ${a.status}  cache-control=${a.headers.get("cache-control") ?? "AUCUN"}`);
+  78| }
+  79| 
+  80| // Les budgets sont LUS dans src/middleware/api-rate-limiter.ts : un audit qui les
+  81| // recopie est deja faux (c'est ce qui est arrive a ce bloc). On les relit donc a la
+  82| // source a chaque tour, et un retrait de la constante ferait echouer le script.
+  83| const srcLimiter = readFileSync(join(root, "src/middleware/api-rate-limiter.ts"), "utf8");
+  84| const parseBudgets = (src) => {
+  85|   const blk = /const BUDGETS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src);
+  86|   if (!blk) return null;
+  87|   // Les fenetres s'ecrivent `5 * MIN` : sans la constante resolve, windowMs
+  88|   // sortait a 5 ms et le script annoncait un budget absurde (720 000 req/min).
+  89|   // On la relit dans le module, la aussi, au lieu de la recopier.
+  90|   const minDef = /const MIN\s*=\s*([0-9_]+)/.exec(src);
+  91|   const MIN = minDef ? Number(minDef[1].replace(/_/g, "")) : 60_000;
+  92|   const num = (tok) => Number(String(tok).replace(/_/g, ""));

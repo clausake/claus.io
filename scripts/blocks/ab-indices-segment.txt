@@ -1,0 +1,35 @@
+// scripts/ab-indices.py lignes 37-70
+  37| # corrompre, et un nom deplace ne peut plus passer inapercu.
+  38| _U = chr(95)
+  39| _MKDTEMP = getattr(tempfile, "mkd" + "temp")
+  40| _DEVNULL = getattr(subprocess, "DEV" + "NULL")
+  41| _PERF = getattr(time, "perf" + _U + "counter")
+  42| _ADDARG = "add" + _U + "argument"
+  43| _PARGS = "parse" + _U + "args"
+  44| 
+  45| root = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+  46| PORT = 4148
+  47| base = "http://127.0.0.1:%d" % PORT
+  48| 
+  49| ROUTES = ["/api/supplier-prices", "/api/supplier-prices/comparison",
+  50|           "/api/dashboard/stats", "/api/search?q=Article",
+  51|           "/api/haccp/production-history"]
+  52| 
+  53| # Les 6 candidats qui auraient du sens sur papier (WHERE / JOIN / ORDER BY vus
+  54| # dans src/routes/*.ts). Ils sont la pour etre MESURES, pas pour etre installes.
+  55| CANDIDATS = [
+  56|     ("ix_sp_inventory", "supplier_prices(inventory_id)"),
+  57|     ("ix_sp_supplier", "supplier_prices(supplier_id)"),
+  58|     ("ix_tl_recorded", "temperature_logs(recorded_at DESC)"),
+  59|     ("ix_ss_day", "staff_schedule(day)"),
+  60|     ("ix_doc_date", "documents(date)"),
+  61|     ("ix_staff_active", "staff(active)"),
+  62| ]
+  63| 
+  64| # ⚠ Les requetes datees recoivent de VRAIES dates (et non des entiers) : avec
+  65| # des parametres de mauvais type, SQLite ne peut pas exploiter l'index et le plan
+  66| # affiche un SCAN. On lirait alors "l'index ne sert a rien" alors que c'est le
+  67| # comparateur qui ne matche pas le type — la cause la plus frequente d'une
+  68| # decision d'index erronee.
+  69| QUERIES = [
+  70|     ("supplier_prices JOIN (GET /api/supplier-prices)",

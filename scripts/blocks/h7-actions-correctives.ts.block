@@ -1,0 +1,45 @@
+// SPRINT-11 h7 — actions correctives HACCP. La table etait un REGISTRE SANS
+// LECTURE: aucun SELECT sur corrective_actions n'existait dans src/ (cartographie
+// par octets, 0 voie) — on ecrivait la preuve exigee par l'art. 5 du regl. 852/2004
+// et AUCUNE route ne la rendait. La relever suppose la releve d'origine: un
+// log_id inexistante produisait une action corrective orpheline, non rattachee a
+// la non-conformite, donc sans valeur de preuve.
+router.post("/api/haccp/corrective-action", async (req, res) => {
+  try {
+    const { log_id, action_taken } = req.body;
+    const refus: string[] = [];
+    const reliquat = clefEtrangere(log_id);
+    if (reliquat === undefined) refus.push("log_id");
+    const action = lireTexte(action_taken, 1000);
+    if (action === undefined) refus.push("action_taken");
+    if (refus.length) return res.status(400).json(estRejete(refus));
+    const log = await db.get("SELECT id FROM temperature_logs WHERE id = ?", [reliquat]);
+    if (!log) {
+      return res.status(400).json(estRejete(["log_id"],
+        "aucune releve correspondante: une action corrective sans releve reliee ne prouve rien a l'auditeur"));
+    }
+    const id = nouvelId();
+    await db.run(
+      "INSERT INTO corrective_actions (id, log_id, action_taken) VALUES (?, ?, ?)",
+      [id, reliquat, action],
+    );
+    res.json({ status: "success", id });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save corrective action" });
+  }
+});
+
+// LA LECTURE QUI MANQUAIT. Sans elle, le POST ci-dessus etait un PASS creux a
+// l'ecriture: on ne verifiait jamais que la preuve ecrite ressort un jour.
+router.get("/api/haccp/corrective-actions", async (req, res) => {
+  try {
+    const lignes = await db.all(
+      "SELECT ca.id, ca.log_id, ca.action_taken, ca.created_at, tl.equipment_name, tl.temperature " +
+      "FROM corrective_actions ca LEFT JOIN temperature_logs tl ON ca.log_id = tl.id " +
+      "ORDER BY ca.created_at DESC LIMIT 200",
+    );
+    res.json(lignes);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load corrective actions" });
+  }
+});

@@ -1,0 +1,53 @@
+// scripts/verify-sse.mjs lignes 149-200
+ 149| 
+ 150| const post = (p, body) => fetch(`${BASE}${p}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+ 151| 
+ 152| // --- preparatifs : deux capteurs enregistres (on capure leurs tokens) ---
+ 153| const regLive = await (await post("/api/haccp/iot-sensors", { id: "sse-live", name: "Chambre Froide Nord", type: "ambient", equipment_type: "Froid" })).json();
+ 154| const regOther = await (await post("/api/haccp/iot-sensors", { id: "stale-c", name: "Vitrine Est", type: "ambient", equipment_type: "Froid" })).json();
+ 155| const tokenLive = regLive.token;
+ 156| const tokenOther = regOther.token;
+ 157| check("token reel retourne a l'enregistrement", typeof tokenLive === "string" && tokenLive.length > 3, String(tokenLive));
+ 158| 
+ 159| const stream = openStream("/api/sensors/stream");
+ 160| await new Promise((r) => setTimeout(r, 400));
+ 161| 
+ 162| // 1. ouverture correcte
+ 163| check("flux SSE ouvert en text/event-stream", /text\/event-stream/.test(stream.contentType), stream.contentType || "vide");
+ 164| 
+ 165| // 2. latence du push
+ 166| const t0 = Date.now();
+ 167| const ing = await post("/api/haccp/webhook/iot-report", { id: "sse-live", token: tokenLive, temperature: 3.4, battery: 88 });
+ 168| check("l'ingestion du webhook reussit (200, pas 403)", ing.status === 200, "HTTP " + ing.status);
+ 169| const got = await stream.waitFor("sensor", 6000);
+ 170| const latency = got ? got[got.length - 1].at - t0 : -1;
+ 171| const payload = got ? got[got.length - 1].data : null;
+ 172| check("webhook poste => evenement 'sensor' recu cote client", !!got, got ? "" : "aucun");
+ 173| check("payload porte la valeur postee (3.4)", !!payload && payload.temperature === 3.4, JSON.stringify(payload));
+ 174| check("latence capteur->client < 1000 ms (le polling etait 4000)", latency >= 0 && latency < 1000, latency + "ms");
+ 175| 
+ 176| // 3. pas d'avalemen : une re-emission identique doit quand meme arriver.
+ 177| // Le 1er 'sensor' est DEJA au buffer (check 2), donc waitFor court-circuiterait:
+ 178| // on attend le PASSAGE strict au-dessus du niveau de reference. Discriminant
+ 179| // reel: si la de-dup etait vivante, le 2e n'arriverait jamais => waitCount faux.
+ 180| const before = stream.count("sensor");
+ 181| await post("/api/haccp/webhook/iot-report", { id: "sse-live", token: tokenLive, temperature: 3.4, battery: 88 });
+ 182| const dupArrived = await stream.waitCount("sensor", before, 4000);
+ 183| check("re-emission identique quand meme diffusee (jamais avalee)", dupArrived, `attendu >${before}, recu=${stream.count("sensor")}`);
+ 184| 
+ 185| // 4. le canal stale est publie (liste vide = aucun muet) et ne fausse pas un
+ 186| //    capteur fraichement actif.
+ 187| await post("/api/haccp/webhook/iot-report", { id: "stale-c", token: tokenOther, temperature: 5.1 });
+ 188| const stale = await stream.waitFor("stale", 60_000);
+ 189| check("canal 'stale' emis et de forme tableau", !!stale && Array.isArray(stale[stale.length - 1].data), stale ? JSON.stringify(stale[stale.length - 1].data) : "aucun");
+ 190| const flatStale = stale ? stale.flatMap((s) => s.data) : [];
+ 191| check("un capteur qui vient de poster n'est PAS declare muet", !flatStale.some((s) => s && (s.id === "stale-c" || s.id === "sse-live")), JSON.stringify(flatStale));
+ 192| 
+ 193| // 5. ajout de capteur => nouvelle liste poussee contenant le nouveau.
+ 194| await post("/api/haccp/iot-sensors", { id: "newcomer", name: "Congelateur Sud", type: "ambient", equipment_type: "Froid" });
+ 195| const listGot = await stream.waitFor("sensors", 4000);
+ 196| const sawNew = listGot ? listGot[listGot.length - 1].data.some((s) => s.id === "newcomer") : false;
+ 197| check("ajout de capteur pousse une liste contenant le nouveau", !!sawNew, listGot ? "" : "aucun");
+ 198| 
+ 199| stream.close();
+ 200| child.kill("SIGTERM");

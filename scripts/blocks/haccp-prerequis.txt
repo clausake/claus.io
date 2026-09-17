@@ -1,0 +1,47 @@
+### Q1 LITTERAUX DES EMETTEURS REELS
+  type (select newSensorType): select_trouve=True options=['ambient', 'blast_chiller', 'probe']
+  equipment_type (select newSensorEqType): select_trouve=True options=['Chaud', 'Froid', 'Refroidissement']
+  litteraux SQL dans haccp.ts: ['iot', 'manuel', 'online']
+  defauts schema: type=['ambient', 'Froid'] eq=['Froid']
+  entry_type/sensor_mode cite dans l'UI: 1/0
+
+### Q2 CHALEUR (mtime, 2 relèves a 20 s)
+  froid  age= 191.7h src/routes/haccp.ts
+  froid  age=  80.7h src/shared/inventory-fields.ts
+  froid  age= 207.6h src/components/Haccp.tsx
+  froid  age= 443.7h src/components/HaccpModules.tsx
+  froid  age=  32.4h test/e2e/routes.spec.ts
+  froid  age=  66.0h package.json
+  froid  age=  66.0h scripts/run-all-gates.py
+  froid  age=  63.7h PHASES.md
+  froid  age=  69.9h src/routes/documents.ts
+
+### Q3 VOIES DE LECTURE (une JOIN interne fait disparaitre l'orpheline)
+  batches: 1 SELECT vus
+     src/routes/haccp.ts:509 | try { const batches = await db.all(` SELECT b.*, i.name as product_name FROM batches b JOIN inventory i ON b.inventory_id = i.id `); res.json(batches); } catch (error) { res.status(500).json
+  corrective_actions: 0 SELECT vus
+  temperature_logs: 1 SELECT vus
+     src/routes/haccp.ts:532 | router.get("/api/haccp/temperatures", async (req, res) => { try { const logs = await db.all( "SELECT * FROM temperature_logs ORDER BY recorded_at DESC LIMIT 50", ); res.json(logs); } catch (
+  production_records: 1 SELECT vus
+     src/routes/haccp.ts:461 | try { const history = await db.all(` SELECT pr.id, r.name as recipe_name, pr.created_at, GROUP_CONCAT(b.lot_number) as batches FROM production_records pr JOIN recipes r ON pr.recipe_id = r.i
+  cleaning_records: 1 SELECT vus
+     src/routes/haccp.ts:431 | router.get("/api/haccp/cleaning", async (req, res) => { try { const records = await db.all( "SELECT * FROM cleaning_records ORDER BY completed_at DESC", ); res.json(records); } catch (error)
+  iot_sensors: 6 SELECT vus
+     src/routes/haccp.ts:37 | sensorHub.heartbeat(); try { const rows = await db.all( "SELECT id, name, last_reading_at FROM iot_sensors WHERE last_reading_at IS NOT NULL", ); const nowMs = Date.now(); const stale = rows
+     src/routes/haccp.ts:216 | router.get("/api/haccp/iot-sensors", async (req, res) => { try { const list = await db.all("SELECT * FROM iot_sensors"); // Map properties for UI consistency const mapped = list.map(s => ({ 
+     src/routes/haccp.ts:248 | res.json({ status: "success", token }); // Un onglet HACCP deja ouvert doit voir le capteur sans rafraichissement. try { const list = await db.all("SELECT * FROM iot_sensors"); sensorHub.pub
+     src/routes/haccp.ts:264 | router.delete("/api/haccp/iot-sensors/:id", async (req, res) => { try { await db.run("DELETE FROM iot_sensors WHERE id = ?", [req.params.id]); res.json({ status: "success" }); // Le tableau 
+
+### Q4 LECTURES DU webhook_token (decide du durcissement sans casser le simulateur)
+  Haccp.tsx:126 | 70ch
+  Haccp.tsx:615 | 48ch
+  Haccp.tsx:713 | 56ch
+  Haccp.tsx:743 | 59ch
+  Haccp.tsx routes:226 | 34ch
+  Haccp.tsx routes:242 | 155ch
+  Haccp.tsx routes:290 | 72ch
+  verify-sse:155 | 32ch
+  verify-sse:157 | 122ch
+  verify-sse:167 | 125ch
+  verify-sse:181 | 113ch
+  verify-sse:187 | 100ch
