@@ -92,6 +92,59 @@ def git_pristine():
     return r.stdout
 
 
+ORIG = os.path.join(PRE_SPLIT, "PHASES.md.orig")
+
+
+def _ancre_externe():
+    """Juge le .orig contre GIT, pas contre un hash que lui-meme a ecrit (constat D3).
+
+    Le defaut etait la: `SHA256.txt` vit dans le MEME dossier scelle que le .orig.
+    Falsifier les deux d'un geste ne faisot broncher aucune porte -- une preuve
+    auto-attestee n'est pas une preuve. Ici l'ancre est le blob COMMITTE dans
+    l'historique: pour falsifier le .orig sans rougir, il faut commiter, donc passer
+    par l'historique relisible (et par le relanceur). C'est la seule ancre qui ne
+    soit pas dans la main de celui qu'elle surveille.
+
+    Deux verifications, disjointes:
+      A  sha256(.orig sur disque) == sha consigne dans le manifeste  (falsification
+         par recollage d'un faux .orig);
+      B  blob git du fichier sur disque == blob git du meme chemin COMMITTE
+         (falsification du disque sans commit -- ce que `git status` ne dit pas
+         toujours quand on oublie de le regarder).
+    """
+    if not os.path.isfile(ORIG):
+        print("ANCRE .orig: ABSENT (%s)" % ORIG.replace(BASE + "/", ""))
+        return False
+    m = json.load(open(MANIFEST, encoding="utf-8"))
+    # A) l'ancre interne: le .orig doit rester le document d'origine consigne
+    consigne = m.get("sha256_original_avant_reancrage") or m["original_sha256"]
+    disque = sha256(open(ORIG, "rb").read())
+    if disque != consigne:
+        print("ANCRE .orig: ECHEC -- le .orig a bouge sous nos pieds.")
+        print("   disque   %s" % disque[:12])
+        print("   consigne %s" % consigne[:12])
+        return False
+    # B) l'ancre externe: git, pas notre propre fichier de hash
+    rel = os.path.relpath(ORIG, BASE)
+    def _git(*a):
+        p = subprocess.run(["git"] + list(a), cwd=BASE, capture_output=True, text=True)
+        return p.stdout.strip() if p.returncode == 0 else None
+    blob_tete = _git("rev-parse", "HEAD:" + rel)
+    blob_disque = _git("hash-object", rel)
+    if blob_tete is None:
+        print("ANCRE .orig: ECHEC -- le .orig n'est pas committe dans HEAD: "
+              "aucune preuve exterieure n'existe.")
+        return False
+    if blob_disque != blob_tete:
+        print("ANCRE .orig: ECHEC -- le .orig sur disque ne correspond pas au blob "
+              "committe (contenu modifie sans commit).")
+        print("   blob committe %s | blob disque %s" % (blob_tete[:12], (blob_disque or "-")[:12]))
+        return False
+    print("ANCRE .orig: OK -- sha conforme au manifeste ET egal au blob committe "
+          "%s (preuve exterieure, pas auto-attestee)." % blob_tete[:12])
+    return True
+
+
 def verify():
     """Recolle depuis le DISQUE et juge contre le sha de l'original consigne.
 
@@ -125,6 +178,11 @@ def verify():
     ok = got == m["original_sha256"]
     print("VERDICT anti-perte: %s | recolle %s | original consigne %s"
           % ("OK" if ok else "ECHEC", got[:12], m["original_sha256"][:12]))
+    # L'ancre du .orig est jugee dans la MEME porte (constat D3): une porte separee
+    # serait oubliee, et une porte non jouee est pire qu'une porte absente -- elle
+    # fait croire a une surveillance qui n'a pas eu lieu.
+    if ok:
+        ok = _ancre_externe()
     if not ok:
         print("   -> une ligne du journal a bouge. Restaure depuis "
                "phases/.pre-split/PHASES.md.orig et rejoue.")
