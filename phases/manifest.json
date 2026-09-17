@@ -1,0 +1,65 @@
+{
+ "original_octets": 133404,
+ "original_sha256": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
+ "chaud_octets": 12267,
+ "archives": [
+  {
+   "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
+   "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
+   "octets": 33521,
+   "lignes": 505,
+   "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
+  },
+  {
+   "fichier": "phases/sprint-11-sprint-11-haccp-deux-regles-que-le-produit-l.md",
+   "titre": "## Sprint 11 - HACCP: deux regles que le produit laissait au client, et un harnais qui contamine ses propres bras (16 sept.)",
+   "octets": 7976,
+   "lignes": 123,
+   "sha256": "df8710091ca8a24b5b5b11e4d22239e881fb4bd1cc080c56a178a8e269e758d6"
+  },
+  {
+   "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
+   "titre": "## Sprint 10 - `verify:forecast` : une porte rouge qui ne jugeait rien, et un mode qui ment sur ses donnees (13 sept.)",
+   "octets": 12755,
+   "lignes": 222,
+   "sha256": "f7ee7de7dd3ece648e20157350736b0e7d228c5a28a9d9e1ffa7fe30c591d217"
+  },
+  {
+   "fichier": "phases/sprint-09-sprint-9-les-lignes-a-la-creation-les-deux-p.md",
+   "titre": "## Sprint 9 - Les lignes a la creation: les DEUX portes restantes de `document_items` (13 sept.)",
+   "octets": 8650,
+   "lignes": 155,
+   "sha256": "bb6451b4cde26c61f10160a43eb8529ebc6589df4def7e31865f32329e083527"
+  },
+  {
+   "fichier": "phases/sprint-08-sprint-8-post-api-inventory-consume-la-route.md",
+   "titre": "## Sprint 8 - POST /api/inventory/consume : la route que personne ne jugeait (12 sept.)",
+   "octets": 18292,
+   "lignes": 300,
+   "sha256": "980b25578aac01223897a4d7429b7e8b5874a4af27aa72f66963bdac62e8ac74"
+  },
+  {
+   "fichier": "phases/sprint-07-sprint-7-la-colonne-de-prix-fournisseur-a-tr.md",
+   "titre": "## Sprint 7 - La colonne de prix fournisseur a TROIS portes d'ecriture, et une seule etait garde (12 sept.)",
+   "octets": 10493,
+   "lignes": 167,
+   "sha256": "9a62a6ec304cbcf29a455e773cd06c677b74c498dcf370b34989a4fd37ccbe81"
+  },
+  {
+   "fichier": "phases/sprint-06-sprint-6-le-port-de-la-fenetre-et-la-voie-d-.md",
+   "titre": "## Sprint 6 - Le port de la fenetre et la voie d'ecriture d'inventaire, juges (12 sept.)",
+   "octets": 9879,
+   "lignes": 154,
+   "sha256": "74fb45264631904eb3d942f0e366a925e70bab3ea34566b41f1c704f772d615f"
+  },
+  {
+   "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
+   "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
+   "octets": 21920,
+   "lignes": 339,
+   "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
+  }
+ ],
+ "lignes_chaud": 11834,
+ "tokens_approx_chaud": 2958
+}
