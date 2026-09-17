@@ -1,6 +1,6 @@
 {
- "original_octets": 133404,
- "original_sha256": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
+ "original_octets": 133478,
+ "original_sha256": "7ff543d16716f93e485223fd30065b2be199697c654527e91eb46df17997c47e",
  "chaud_octets": 12267,
  "archives": [
   {
@@ -61,5 +61,18 @@
   }
  ],
  "lignes_chaud": 11834,
- "tokens_approx_chaud": 2958
+ "tokens_approx_chaud": 2958,
+ "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
+ "reancrage": {
+  "motif": "chiffres du chaud corriges aux mesures disque (constat D1 de la revue independante, revifie par mes lectures)",
+  "date": "2026-09-17 21:16:48.906927",
+  "ancre_git": "6d970bc5877b54298c23996bd6d5d8fa8f8be76d",
+  "chiffres_disque": {
+   "server.ts": 258,
+   "src/App.tsx": 952,
+   "src/routes/*.ts": 20,
+   "src/components/*.tsx": 19
+  },
+  "note": ".pre-split/PHASES.md.orig reste l'etat d'origine avec ses chiffres FAUX; il n'est pas retabli. Authorite = le chaud + `wc -l`."
+ }
 }

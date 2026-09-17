@@ -1,1 +1,2 @@
-0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2  PHASES.md.pre-split
+7ff543d16716f93e485223fd30065b2be199697c654527e91eb46df17997c47e  PHASES.md.recombine (etat JUGE par --verify, apres correction)
+0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2  PHASES.md.orig (etat d'origine; chiffres Stack FAUX, ne pas retablir)
