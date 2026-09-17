@@ -1,0 +1,46 @@
+// scripts/verify-http.mjs lignes 171-215
+ 171|   const again = await raw("/", { "Accept-Encoding": "identity", "If-None-Match": r.headers["etag"] });
+ 172|   check("(4c) revalidation du HTML par ETag -> 304", again.status === 304, `status=${again.status}`);
+ 173| }
+ 174| 
+ 175| // --- 5. le SSE n'est jamais compresse, et livre vraiment --------------
+ 176| {
+ 177|   const nom = `Capteur HTTP ${Date.now()}`;
+ 178|   const reg = await (await fetch(`${BASE}/api/haccp/iot-sensors`, {
+ 179|     method: "POST",
+ 180|     headers: { "content-type": "application/json" },
+ 181|     body: JSON.stringify({ id: `http-${Date.now()}`, name: nom, type: "ambient", "equipment_type": "Froid" }),
+ 182|   })).json();
+ 183|   const liste = await (await fetch(`${BASE}/api/haccp/iot-sensors`)).json();
+ 184|   const capteurId = liste.find((s) => s.name === nom)?.id ?? reg.id;
+ 185| 
+ 186|   const ac = new AbortController();
+ 187|   const t0 = Date.now();
+ 188|   const flux = await fetch(`${BASE}/api/sensors/stream`, {
+ 189|     signal: ac.signal,
+ 190|     headers: { Accept: "text/event-stream", "Accept-Encoding": "gzip" },
+ 191|   });
+ 192|   const ccSse = String(flux.headers.get("cache-control") ?? "");
+ 193|   check("(5a) SSE : pas de compression (gzip mettrait les evenements en tampon)",
+ 194|     flux.headers.get("content-encoding") === null, `encoding=${flux.headers.get("content-encoding")}`);
+ 195|   check("(5b) SSE : no-cache + no-transform (aucun proxy ne doit le mettre en tampon)",
+ 196|     /no-cache/.test(ccSse) && /no-transform/.test(ccSse), `cache-control=${ccSse || "AUCUN"}`);
+ 197| 
+ 198|   const lecteur = flux.body?.getReader();
+ 199|   const dec = new TextDecoder();
+ 200|   let tampon = "";
+ 201|   let recu = null;
+ 202|   const poste = async () => {
+ 203|     await fetch(`${BASE}/api/haccp/webhook/iot-report`, {
+ 204|       method: "POST",
+ 205|       headers: { "content-type": "application/json" },
+ 206|       body: JSON.stringify({ id: capteurId, token: reg.token, temperature: 4.2, battery: 77 }),
+ 207|     });
+ 208|   };
+ 209|   const tPost = Date.now();
+ 210|   await poste();
+ 211|   const fin = Date.now() + 5000;
+ 212|   while (lecteur && Date.now() < fin && !recu) {
+ 213|     const chunk = await lecteur.read();
+ 214|     if (chunk.done) break;
+ 215|     tampon += dec.decode(chunk.value, { stream: true });

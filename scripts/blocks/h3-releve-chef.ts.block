@@ -1,0 +1,36 @@
+// SPRINT-11 h3 — releve de temperature SAISIE PAR LE CHEF. Piece d'audit
+// reglementaire (regl. (CE) n°852/2004 art. 5). L'ancien corps n'avait AUCUN
+// controle: 'temperature: "vingt degres"' passait dans la colonne REAL
+// (affinite SQLite), le champ blanc que l'UI serialise NaN arrivait deja en
+// `null` (JSON.stringify(NaN) rend null) et s'inscrivait comme releve absente.
+// entry_type/sensor_mode etaient controlables par le client: une saisie manuelle
+// signee 'iot' aurait fait passer une frappe de clavier pour une trace machine.
+router.post("/api/haccp/temperature", async (req, res) => {
+  try {
+    const { equipment_name, temperature, user, recorded_at, entry_type, sensor_mode } = req.body;
+    const refus: string[] = [];
+    const equipement = lireTexte(equipment_name, 200);
+    if (equipement === undefined) refus.push("equipment_name");
+    const releve = nombreDeReleve(temperature, TEMPERATURE_MIN, TEMPERATURE_MAX);
+    if (releve === undefined) refus.push("temperature");
+    let instant = maintenantISO();
+    if (recorded_at !== undefined && recorded_at !== null) {
+      const iso = dateISO(recorded_at);
+      if (iso === undefined) refus.push("recorded_at"); else instant = iso;
+    }
+    const entree = clefEnum(entry_type, TYPES_ENTREE, "manuel");
+    if (entree === undefined) refus.push("entry_type");
+    const mode = clefEnum(sensor_mode, MODES_CAPTEUR, "online");
+    if (mode === undefined) refus.push("sensor_mode");
+    if (refus.length) return res.status(400).json(estRejete(refus));
+    const operateur = lireTexte(user, 100) ?? "SYSTÈME";
+    const id = nouvelId();
+    await db.run(
+      "INSERT INTO temperature_logs (id, equipment_name, temperature, user, recorded_at, entry_type, sensor_mode) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [id, equipement, releve, operateur, instant, entree, mode],
+    );
+    res.json({ status: "success", id });
+  } catch (error) {
+    res.status(500).json({ status: "error", message: "Failed to log temperature" });
+  }
+});

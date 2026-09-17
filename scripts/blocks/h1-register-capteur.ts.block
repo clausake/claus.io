@@ -1,0 +1,44 @@
+// SPRINT-11 h1 — enregistrement d'un capteur IoT.
+// L'ancien corps acceptait un id ' ', un nom vide, n'importe quel type/equipement
+// (la liste deroulante de l'UI etait la seule regle), et generait le jeton de
+// webhook avec Math.random().toString(36).substring(2, 8) : 32 bits d'entropie,
+// PRNG previsible. Le jeton protege l'ingestion : une releve de 4 degres ecrite
+// depuis un autre poste du reseau est une piece d'audit fausse.
+router.post("/api/haccp/iot-sensors", async (req, res) => {
+  try {
+    const { id, name, type, equipment_type } = req.body;
+    const refus: string[] = [];
+    const capteurId = clefEtrangere(id, ID_CAPTEUR_MAX);
+    if (capteurId === undefined || capteurId.length < ID_CAPTEUR_MIN) refus.push("id");
+    const nom = lireTexte(name, 200);
+    if (nom === undefined) refus.push("name");
+    const typ = clefEnum(type, TYPES_CAPTEUR, "ambient");
+    if (typ === undefined) refus.push("type");
+    const eqt = clefEnum(equipment_type, TYPES_EQUIPEMENT, "Froid");
+    if (eqt === undefined) refus.push("equipment_type");
+    if (refus.length) return res.status(400).json(estRejete(refus));
+    const dejaLa = await db.get("SELECT id FROM iot_sensors WHERE id = ?", [capteurId]);
+    if (dejaLa) {
+      return res.status(409).json({ error: `Capteur « ${capteurId} » deja enregistre.` });
+    }
+    const token = newToken();
+    await db.run(
+      "INSERT INTO iot_sensors (id, name, type, equipment_type, battery, last_reading, last_reading_at, webhook_token) VALUES (?, ?, ?, ?, 100, 20.0, ?, ?)",
+      [capteurId, nom, typ, eqt, maintenantISO(), token]
+    );
+    res.json({ status: "success", token });
+    // Un onglet HACCP deja ouvert doit voir le capteur sans rafraichissement.
+    try {
+      const list = await db.all("SELECT * FROM iot_sensors");
+      sensorHub.publishList(list.map((s: any) => ({
+        id: s.id, name: s.name, type: s.type, equipment_type: s.equipment_type,
+        temperature: s.last_reading ?? 20.0, battery: s.battery ?? 100,
+        last_reading_at: s.last_reading_at,
+      })));
+    } catch (pushErr) {
+      console.error("[SSE] diffusion liste ignoree:", pushErr);
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Failed to register sensor." });
+  }
+});

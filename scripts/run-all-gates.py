@@ -48,7 +48,16 @@ DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
           # Les retirer rend la porte d'entree de document_items jugeable
           # partiellement sans qu'aucun lot ne le voie.
           "verify:document-items", "verify:document-items-mord",
-          "verify:document-items-voices"]
+          "verify:document-items-voices",
+          # Le contrat HACCP (Sprint 11): les routes d'ecriture du seul domaine
+          # qui porte une OBLIGATION REGLEMENTAIRE (regl. (CE) n°852/2004 art. 5).
+          # Les 5 tests HACCP de routes.spec.ts etaient des GET nominaux (un PASS
+          # creux); les 8 CHEMINS C1..C8 jugent desormais l'ECRITURE et la
+          # RELECTURE, et la morsure prouve que les 12 regles peuvent rougir.
+          # Sans la porte `-mord`, l'une de ces routes peut redevenir un 200 muet
+          # (releve en texte, lot a 0 kg, action corrective orphelinee) sans
+          # qu'aucun lot ne le voie.
+          "verify:haccp", "verify:haccp-mord"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

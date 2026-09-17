@@ -1,0 +1,48 @@
+// SPRINT-11 h6 — lot de traçabilite (l'enregistrement que l'auditeur peut
+// exiger: dlc, lot, temperature a reception). L'ancien corps: quantity via
+// `quantity || 0` (un texte devenait 0 SANS erreur, un lot trace a 0 kg);
+// inventory_id non verifie alors que GET /api/haccp/batches est un
+// `JOIN inventory` INTERNE: un lot dont l'article ne joint rien est ecrit puis
+// INFICHABLE a l'ecran du chef. reception_temp et expiration_date n'avaient
+// aucune forme attendue (le tri/filtrage lexicographique des TEXT les rendait
+// muets sans erreur).
+router.post("/api/haccp/batches", async (req, res) => {
+  try {
+    const {
+      inventory_id, lot_number, expiration_date, source_image_url,
+      quantity, unit, reception_temp, packaging_ok,
+    } = req.body;
+    const refus: string[] = [];
+    const article = clefEtrangere(inventory_id);
+    if (article === undefined) refus.push("inventory_id");
+    const lot = lireTexte(lot_number, 200);
+    if (lot === undefined) refus.push("lot_number");
+    const echeance = dateISO(expiration_date) ?? lireTexte(expiration_date, 40);
+    if (echeance === undefined) refus.push("expiration_date");
+    const poids = nombreDeReleve(quantity ?? 0, 0, QUANTITE_LOT_MAX);
+    if (poids === undefined) refus.push("quantity");
+    const mesure = unit === undefined || unit === null ? "" : lireTexte(unit, 30);
+    if (mesure === undefined) refus.push("unit");
+    let reception: number | null = null;
+    if (reception_temp !== undefined && reception_temp !== null && reception_temp !== "") {
+      const r = nombreDeReleve(reception_temp, RECEPTION_TEMP_MIN, RECEPTION_TEMP_MAX);
+      if (r === undefined) refus.push("reception_temp"); else reception = r;
+    }
+    if (refus.length) return res.status(400).json(estRejete(refus));
+    const art = await db.get("SELECT id FROM inventory WHERE id = ?", [article]);
+    if (!art) {
+      return res.status(400).json(estRejete(["inventory_id"],
+        "article inconnu: un lot qui ne joint aucun article disparait de la liste des lots (JOIN interne)"));
+    }
+    const id = nouvelId();
+    await db.run(
+      "INSERT INTO batches (id, inventory_id, lot_number, expiration_date, source_image_url, quantity, unit, reception_temp, packaging_ok) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [id, article, lot, echeance, lireTexte(source_image_url, COLONNE_TEXTE_MAX) ?? null,
+       poids, mesure, reception, packaging_ok ? 1 : 0],
+    );
+    res.json({ status: "success", id });
+  } catch (error) {
+    console.error("Save batch error:", error);
+    res.status(500).json({ error: "Failed to save batch" });
+  }
+});
