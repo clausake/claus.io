@@ -141,6 +141,30 @@ def main(argv):
     total = len(disque)
     src = disque.decode("utf-8")
 
+    # ---- etat: DEJA decoupe ? (c'est la porte qui a fige la session du 17/09) -----
+    # Relancer --apply sur un journal deja decoupe butait sur la garde de
+    # .pre-split: un message qui accusait « quelqu'un a deja modifie l'arbre »,
+    # sur un appel qui ne PEUT pas reussir. L'agent l'a rejoue 17 fois, le
+    # garde-fou identical_call_streak_halt a sonne au 5e. Un gate qui ne sait
+    # que echouer deux fois n'est pas un gate, c'est un piege: l'etat est
+    # reconnu AVANT toute ecriture, et un re-decoupage refuse est un SUCCES
+    # (rc=0) puisqu'il n'y a rien a faire.
+    deja = os.path.isfile(MANIFEST) or ("`phases/sprint-" in src)
+    if deja:
+        if not os.path.isfile(MANIFEST):
+            # des stubs sont en place mais le manifest a disparu: passage interompu
+            raise SystemExit(
+                "ETAT DECHIRE: PHASES.md contient des stubs de decoupage mais le\n"
+                "manifest est absent (%s). Ne re-decoupe surtout pas par-dessus.\n"
+                "Recovery depuis la source conservee:\n"
+                "  cp phases/.pre-split/PHASES.md.orig PHASES.md\n"
+                "  rm -rf phases && python3 scripts/decouper-phases.py --apply"
+                % os.path.relpath(MANIFEST, BASE))
+        print("DEJA DECOUPE (manifest present) - ce script ne re-decoupe pas un")
+        print("journal deja decoupe: le relancer par-dessus ne peut que l'abimer.")
+        print("Rien n'est ecrit. Verdict d'integrite ci-dessous.")
+        return verify()
+
     # ---- P1: on n'ecrit pas par-dessus un arbre qui a bouge sous nos pieds -------
     head = git_pristine()
     if sha256(head) != sha256(disque):
