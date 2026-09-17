@@ -23,7 +23,14 @@ import sys
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(BASE, "test", "gates.out")
 
-DEFAUT = ["verify:sse", "verify:perf", "verify:http", "verify:bundle",
+DEFAUT = ["verify:split",
+          # Le journal chaud est la seule entree shared par tous les agents; s'il
+          # est recolle mal (une ligne perdue dans une archive), chaque agent lit
+          # desormais un faux sans le savoir. La porte verifie par sha256 que
+          # chaud+archives se recollent a l'original consigne. Sans elle dans
+          # DEFAUT, elle n'est jouee que si un agent y pense: une porte que
+          # personne n'appelle n'est pas une porte.
+          "verify:sse", "verify:perf", "verify:http", "verify:bundle",
           "verify:ratelimit", "verify:ci", "verify:indices",
           "verify:instance-guard", "verify:instance-mord",
           "verify:purchasing", "verify:forecast", "verify:forecast-mord",
