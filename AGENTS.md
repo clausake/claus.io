@@ -35,6 +35,23 @@ appels identiques sur cette grepe avant la coupure du garde-fou, et l'autre a re
 - avant toute conclusion d'absence, une sonde prouve le capteur vivant : `wc -c`,
   `grep -c` sur un motif qu'on sait matcher, ou `grep -a`.
 
+## 7. Une sortie stable est un fait acquis: la repollee ne produit rien
+
+- `npm run verify:sse` qui a rendu `RC=0` cinq fois de suite rend `RC=0` pour
+  toujours: le sixieme appel n'apprend rien. Mesure le 18/09, un pilote a brule
+  5 appels sur ce verbe (sortie identique `RC=0`) et 7 sur
+  `_tests/run_all.py offline` (sortie identique) avant la coupure du garde.
+  Un halt sur un verbe de POLL (`grep`, `wc -c`, `git diff`, `echo RC`) est un
+  blocage de GESTE, pas du systeme: le fait est acquis, passe a l'ecriture.
+- `git diff HEAD -- scripts/…` rendu VIDE pendant que ton patch n'est pas encore
+  ecrit ne veut pas dire « en attente », ca veut dire « tu n'as rien ecrit ».
+  Le regarder quinze fois ne remplit pas le fichier.
+- Deux courses SIMULTANEES ne se demandent pas avec `&` dans une commande
+  terminal: le harnais refuse (`Foreground command uses '&' backgrounding`,
+  exit -1) et tu te retrouves a polluer l'autre en sequence. Ecris un `.py` avec
+  `subprocess.Popen([...])` par enfant puis `communicate()`: c'est exactement
+  comme ca que les deux courses jumelles `gates-…-670137` / `670138` ont existe.
+
 ## 3. Une relire par commit, pas par tour
 
 Le pilote appelle `/review` quand un livrable est committe. Jamais entre deux tours
