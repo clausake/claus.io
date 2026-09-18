@@ -22,6 +22,9 @@ import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(BASE, "test", "gates.out")
+COURSE_ID = os.path.basename(sys.argv[0]) + "-" + str(os.getpid())
+OUT = os.path.join(BASE, "test", "gates-" + COURSE_ID + ".out")
+SYMLINK = os.path.join(BASE, "test", "gates.out")
 
 DEFAUT = ["verify:split",
           # Le journal chaud est la seule entree shared par tous les agents; s'il
@@ -85,6 +88,7 @@ def main(cible):
         return 2
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    os.remove(OUT) if os.path.lexists(OUT) else None
     with open(OUT, "w", encoding="utf-8") as log:
         verdicts = []
         for g in cible:
@@ -95,16 +99,23 @@ def main(cible):
             log.write("\n===== %s rc=%s =====\n%s\n" % (g, p.returncode, txt[-2500:]))
             log.flush()
 
-    # Un resum qui enumerate TOUT comme rouge (ou, pire, qui filtre mal) fait
-    # passer une porte rouge pour verte: le compteur est le seul mot que l'on
-    # doit pouvoir lire sans relire le log.
     rouges = [g for g, rc in verdicts if rc != 0]
+    with open(OUT, "a", encoding="utf-8") as log:
+        log.write("\nGATES=%d\nROUGES=%d\n" % (len(verdicts), len(rouges)))
+        if rouges:
+            log.write("LISTE " + "|".join(rouges) + "\n")
+        log.write("LOG " + OUT + "\n")
+        log.flush()
     print("GATES=%d" % len(verdicts))
     for g, rc in verdicts:
         print("RC %s %d" % (g.replace(":", "_"), rc))
     print("ROUGES=%d" % len(rouges))
     if rouges:
         print("LISTE " + "|".join(rouges))
+    # le OUT nominal du lecteur (test/gates.out) est un SYMLINK vers la course courante
+    if os.path.lexists(SYMLINK):
+        os.remove(SYMLINK)
+    os.symlink(os.path.basename(OUT), SYMLINK)
     print("LOG " + OUT)
     return 1 if rouges else 0
 
