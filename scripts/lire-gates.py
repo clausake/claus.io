@@ -54,7 +54,7 @@ def lire(chemin):
     if not verds:
         return (), ("AUCUN verdict trouv\u00e9 dans %s (%d lignes lues). Le fichier "
                     "est peut-\u00eatre vide ou d'un autre format." % (chemin, len(lignes)))
-    return tuple(verds), ()
+    return tuple(verds), tuple(lignes), ()
 
 
 def main(argv):
@@ -65,7 +65,7 @@ def main(argv):
             print("--chemin sans valeur")
             return 2
         chemin = argv[i + 1]
-    verds, err = lire(chemin)
+    verds, lignes, err = lire(chemin)
     if err:
         # C'est LA ligne qui manquait: un rien qui se signale comme un rien.
         print("VIDE: " + err)
@@ -88,6 +88,14 @@ def main(argv):
     if rouges and not veus:
         print("  -> rejouer seulement ce qui coince: "
               "python3 scripts/run-all-gates.py " + " ".join(g for g, _ in rouges))
+    resume_present = any(
+        RESUM.match(ln) is not None
+        for ln in lignes)
+    if not rouges and not resume_present:
+        print("  VERT NON PROUVE / RUN INTERROMPU: le journal n'a pas de résumé "
+              "(GATES=/ROUGES=); relance python3 scripts/run-all-gates.py "
+              "(verify:all = npm run verify:all)")
+        return 1
     if not rouges:
         print("  TOUT VERT")
     return 1 if rouges else 0
