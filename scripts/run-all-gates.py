@@ -112,10 +112,15 @@ def main(cible):
     print("ROUGES=%d" % len(rouges))
     if rouges:
         print("LISTE " + "|".join(rouges))
-    # le OUT nominal du lecteur (test/gates.out) est un SYMLINK vers la course courante
-    if os.path.lexists(SYMLINK):
-        os.remove(SYMLINK)
-    os.symlink(os.path.basename(OUT), SYMLINK)
+    # le OUT nominal du lecteur (test/gates.out) est un SYMLINK vers la course courante.
+    # DEUX courses qui finissent ensemble meurent FileExistsError sur os.symlink sans
+    # remplacement atomique: le lien est creé sous un NOM TEMPORAIRE (unique par course)
+    # puis os.replace l'installe en UN geste atomique (POSIX rename(2) sur un symlink).
+    TMP_LINK = SYMLINK + "-" + COURSE_ID + ".tmp"
+    if os.path.lexists(TMP_LINK):
+        os.remove(TMP_LINK)
+    os.symlink(os.path.basename(OUT), TMP_LINK)
+    os.replace(TMP_LINK, SYMLINK)
     print("LOG " + OUT)
     return 1 if rouges else 0
 
