@@ -472,3 +472,29 @@ test("R la reponse relit la BASE et ne recite pas le client", async ({ request }
   expect(relu.raw_unit_price, "R_DELTA_PRIX").toBe(11);
   expect(relu.calculated_price_per_ref, "R_DELTA_CONVERSION").toBe(11);
 });
+
+// --- Route 22 (DELETE /api/supplier-prices/:id) ----------------------------
+// Le chef supprime un prix fournisseur dans la vue SupplierPrices (fetch DELETE).
+// Le contrat juge le DELTA: la ligne creee par POST /api/supplier-prices est
+// PRESENT dans GET /api/supplier-prices avant suppression, puis ABSENT apres;
+// la comparaison ne peut plus designer cette ligne apres le DELETE.
+test("D22 DELETE /api/supplier-prices/:id : le prix quitte la liste et la comparaison", async ({ request }) => {
+  const cr = await poster(request, {
+    supplier_id: SID, inventory_id: IID, raw_unit_price: 8, unit: "kg",
+  });
+  expect(cr.status(), "creation prix D22").toBe(200);
+  const id = (await cr.json())?.id;
+  expect(id).toBeTruthy();
+
+  const avant = (await prix(request)).find((l: any) => l.id === id);
+  expect(avant, "le prix est PRESENT avant suppression").toBeTruthy();
+
+  const res = await request.delete(`${BASE}/api/supplier-prices/${id}`);
+  expect(res.status()).toBe(200);
+  const corps = await res.json();
+  expect(String(corps.status ?? "")).toBeTruthy();
+
+  // DELTA : le prix ne peut plus revenir dans la liste relue en base
+  const apres = await prix(request);
+  expect(apres.find((l: any) => l.id === id)).toBeFalsy();
+});

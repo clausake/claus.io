@@ -99,6 +99,24 @@ test("GET /api/suppliers + POST", async ({ request }) => {
 
   const list = await (await request.get(`${BASE}/api/suppliers`)).json();
   expect(list.find((s: any) => s.id === sup.id)).toBeTruthy();
+
+  // PUT /api/suppliers/:id — Route 23
+  const put = await request.put(`${BASE}/api/suppliers/${sup.id}`, {
+    data: { name: "Fournisseur E2E Modifie", email: "modifie@b.fr", phone: "0202" },
+  });
+  expect(put.status()).toBe(200);
+  const apresPut = await put.json();
+  expect(String(apresPut.status ?? "")).toBeTruthy();
+  // DELTA : la base porte le nom modifie
+  const relu = ((await (await request.get(`${BASE}/api/suppliers`)).json())).find((s: any) => s.id === sup.id);
+  expect(relu.name).toBe("Fournisseur E2E Modifie");
+  expect(relu.email).toBe("modifie@b.fr");
+
+  // DELETE /api/suppliers/:id
+  const del = await request.delete(`${BASE}/api/suppliers/${sup.id}`);
+  expect(del.status()).toBe(200);
+  const apresDel = await (await request.get(`${BASE}/api/suppliers`)).json();
+  expect(apresDel.find((s: any) => s.id === sup.id)).toBeFalsy();
 });
 
 test("GET /api/dashboard/stats", async ({ request }) => {
@@ -235,6 +253,66 @@ test("CRUD staff", async ({ request }) => {
   // delete
   res = await request.delete(`${BASE}/api/staff/${item.id}`);
   expect(res.status()).toBe(200);
+  // DELTA : la ligne relue ne peut plus revenir dans la liste active (active=0)
+  const apresDel = await request.get(`${BASE}/api/staff`);
+  const listApres = await apresDel.json();
+  expect(listApres.find((s: any) => s.id === item.id)).toBeFalsy();
+});
+
+// --- Route 20 (POST /api/staff/duplicate-week) -----------------------------
+// Le chef duplique la semaine precedente dans la vue StaffManagement (fetch POST
+// duplicate-week). Le contrat juge le DELTA: la semaine COURANTE recoit les
+// creneaux de la semaine PRECEDENTE, retarde de 7 jours, et la liste relue par
+// GET /api/staff?start=&end= porte exactement ces creneaux. Un corps sans
+// dates rend 400 NOMME (message « Missing dates »), pas un 500 muet.
+test("POST /api/staff/duplicate-week : la semaine precedente est recopiee dans la courante", async ({ request }) => {
+  const prevWeekStart = "2026-09-07";
+  const currentWeekStart = "2026-09-14";
+
+  // la voie de l'app pour poser les creneaux de la semaine precedente:
+  // POST /api/staff { name, role, hourlyRate, schedule, datesObj }.
+  const resStaff = await request.post(`${BASE}/api/staff`, {
+    data: {
+      name: "Chef Duplique Route20",
+      role: "Chef",
+      hourlyRate: 25,
+      schedule: {
+        "2026-09-07": [{ start: "09:00", end: "12:00" }],
+        "2026-09-08": [{ start: "14:00", end: "17:00" }],
+      },
+      datesObj: { "2026-09-07": "2026-09-07", "2026-09-08": "2026-09-08" },
+    },
+  });
+  expect(resStaff.status()).toBe(200);
+  const staffId = (await resStaff.json()).id;
+
+  const sansDates = await request.post(`${BASE}/api/staff/duplicate-week`, { data: {} });
+  expect(sansDates.status()).toBe(400);
+  const corps400 = await sansDates.json();
+  expect(String(corps400.message ?? "")).toBeTruthy();
+
+  const res = await request.post(`${BASE}/api/staff/duplicate-week`, {
+    data: { currentWeekStart, prevWeekStart },
+  });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(String(body.status ?? "")).toBeTruthy();
+
+  // DELTA : la liste relue par la voie de l'app porte les creneaux DEPLACE de 7 jours
+  const lire = await request.get(`${BASE}/api/staff?start=2026-09-14&end=2026-09-20`);
+  expect(lire.status()).toBe(200);
+  const courant = (await lire.json()).find((s: any) => s.id === staffId);
+  expect(courant, "le membre est relu avec sa semaine courante").toBeTruthy();
+  const creneaux = courant.schedule["2026-09-14"] ?? [];
+  expect(creneaux.length).toBe(1);
+  expect(creneaux[0].start).toBe("09:00");
+  expect(creneaux[0].end).toBe("12:00");
+  const creneaux8 = courant.schedule["2026-09-15"] ?? [];
+  expect(creneaux8.length).toBe(1);
+  expect(creneaux8[0].start).toBe("14:00");
+
+  const nettoyer = await request.delete(`${BASE}/api/staff/${staffId}`);
+  expect(nettoyer.status()).toBe(200);
 });
 
 test("GET /api/search?q=carotte", async ({ request }) => {
@@ -516,6 +594,23 @@ test("POST /api/ai/chat : reponse textique dans les deux cas", async ({ request 
   expect(typeof body.response).toBe("string");
   expect(body.response.length).toBeGreaterThan(0);
 });
+
+// --- Route 24 (POST /api/voice) -----------------------------------------
+// La voix du chef (ChatAssistant) poste son message; la route construit son
+// prompt JSON (intent add_to_cart/general_advice) puis interroge Ollama avec
+// format:'json'. Le contrat juge un corps exploitable dans les deux branches:
+// present -> { intent, response }, absent -> 500 { intent:'error',
+// response:'Désolé Chef...' } — raison NOMMEE, pas un 500 muet.
+test("POST /api/voice : corps exploitable dans les deux branches Ollama", async ({ request }) => {
+  const res = await request.post(`${BASE}/api/voice`, { data: { message: "Bonjour Chef Route24" } });
+  expect([200, 500]).toContain(res.status());
+  const body = await res.json();
+  expect(typeof body).toBe("object");
+  expect(typeof body.intent).toBe("string");
+  expect(typeof body.response).toBe("string");
+  expect(String(body.response ?? "").length).toBeGreaterThan(0);
+});
+
 
 // --- Flux SSE des capteurs (hub src/services/sensor-hub.ts) -------------
 // Le contrat de la diffusion : un webhook poste est Pousse au client, sans
