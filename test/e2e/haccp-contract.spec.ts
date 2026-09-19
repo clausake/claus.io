@@ -421,3 +421,57 @@ test("C8 la voie NON contractee (scan OCR) reste jouable, pas masquee", async ({
   const res = await request.post(`${BASE}/api/haccp/scan`, { data: {} });
   expect([200, 400, 415, 500], "la voie OCR repond et n'a pas disparu du routeur").toContain(res.status());
 });
+
+// --- Route 11 (DELETE /api/haccp/documents/:id) --------------------------
+// Le chef supprime un document HACCP dans la vue DocumentsHaccp (fetch DELETE).
+// Le contrat juge le DELTA: le document cree par la voie POST /api/haccp/documents
+// est PRESENT dans GET /api/haccp/documents avant suppression, puis ABSENT apres.
+// Le DELETE ne rend pas 500 sur une clef inexistante (DELETE FROM ... WHERE id=?).
+test("D1 DELETE /api/haccp/documents/:id : le document quitte la liste apres suppression", async ({ request }) => {
+  req = request;
+  const nom = "Document Sonde D1 " + Date.now();
+  const cr = await poste("/api/haccp/documents", { type: "AUTRE", name: nom });
+  expect(cr.code, "creation document").toBe(200);
+  const docId = cr.corps.id as string;
+  expect(docId).toBeTruthy();
+
+  const avant = (await lire("/api/haccp/documents")).find((d: any) => d.id === docId);
+  expect(avant, "le document est PRESENT avant suppression").toBeTruthy();
+  expect(avant.name).toBe(nom);
+
+  const res = await req.delete(`${BASE}/api/haccp/documents/${docId}`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(String(body.status ?? body.success ?? "")).toBeTruthy();
+
+  // DELTA : le document ne peut plus revenir dans la liste relue en base.
+  const apres = await lire("/api/haccp/documents");
+  expect(apres.find((d: any) => d.id === docId)).toBeFalsy();
+});
+
+// --- Route 12 (DELETE /api/haccp/iot-sensors/:id) -------------------------
+// Le chef retire un capteur IoT dans la vue IoTManagement (fetch DELETE).
+// Le contrat juge le DELTA: le capteur cree par POST /api/haccp/iot-sensors
+// est PRESENT dans GET /api/haccp/iot-sensors avant suppression, puis ABSENT apres.
+test("D2 DELETE /api/haccp/iot-sensors/:id : le capteur quitte la liste apres suppression", async ({ request }) => {
+  req = request;
+  const id = "cap-d2-" + Date.now();
+  const cr = await poste("/api/haccp/iot-sensors", {
+    id, name: "Congelateur D2", type: "ambient", equipment_type: "Froid",
+  });
+  expect(cr.code, "creation capteur").toBe(200);
+  expect(cr.corps.token).toBeTruthy();
+
+  const avant = (await lire("/api/haccp/iot-sensors")).find((s: any) => s.id === id);
+  expect(avant, "le capteur est PRESENT avant suppression").toBeTruthy();
+  expect(avant.name).toBe("Congelateur D2");
+
+  const res = await req.delete(`${BASE}/api/haccp/iot-sensors/${id}`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(String(body.status ?? body.success ?? "")).toBeTruthy();
+
+  // DELTA : le capteur ne peut plus revenir dans la liste relue en base.
+  const apres = await lire("/api/haccp/iot-sensors");
+  expect(apres.find((s: any) => s.id === id)).toBeFalsy();
+});

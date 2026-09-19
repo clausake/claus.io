@@ -433,3 +433,31 @@ test("P8 un payload de saisie ne sort JAMAIS en 500: refus nomme ou creation a d
   expect(relu!.yield_percent, "le defaut du schema, pas un effacement").toBe(100);
   expect(relu!.status, "0 <= 0 -> critical, par la regle de l'UI").toBe("critical");
 });
+
+// --- Route 13 (POST /api/inventory/analyze) -------------------------------
+// L'Assistant IA (InventoryDashboard handleAnalyzeInventory) relit l'inventaire
+// EN BASE puis construit son prompt: le contexte porte le nom/quantite/min de
+// TOUTES les lignes, et les low/critical relus de la meme base. Le contrat juge
+// un corps exploitable dans les deux branches Ollama: present -> { analysis: texte },
+// absent -> 500 { status:'error', message:'Désolé Chef, l'analyse stratégique...' }.
+// Un 500 muet ne dit au chef QUE « panne serveur »: la branche absent sort avec
+// une raison NOMMEE.
+test("A1 POST /api/inventory/analyze : repond un corps exploitable dans les deux branches Ollama", async ({ request }) => {
+  // une ligne de stock bas relue par le routeur AVANT l'appel — elle est dans
+  // le contexte du prompt quand la branche Ollama present repond.
+  const low = await creer(request, { id: prochainId(), name: "A1 Analyse Beurre", quantity: 0, minStock: 1, unit: "kg" });
+  expect(low.status()).toBe(200);
+  const invId = (await low.json()).id;
+
+  const res = await request.post(`${BASE}/api/inventory/analyze`, { data: {} });
+  expect([200, 500]).toContain(res.status());
+  const corps = (await res.json()) as any;
+  expect(typeof corps).toBe("object");
+  if (res.status() === 200) {
+    // corps exploitable: la clef analysis porte le texte relit par le routeur
+    expect(String(corps.analysis ?? "")).toBeTruthy();
+  } else {
+    // branche Ollama absent: raison NOMMEE, pas un 500 muet.
+    expect(String(corps.message ?? "")).toBeTruthy();
+  }
+});
