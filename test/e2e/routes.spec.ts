@@ -4,6 +4,8 @@ import { test, expect } from "@playwright/test";
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 import { request as rawRequest } from "node:http";
 import { gunzipSync } from "node:zlib";
 import { Buffer } from "node:buffer";
@@ -128,9 +130,88 @@ test("CRUD recettes", async ({ request }) => {
   const list = await res.json();
   expect(list.find((r: any) => r.id === item.id)).toBeTruthy();
 
+  // PUT /api/recipes/:id — Route 16
+  res = await request.put(`${BASE}/api/recipes/${item.id}`, {
+    data: {
+      name: "Test Recipe Modifie",
+      ingredients: [{ inventory_name: "Beurre Test Modifie", quantity_per_person: 15, unit: "g" }],
+      preparation_steps: "test modifie",
+    },
+  });
+  expect(res.status()).toBe(200);
+  const apresPut = await res.json();
+  expect(String(apresPut.status ?? "")).toBeTruthy();
+  // DELTA : la relit en base porte le nom modifie
+  const reli = (await (await request.get(`${BASE}/api/recipes`)).json()).find((r: any) => r.id === item.id);
+  expect(reli.name).toBe("Test Recipe Modifie");
+  expect(String(reli.preparation_steps ?? "")).toContain("modifie");
+
   // delete
   res = await request.delete(`${BASE}/api/recipes/${item.id}`);
   expect(res.status()).toBe(200);
+});
+
+// --- Route 18 (PUT /api/recipes/:id/save) ----------------------------------
+// Le chef marque une recette sauvegardee (RecipeDetails fetch PUT /save).
+// Le contrat juge le DELTA: la ligne relit en base porte is_saved=1 apres
+// la marque, et ne peut pas revenir en 0 tant que la marque reste.
+test("PUT /api/recipes/:id/save : la recette est marque sauvegardee et relu en base", async ({ request }) => {
+  const cree = await request.post(`${BASE}/api/recipes`, {
+    data: { name: "Recette Save Route18", category: "Plat", dish_type: "plat", ingredients: [], preparation_steps: "" },
+  });
+  expect(cree.status()).toBe(200);
+  const id = (await cree.json()).id;
+
+  const avant = (await (await request.get(`${BASE}/api/recipes`)).json()).find((r: any) => r.id === id);
+  expect(avant.is_saved).toBe(0);
+
+  const res = await request.put(`${BASE}/api/recipes/${id}/save`, { data: {} });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(String(body.status ?? "")).toBeTruthy();
+
+  // DELTA : la base porte la marque
+  const relu = (await (await request.get(`${BASE}/api/recipes`)).json()).find((r: any) => r.id === id);
+  expect(relu.is_saved).toBe(1);
+
+  const net = await request.delete(`${BASE}/api/recipes/${id}`);
+  expect(net.status()).toBe(200);
+});
+
+// Le chef clique « Generer les etapes » dans RecipeDetails: la route relit la
+// recette EN BASE (404 si elle n'existe pas), construit son prompt avec les
+// ingredients relus par la JOIN recipe_ingredients/inventory, puis interroge
+// Ollama. Le contrat juge: un id ABSENT rend 404 NOMME, un corps exploitable
+// dans les deux branches Ollama (present -> { preparation_steps }, absent ->
+// 500 { error:'Failed to generate steps' }).
+test("POST /api/recipes/:id/generate-steps : 404 id absent, corps exploitable dans les deux branches Ollama", async ({ request }) => {
+  const absent = await request.post(`${BASE}/api/recipes/inexistant-id/generate-steps`, { data: {} });
+  expect(absent.status()).toBe(404);
+  const corps = await absent.json();
+  expect(String(corps.error ?? "")).toContain("Recipe");
+
+  const cree = await request.post(`${BASE}/api/recipes`, {
+    data: { name: "Recette Steps Route17", category: "Plat", dish_type: "plat", ingredients: [], preparation_steps: "" },
+  });
+  expect(cree.status()).toBe(200);
+  const id = (await cree.json()).id;
+
+  const res = await request.post(`${BASE}/api/recipes/${id}/generate-steps`, { data: {} });
+  expect([200, 500]).toContain(res.status());
+  const body = await res.json();
+  expect(typeof body).toBe("object");
+  if (res.status() === 200) {
+    // le corps exploitable porte la clef des etapes generees
+    expect(String(body.preparation_steps ?? "")).toBeTruthy();
+    // DELTA : la base porte la valeur REELLE retournee par la route
+    const relu = (await (await request.get(`${BASE}/api/recipes`)).json()).find((r: any) => r.id === id);
+    expect(relu.preparation_steps).toBe(body.preparation_steps);
+  } else {
+    expect(String(body.error ?? "")).toBeTruthy();
+  }
+
+  const net = await request.delete(`${BASE}/api/recipes/${id}`);
+  expect(net.status()).toBe(200);
 });
 
 test("CRUD staff", async ({ request }) => {
@@ -204,6 +285,42 @@ test("GET /api/robots", async ({ request }) => {
   expect(res.status()).toBe(200);
   const arr = await res.json();
   expect(Array.isArray(arr)).toBe(true);
+});
+
+// --- Route 19 (POST /api/robots/assign) -----------------------------------
+// La table robots n'est pas semée par src/db/init.ts: le POST /api/robots/assign
+// exige une ligne EXISTANTE (UPDATE robots SET task = ?, status='active', progress=0
+// WHERE id=?). Le contrat semise DONC un robot par la voie API du depot
+// (open({filename, driver: sqlite3.Database}) comme documents-validate-contract
+// S6c) avec une PREUVE de semence, puis juge le DELTA: la ligne relue en base
+// porte la tache assignee et status='active'.
+test("POST /api/robots/assign : le robot semee reçoit sa tache et passe en status active", async ({ request }) => {
+  const robotId = "robot-d19-" + Date.now();
+  {
+    const dbFichier = path.join(DATA_DIR, "agent_culinaire.db");
+    const dbLocal = await open({ filename: dbFichier, driver: sqlite3.Database });
+    await dbLocal.run("PRAGMA busy_timeout = 8000");
+    const pose = await dbLocal.run(
+      "INSERT INTO robots (id, name, status, task, progress, battery, location) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [robotId, "Robot Sonde D19", "idle", "", 0, 100, "plonge"],
+    );
+    await dbLocal.close();
+    expect(pose.changes, "D19_LA_SEMENCE_DU_ROBOT_ENTRE_EN_BASE").toBe(1);
+  }
+  const avant = ((await (await request.get(`${BASE}/api/robots`)).json()) as any[]).find((r: any) => r.id === robotId);
+  expect(avant, "le robot est PRESENT avant assign").toBeTruthy();
+  expect(avant.status).toBe("idle");
+
+  const res = await request.post(`${BASE}/api/robots/assign`, { data: { robotId, task: "Nettoyer la plonge D19" } });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(String(body.status ?? "")).toBeTruthy();
+
+  // DELTA : la base porte la tache et le statut active
+  const apres = ((await (await request.get(`${BASE}/api/robots`)).json()) as any[]).find((r: any) => r.id === robotId);
+  expect(apres.task).toBe("Nettoyer la plonge D19");
+  expect(apres.status).toBe("active");
+  expect(apres.progress).toBe(0);
 });
 
 test("GET /api/documents", async ({ request }) => {
