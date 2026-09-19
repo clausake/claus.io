@@ -534,9 +534,14 @@ test("CRUD supplier-prices : depend de inventory + calcul prix/ref", async ({ re
 });
 
 // --- Admin (router admin.ts) -------------------------------------------
-// /api/agent/command n'est pas couvert : il lance un chromium headless:false
-// (impossible sur un runner sans display). A couvrir via un test d'integration
-// dedie avec xvfb, pas dans cette suite.
+// /api/agent/command: l'ancien corps lancait un Chromium headless:false et se
+// vendait lui-meme comme une navigation B2B (devis qui se confirme lui-meme).
+// Ce bloc est REECRIT en simulation echo SANS navigateur (aucun chromium
+// launch en src/routes/admin.ts — releve par grep le 19/09). Le contrat est
+// juge dans CETTE suite par deux tests nommes plus bas (« ne doit pas vendre
+// un echo comme une extraction » et « sans panier rend 400 »); l'item
+// xvfb du journal chaud est donc RE-JUGE comme FEUILLE STALE: la route ne
+// demarre plus de navigateur, xvfb n'est plus une voie necessaire.
 test("GET /api/admin/db-download telecharge la base", async ({ request }) => {
   const res = await request.get(`${BASE}/api/admin/db-download`);
   // la base existe (creee au demarrage) → 200 + en-tete d'attachment
