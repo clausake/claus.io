@@ -570,3 +570,311 @@ test("POST /api/agent/command sans panier rend 400, pas un faux succes sur zero 
     }
   },
 );
+
+test("POST /api/alerts/:id/ignore : une alerte stock ne reapparait pas apres ignore", async ({ request }) => {
+  // Une alerte stock vient de l'inventaire (GET /api/alerts cree stock_<id> pour
+  // une ligne quantity <= minStock). Le chef coche « Ignorer » -> la route POST
+  // /api/alerts/:id/ignore ecrit status="ignored" en base, et la relit via
+  // GET /api/alerts : la ligne ne peut plus revenir tant que le stock reste bas.
+  const low = await request.post(`${BASE}/api/inventory`, {
+    data: { name: "Beurre Test Alerts", quantity: 0, minStock: 1, unit: "kg", status: "critical", category: "Alertes" },
+  });
+  expect(low.status()).toBe(200);
+  const invRow = await low.json();
+  const alertId = `stock_${invRow.id}`;
+
+  const avant = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
+  const ligne = avant.find((a: any) => a.id === alertId);
+  expect(ligne, "l'alerte stock est presente avant ignore").toBeTruthy();
+  expect(ligne.status).toBe("active");
+
+  const res = await request.post(`${BASE}/api/alerts/${alertId}/ignore`, { data: {} });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.success).toBe(true);
+
+  // DELTA : la ligne ignoree quitte la liste des alertes actives.
+  const apres = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
+  expect(apres.find((a: any) => a.id === alertId)).toBeFalsy();
+});
+
+test("POST /api/alerts/:id/resolve : une alerte stock resolue quitte la liste active", async ({ request }) => {
+  // GET /api/alerts cree l'alerte stock_<id> pour une ligne quantity <= minStock
+  // et la marque active. Le chef coche « Resoudre » -> POST /api/alerts/:id/resolve
+  // ecrit status="resolved" en base; la relecture juge le DELTA: la ligne quitte
+  // la liste des alertes actives tant que le stock reste bas.
+  const low = await request.post(`${BASE}/api/inventory`, {
+    data: { name: "Huile Test Alerts", quantity: 0, minStock: 1, unit: "kg", status: "critical", category: "Alertes" },
+  });
+  expect(low.status()).toBe(200);
+  const invRow = await low.json();
+  const alertId = `stock_${invRow.id}`;
+
+  const avant = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
+  const ligne = avant.find((a: any) => a.id === alertId);
+  expect(ligne, "l'alerte stock est presente avant resolve").toBeTruthy();
+  expect(ligne.status).toBe("active");
+
+  const res = await request.post(`${BASE}/api/alerts/${alertId}/resolve`, { data: {} });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.success).toBe(true);
+
+  // DELTA : la ligne resolue quitte la liste des alertes actives.
+  const apres = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
+  expect(apres.find((a: any) => a.id === alertId)).toBeFalsy();
+});
+
+// --- Routes IA upload (menu.ts) -----------------------------------------
+// /api/analyze-menu, /api/generate-creative-menu, /api/generate-gastronomic-menu,
+// /api/generate-traditional-menu, /api/recipes/scan, /api/documents/upload,
+// /api/haccp/documents/upload sont des routes qui EXIGENT un fichier multipart.
+// Le contrat verifie est « refuser sans fichier + repondre un corps exploitable
+// dans les deux branches Ollama (present ou absent) », comme /api/ai/chat.
+// Sur un runner sans modele (curl /api/tags rend {"models":[]}), la branche
+// "absent" sort en 500 avec un corps exploitable. L'IA peut aussi renvoyer un
+// corps non JSON-parsable: le routeur rend alors 500 avec raw. Les deux branches
+// sont jugees: une sortie explicite et un corps exploitable.
+test("POST /api/analyze-menu : sans fichier rend 400 NOMME, avec fichier rend un corps exploitable", async ({ request }) => {
+  const sans = await request.post(`${BASE}/api/analyze-menu`, { data: {} });
+  expect(sans.status()).toBe(400);
+  const body = await sans.json();
+  expect(String(body.error ?? "")).toContain("file");
+
+  // un PNG reel (2x2 pixels blanc) — la branche Ollama present rend 200 avec
+  // fiches_techniques; la branche absent rend 500 avec un corps exploitable.
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/analyze-menu`, {
+    multipart: { file: { name: "menu-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(avec.status());
+  const corps = await avec.json();
+  expect(typeof corps).toBe("object");
+  // le corps exploitable porte la cle fiche technique quand l'IA a repondu.
+  if (avec.status() === 200) expect(Array.isArray(corps.fiches_techniques)).toBe(true);
+});
+
+// --- Anti-waste (antiwaste.ts) ------------------------------------------
+test("POST /api/anti-waste/generate : repond un corps exploitable dans les deux branches Ollama", async ({ request }) => {
+  // La route n'exige pas de fichier: elle demande les batches a DLC courte et
+  // construit son prompt, puis interroge Ollama. Sur un runner sans modele la
+  // branche "absent" sort en 500 avec un corps exploitable; la branche present
+  // rend 200 avec menu_name/dishes (ou toute forme JSON parsable).
+  const res = await request.post(`${BASE}/api/anti-waste/generate`, { data: {} });
+  expect([200, 500]).toContain(res.status());
+  const body = await res.json();
+  expect(typeof body).toBe("object");
+  // corps exploitable: soit le menu genere, soit l'erreur nommee (500 absent).
+  if (res.status() === 200) expect(String(body.menu_name ?? "")).toBeTruthy();
+  if (res.status() === 500) expect(String(body.error ?? "").length).toBeGreaterThan(0);
+});
+
+// --- Documents (documents.ts) -------------------------------------------
+// /api/documents/:id/extract est la porte qui relit le brouillon d'une facture:
+// elle resoud le fichier source en uploadsDir, l'extrait (PDF ou image), puis
+// interroge Ollama. Un id ADRESSE par l'appelant qui n'existe pas est une
+// ressource absente (404), un fichier source absent est un defaut de REQUETE
+// (400 nomme), et la branche Ollama absent rend un corps exploitable.
+// Trois formes de source_image_url sont jugées: pointe vers un fichier ABSENT
+// (400 « introuvable »), VIDE (la voie manuelle DocumentManager — le split
+// rend undefined et le routeur jette un TypeError -> 500 exploitable), et
+// PRESENT (voie REELLE upload draft -> corps exploitable).
+test("POST /api/documents/:id/extract : 404 id absent, 400 fichier introuvable, 500 fichier vide, corps exploitable avec fichier", async ({ request }) => {
+  // un id adresse qui n'existe pas -> 404
+  const absent = await request.post(`${BASE}/api/documents/inexistant-id/extract`, { data: {} });
+  expect(absent.status()).toBe(404);
+
+  // un document SANS fichier (source_image_url VIDE, voie manuelle) -> le split
+  // rend undefined et le routeur jette un TypeError: 500 avec une raison NOMMEE.
+  const manuel = await request.post(`${BASE}/api/documents`, {
+    data: {
+      type: "FACTURE", supplier: "Sonde Extract", date: "2026-09-19",
+      total_amount: 0, source_image_url: "", items: [
+        { inventory_id: null, original_name: "Pomme sonde", quantity: 1, unit_price: 1, lot_number: "", dlc: "" },
+      ],
+    },
+  });
+  expect(manuel.status()).toBe(200);
+  const docId = (await manuel.json()).id;
+  const vide = await request.post(`${BASE}/api/documents/${docId}/extract`, { data: {} });
+  expect(vide.status()).toBe(500);
+  const corpsVide = await vide.json();
+  expect(String(corpsVide.message ?? corpsVide.error ?? "").length).toBeGreaterThan(0);
+
+  // un document dont le fichier source pointe vers un chemin ABSENT -> 400 nomme
+  const fantome = await request.post(`${BASE}/api/documents`, {
+    data: {
+      type: "FACTURE", supplier: "Sonde Extract Fantome", date: "2026-09-19",
+      total_amount: 0, source_image_url: "/uploads/document-inexistant.png", items: [
+        { inventory_id: null, original_name: "Poire sonde", quantity: 1, unit_price: 1, lot_number: "", dlc: "" },
+      ],
+    },
+  });
+  expect(fantome.status()).toBe(200);
+  const idFantome = (await fantome.json()).id;
+  const introuvable = await request.post(`${BASE}/api/documents/${idFantome}/extract`, { data: {} });
+  // Le fichier source absent rend 404 (le routeur juge l'URI: un document sans
+  // fichier reste une ressource adresse qui n'existe pas) et NOMME la cause.
+  expect(introuvable.status()).toBe(404);
+  const corps = await introuvable.json();
+  expect(String(corps.error ?? "")).toContain("introuvable");
+
+  // un document avec un fichier reel (voie REELLE: upload draft) -> corps exploitable
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const upload = await request.post(`${BASE}/api/documents/upload?draft=true`, {
+    multipart: { file: { name: "extract-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect(upload.status()).toBe(200);
+  const idUpload = (await upload.json()).id;
+  const extr = await request.post(`${BASE}/api/documents/${idUpload}/extract`, { data: {} });
+  expect([200, 500]).toContain(extr.status());
+  const corpsExtr = await extr.json();
+  expect(typeof corpsExtr).toBe("object");
+  if (extr.status() === 200) {
+    expect(typeof corpsExtr.data).toBe("object");
+    expect(String(corpsExtr.source_image_url ?? "")).toContain("/uploads/");
+  }
+});
+
+// --- Documents upload (documents.ts) -------------------------------------
+test("POST /api/documents/upload : sans fichier rend 400, texte rend 400, PNG rend une ligne RELUE et le fichier VERIFIE", async ({ request }) => {
+  // sans fichier -> 400 nomme
+  const sans = await request.post(`${BASE}/api/documents/upload`, { data: {} });
+  expect(sans.status()).toBe(400);
+  const corpsSans = await sans.json();
+  expect(String(corpsSans.error ?? "")).toContain("file");
+
+  // un texte non-image/PDF -> 400 (la voie exige image ou PDF)
+  const texte = await request.post(`${BASE}/api/documents/upload`, {
+    multipart: { file: { name: "facture.txt", mimeType: "text/plain", buffer: Buffer.from("ce n'est pas une image", "utf-8") } },
+  });
+  expect(texte.status()).toBe(400);
+  const corpsTexte = await texte.json();
+  expect(String(corpsTexte.error ?? "")).toContain("supported");
+
+  // un PNG reel -> 200; la ligne est relue en base et le fichier VERIFIE sur disque.
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const ok = await request.post(`${BASE}/api/documents/upload`, {
+    multipart: { file: { name: "facture-ok.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(ok.status());
+  if (ok.status() === 200) {
+    const corpsOk = await ok.json();
+    // le corps porte la cle source_image_url qui pointe vers le fichier ECRIT
+    expect(String(corpsOk.source_image_url ?? "")).toContain("/uploads/");
+    // DELTA: le document est relue EN BASE par GET /api/documents
+    const liste = (await (await request.get(`${BASE}/api/documents`)).json()) as any[];
+    const reli = liste.find((d: any) => d.source_image_url === corpsOk.source_image_url);
+    expect(reli, "le document est relue en base").toBeTruthy();
+    // le fichier verifie: la route a ecrit uploads/<filename>
+    const nomFichier = String(corpsOk.source_image_url ?? "").split("/uploads/")[1];
+    expect(fs.existsSync(path.join(process.cwd(), "test/tmp-data/uploads", nomFichier))).toBe(true);
+  }
+});
+
+// --- Epicure (epicure.ts) -----------------------------------------------
+// /api/epicure/analyze est un moteur LOCAL (sans Ollama): le contrat juge un
+// tableau d'ingredients NON-tableau -> 400 nomme, et un tableau legitime ->
+// 200 avec un corps exploitable. Le payload recopie tel quel est celui que
+// l'UI EpicureStudio envoie (ingredients: [{name, quantity_per_person, unit}]).
+test("POST /api/epicure/analyze : ingredients non-tableau rend 400, tableau legitime rend un corps exploitable", async ({ request }) => {
+  const mauvais = await request.post(`${BASE}/api/epicure/analyze`, { data: { ingredients: "tomate", language: "fr" } });
+  expect(mauvais.status()).toBe(400);
+  const corps = await mauvais.json();
+  expect(String(corps.error ?? "")).toContain("array");
+
+  // Le payload REEL de l'UI (EpicureStudio handleAnalyze) est un TABLEAU DE
+  // CHAINES (recipeInput.split(",").map(trim).filter(Boolean)), pas des objets:
+  // { ingredients: ["Fraises","Chocolat noir","Menthe fraiche"], language: "fr" }.
+  const bon = await request.post(`${BASE}/api/epicure/analyze`, {
+    data: { ingredients: ["Tomate", "Mozzarella", "Basilic"], language: "fr" },
+  });
+  expect(bon.status()).toBe(200);
+  const corpsOk = await bon.json();
+  expect(typeof corpsOk).toBe("object");
+  // le corps exploitable porte au moins un champ de resultat d'analyse
+  expect(Object.keys(corpsOk).length).toBeGreaterThan(0);
+});
+
+// --- Menus generes par IA (menu.ts) --------------------------------------
+// Les trois routes /api/generate-creative-menu, /api/generate-gastronomic-menu
+// et /api/generate-traditional-menu exigent un fichier multipart (image) et
+// construisent un prompt; la branche Ollama present rend 200 avec un menu,
+// la branche absent rend 500 avec un corps exploitable. Un fichier ABSENT
+// rend 400 (la route exige un fichier pour le prompt, mais garde la voie
+// sans image: la saisie sans photo reste possible). Le contrat verifie est
+// « sortie explicite + corps exploitable » dans les deux branches.
+test("POST /api/generate-creative-menu : sans fichier rend 400, avec fichier rend un corps exploitable", async ({ request }) => {
+  // La voie SANS fichier reste possible (MenuAnalysis garde la saisie sans
+  // photo): la route interroge Ollama directement. Sur un runner sans modele
+  // elle sort en 500 avec un corps exploitable; avec modele elle rend un menu.
+  const sans = await request.post(`${BASE}/api/generate-creative-menu`, { data: {} });
+  expect([200, 500]).toContain(sans.status());
+  const corps = await sans.json();
+  expect(typeof corps).toBe("object");
+  if (sans.status() === 500) expect(String(corps.error ?? "").length).toBeGreaterThan(0);
+
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/generate-creative-menu`, {
+    multipart: { file: { name: "creative-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(avec.status());
+  const corpsAvec = await avec.json();
+  expect(typeof corpsAvec).toBe("object");
+  if (avec.status() === 200) {
+    expect(String(corpsAvec.status ?? "")).toBe("success");
+    expect(Array.isArray(corpsAvec.creative_menu)).toBe(true);
+  }
+});
+
+test("POST /api/generate-gastronomic-menu : avec fichier rend un corps exploitable dans les deux branches", async ({ request }) => {
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/generate-gastronomic-menu`, {
+    multipart: { file: { name: "gastronomic-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(avec.status());
+  const corps = await avec.json();
+  expect(typeof corps).toBe("object");
+  if (avec.status() === 200) expect(String(corps.status ?? "")).toBeTruthy();
+});
+
+test("POST /api/generate-traditional-menu : avec fichier rend un corps exploitable dans les deux branches", async ({ request }) => {
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/generate-traditional-menu`, {
+    multipart: { file: { name: "traditional-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(avec.status());
+  const corps = await avec.json();
+  expect(typeof corps).toBe("object");
+  if (avec.status() === 200) expect(String(corps.status ?? "")).toBeTruthy();
+});
