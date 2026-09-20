@@ -1,4 +1,25 @@
 // Routes : Recettes (CRUD, scan fiche technique, génération d'étapes)
+// CONTRAT DES LIGNES D'INGREDIENT (sprint 12):
+//   - les payloads juges sont CEUX QUE L'UI ENVOIE REELLEMENT (R1 scan, R2
+//     saveGeneratedRecipes, R3 handleSaveFicheToBook, R4 saveRecipe manual-, R5
+//     PUT editeur, R6 deleteRecipe) — sonde scripts/probe-recipes-voices.mjs.
+//   - le contrat de la COLONNE quantity_per_person: absent = defaut EXPLICITE
+//     0; texte/blanc/negatif/non-fini = REJETE (400 + refused) — la colonne est
+//     REAL NOT NULL, le binding jette, et l'affinite dynamique stocke du TEXTE
+//     dans une colonne REAL sans se plaindre (sonde: 'beaucoup' relu).
+//   - inventory_name: requireString PAR LIGNE (l'editeur PUT n'a pas de defaut)
+//     — NOT NULL sur inventory.name, le binding undefined jette (500).
+//   - allergens: tableau (ou absent -> []); une chaine JSON.stringify entre
+//     comme garbage et la relecture JSON.parse(« gluten ») JETTE (la UI affiche
+//     l'Allergens Display qui attend un tableau).
+//   - language: une chaine; un nombre rendait la recette INVISIBLE dans
+//     GET /api/recipes (WHERE language = ? compare TEXT a TEXT).
+//   - preparation_steps: une chaine OU un tableau d'etapes {step_order,
+//     instructions} — la UI R3 poste un TABLEAU et la route l'avale en "".
+//   - TOUT le lot se rejoue atomiquement: aucune ligne si une seule ligne d'
+//     ingredient est refusee (les lignes recipes + recipe_ingredients +
+//     inventory se posent ENSEMBLE), et la reponse REND LA LIGNE RELUE (pas le
+//     corps de la requete) et NOMME les nouvelles lignes d'inventaire crees.
 import { Router } from "express";
 import type { Database } from "sqlite";
 import fs from "fs";
@@ -51,9 +72,87 @@ try {
   } = req.body;
   const categoryVal = optionalString(req, "category", 100) || "Général";
   const dishTypeVal = optionalString(req, "dish_type", 50) || 'plat';
-  const prepSteps = optionalString(req, "preparation_steps", 50000) || "";
+  // preparation_steps : la UI R3 (MenuAnalysis.handleSaveFicheToBook) poste un
+  // TABLEAU d'etapes {step_order, instructions}. Une chaine passe telle quelle;
+  // un tableau est JOINT en une chaine (l'intention de la UI est de sauver les
+  // etapes, et la colonne schema est TEXT); tout autre type est REJETE.
+  let prepStepsRaw = req.body?.preparation_steps;
+  let prepSteps = "";
+  if (Array.isArray(prepStepsRaw)) {
+    prepSteps = prepStepsRaw.map((s: any) => s?.instructions ?? s?.step ?? "").join("\n");
+  } else if (typeof prepStepsRaw === "string") {
+    prepSteps = prepStepsRaw.length > 50000 ? prepStepsRaw.slice(0, 50000) : prepStepsRaw;
+  } else if (prepStepsRaw === undefined || prepStepsRaw === null) {
+    prepSteps = "";
+  } else {
+    return res.status(400).json({ status: "error", refused: ["preparation_steps"] });
+  }
   const srcImage = optionalString(req, "source_image_url", 500) || null;
-  const recipeLang = language || ollamaSettingsRef.current.language || 'fr';
+  // language : une chaine. Un nombre rendait la recette INVISIBLE dans
+  // GET /api/recipes (WHERE language = ? compare TEXT a TEXT).
+  let recipeLang: string | undefined;
+  if (language !== undefined && language !== null) {
+    if (typeof language !== "string") {
+      return res.status(400).json({ status: "error", refused: ["language"] });
+    }
+    recipeLang = language;
+  }
+  // allergens : tableau (ou absent -> []). Une chaine JSON.stringify entre comme
+  // garbage et la relecture JSON.parse(« gluten ») JETTE, ce qui casse l'Allergens
+  // Display de la UI qui attend un tableau.
+  let allergensVal: unknown = allergens;
+  if (allergens !== undefined && allergens !== null && !Array.isArray(allergens)) {
+    return res.status(400).json({ status: "error", refused: ["allergens"] });
+  }
+  // ingredients : un tableau. Un non-tableau ne rendait AUCUN ingredient (le
+  // for(...) sur `ingredients || []` avalait tout sans rien nommer).
+  if (ingredients !== undefined && ingredients !== null && !Array.isArray(ingredients)) {
+    return res.status(400).json({ status: "error", refused: ["ingredients"] });
+  }
+  const lignes = (Array.isArray(ingredients) ? ingredients : []);
+  // Le lot se rejoue ATOMIQUEMENT: la validation par ligne se fait AVANT
+  // l'ecriture d'une seule ligne (recipes + recipe_ingredients + inventory se
+  // posent ENSEMBLE). Une ligne refusee refuse TOUT le lot (400 + rejetees).
+  const rejetees: Array<{ index: number; raison: string }> = [];
+  const lignesValides: Array<{ inventory_name: string; unit: string | null; qte: number }> = [];
+  for (let i = 0; i < lignes.length; i++) {
+    const ing = lignes[i] as any;
+    const nomBrut = ing?.inventory_name;
+    if (typeof nomBrut !== "string" || nomBrut.trim() === "") {
+      rejetees.push({ index: i, raison: "inventory_name_absent_vide" });
+      continue;
+    }
+    // quantity_per_person : absent = defaut EXPLICITE 0; un texte/negatif/
+    // non-fini est REJETE (colonne REAL NOT NULL; l'affinite dynamique stocke
+    // du TEXTE dans une colonne REAL sans se plaindre — sonde S2 'beaucoup').
+    let qte: number | undefined;
+    const brutQte = ing?.quantity_per_person;
+    if (brutQte === undefined || brutQte === null || brutQte === "") {
+      qte = 0;
+    } else {
+      const n = typeof brutQte === "number" ? brutQte : (typeof brutQte === "string" && brutQte.trim() !== "" ? Number(brutQte) : NaN);
+      if (!Number.isFinite(n) || n < 0) {
+        rejetees.push({ index: i, raison: "quantity_per_person_inexploitable" });
+        continue;
+      }
+      qte = n;
+    }
+    const unitBrut = ing?.unit;
+    if (unitBrut !== undefined && unitBrut !== null && typeof unitBrut !== "string") {
+      rejetees.push({ index: i, raison: "unit_non_texte" });
+      continue;
+    }
+    lignesValides.push({
+      inventory_name: nomBrut,
+      unit: typeof unitBrut === "string" ? unitBrut : null,
+      qte,
+    });
+  }
+  if (rejetees.length > 0) {
+    return res.status(400).json({ status: "error", rejetees, refused: ["ingredients"] });
+  }
+  const recipeLangFinal = recipeLang ?? (ollamaSettingsRef.current.language || 'fr');
+  const allergensJson = Array.isArray(allergensVal) ? JSON.stringify(allergensVal) : "[]";
   const recipeId = Math.random().toString(36).substr(2, 9);
   await db.run(
     "INSERT INTO recipes (id, name, category, dish_type, preparation_steps, source_image_url, allergens, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -64,11 +163,12 @@ try {
       dishTypeVal,
       prepSteps,
       srcImage,
-      allergens ? JSON.stringify(allergens) : "[]",
-      recipeLang,
+      allergensJson,
+      recipeLangFinal,
     ],
   );
-  for (const ing of ingredients || []) {
+  const crees: string[] = [];
+  for (const ing of lignesValides) {
     let invItem = await findMatchingInventoryItem(db, ing.inventory_name);
     let invId = invItem?.id;
     if (!invId) {
@@ -80,11 +180,12 @@ try {
           ing.inventory_name,
           0,
           5,
-          ing.unit || "g",
+          ing.unit ?? "g",
           "OUT_OF_STOCK",
           "Ingr\xE9dient g\xE9n\xE9r\xE9",
         ],
       );
+      crees.push(ing.inventory_name);
     }
     await db.run(
       "INSERT INTO recipe_ingredients (id, recipe_id, inventory_id, quantity_per_person) VALUES (?, ?, ?, ?)",
@@ -92,11 +193,24 @@ try {
         Math.random().toString(36).substr(2, 9),
         recipeId,
         invId,
-        ing.quantity_per_person || 0,
+        ing.qte,
       ],
     );
   }
-  res.json({ status: "success", id: recipeId });
+  // La reponse REND LA LIGNE RELUE (pas le corps de la requete) et NOMME les
+  // nouvelles lignes d'inventaire crees (la UI lit id; le chef doit savoir
+  // quelles lignes sont nées).
+  const recetteRelue = await db.get(
+    "SELECT id, name, category, dish_type, preparation_steps, allergens, language FROM recipes WHERE id = ?",
+    [recipeId],
+  );
+  res.json({
+    status: "success",
+    id: recipeId,
+    recipe: recetteRelue,
+    ingredients: lignesValides.map((l) => ({ inventory_name: l.inventory_name, quantity_per_person: l.qte })),
+    created_inventory: crees,
+  });
 } catch (error) {
   console.error(error);
   res.status(500).json({ error: "Failed to save recipe" });
@@ -105,14 +219,67 @@ try {
 router.put("/api/recipes/:id", async (req, res) => {
 try {
   const { name, ingredients, preparation_steps } = req.body;
+  const recetteExistante = await db.get(
+    "SELECT id FROM recipes WHERE id = ?",
+    [req.params.id],
+  );
+  if (!recetteExistante) return res.status(404).json({ status: "error", message: "Recipe not found" });
+  if (typeof name !== "string" || name.trim() === "") {
+    return res.status(400).json({ status: "error", refused: ["name"] });
+  }
+  let prepSteps = "";
+  if (preparation_steps !== undefined && preparation_steps !== null) {
+    if (typeof preparation_steps !== "string") {
+      return res.status(400).json({ status: "error", refused: ["preparation_steps"] });
+    }
+    prepSteps = preparation_steps;
+  }
+  const lignes = Array.isArray(ingredients) ? ingredients : [];
+  if (ingredients !== undefined && ingredients !== null && !Array.isArray(ingredients)) {
+    return res.status(400).json({ status: "error", refused: ["ingredients"] });
+  }
+  const rejetees: Array<{ index: number; raison: string }> = [];
+  const lignesValides: Array<{ inventory_name: string; unit: string | null; qte: number }> = [];
+  for (let i = 0; i < lignes.length; i++) {
+    const ing = lignes[i] as any;
+    const nomBrut = ing?.inventory_name;
+    if (typeof nomBrut !== "string" || nomBrut.trim() === "") {
+      rejetees.push({ index: i, raison: "inventory_name_absent_vide" });
+      continue;
+    }
+    let qte: number | undefined;
+    const brutQte = ing?.quantity_per_person;
+    if (brutQte === undefined || brutQte === null || brutQte === "") {
+      qte = 0;
+    } else {
+      const n = typeof brutQte === "number" ? brutQte : (typeof brutQte === "string" && brutQte.trim() !== "" ? Number(brutQte) : NaN);
+      if (!Number.isFinite(n) || n < 0) {
+        rejetees.push({ index: i, raison: "quantity_per_person_inexploitable" });
+        continue;
+      }
+      qte = n;
+    }
+    const unitBrut = ing?.unit;
+    if (unitBrut !== undefined && unitBrut !== null && typeof unitBrut !== "string") {
+      rejetees.push({ index: i, raison: "unit_non_texte" });
+      continue;
+    }
+    lignesValides.push({
+      inventory_name: nomBrut,
+      unit: typeof unitBrut === "string" ? unitBrut : null,
+      qte,
+    });
+  }
+  if (rejetees.length > 0) {
+    return res.status(400).json({ status: "error", rejetees, refused: ["ingredients"] });
+  }
   await db.run(
     "UPDATE recipes SET name = ?, preparation_steps = ? WHERE id = ?",
-    [name, preparation_steps, req.params.id],
+    [name, prepSteps, req.params.id],
   );
-  await db.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [
-    req.params.id,
-  ]);
-  for (const ing of ingredients || []) {
+  await db.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [req.params.id]);
+  const crees: string[] = [];
+  for (const ing of lignesValides) {
     let invItem = await findMatchingInventoryItem(db, ing.inventory_name);
     let invId = invItem?.id;
     if (!invId) {
@@ -124,11 +291,12 @@ try {
           ing.inventory_name,
           0,
           5,
-          ing.unit || "g",
+          ing.unit ?? "g",
           "OUT_OF_STOCK",
           "Ingr\xE9dient g\xE9n\xE9r\xE9",
         ],
       );
+      crees.push(ing.inventory_name);
     }
     await db.run(
       "INSERT INTO recipe_ingredients (id, recipe_id, inventory_id, quantity_per_person) VALUES (?, ?, ?, ?)",
@@ -136,11 +304,20 @@ try {
         Math.random().toString(36).substr(2, 9),
         req.params.id,
         invId,
-        ing.quantity_per_person || 0,
+        ing.qte,
       ],
     );
   }
-  res.json({ status: "success" });
+  const recetteRelue = await db.get(
+    "SELECT id, name, category, dish_type, preparation_steps, allergens, language FROM recipes WHERE id = ?",
+    [req.params.id],
+  );
+  res.json({
+    status: "success",
+    recipe: recetteRelue,
+    ingredients: lignesValides.map((l) => ({ inventory_name: l.inventory_name, quantity_per_person: l.qte })),
+    created_inventory: crees,
+  });
 } catch (error) {
   console.error(error);
   res.status(500).json({ error: "Failed to update recipe" });
@@ -148,11 +325,44 @@ try {
 });
 router.delete("/api/recipes/:id", async (req, res) => {
 try {
+  // Le DELETE d'un id absent rendait 200 SILENCIEUX sur une ligne qui ne part
+  // pas (DELETE FROM recipes WHERE id = ? retourne 0 ligne modifiee), et la
+  // DELETE ne partait PAS avec les sous-lignes d'ingredients ni avec les
+  // lignes d'inventaire creees PAR LA RECETTE (elles restaient en orphelines
+  // chez le chef — sonde S11/S5). Le contrat exige un 404 sur une recette
+  // absente, et la DELETE emporte les sous-lignes avec la recette.
+  const recetteExistante = await db.get(
+    "SELECT id FROM recipes WHERE id = ?",
+    [req.params.id],
+  );
+  if (!recetteExistante) return res.status(404).json({ status: "error", message: "Recipe not found" });
+  const ingredientsRelus = await db.all(
+    "SELECT inventory_id FROM recipe_ingredients WHERE recipe_id = ?",
+    [req.params.id],
+  );
   await db.run("DELETE FROM recipes WHERE id = ?", [req.params.id]);
   await db.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [
     req.params.id,
   ]);
-  res.json({ status: "success" });
+  // Les lignes d'inventaire creees PAR LA RECETTE (dont la recette supprimee
+  // etait le SEUL proprietaire) partent avec elle; celles partagees avec une
+  // autre recette restent chez le chef.
+  const idsAEnlever = ingredientsRelus.map((r: any) => r.inventory_id);
+  let enlevees: string[] = [];
+  for (const invId of idsAEnlever) {
+    const autres = await db.get(
+      "SELECT id FROM recipe_ingredients WHERE inventory_id = ? AND recipe_id != ? LIMIT 1",
+      [invId, req.params.id],
+    );
+    if (!autres) {
+      const inv = await db.get("SELECT id, name FROM inventory WHERE id = ?", [invId]);
+      if (inv) {
+        await db.run("DELETE FROM inventory WHERE id = ?", [invId]);
+        enlevees.push(inv.name);
+      }
+    }
+  }
+  res.json({ status: "success", removed_inventory: enlevees });
 } catch (error) {
   console.error(error);
   res.status(500).json({ error: "Failed to delete recipe" });
@@ -236,10 +446,21 @@ try {
 });
 router.put("/api/recipes/:id/save", async (req, res) => {
 try {
+  // Le PUT /save sur un id absent rendait 200 SILENCIEUX sur une ligne qui ne
+  // part pas (UPDATE recipes SET is_saved = 1 WHERE id = ? retourne 0 ligne
+  // modifiee). Le contrat exige un 404 sur une recette absente.
+  const recetteExistante = await db.get(
+    "SELECT id FROM recipes WHERE id = ?",
+    [req.params.id],
+  );
+  if (!recetteExistante) return res.status(404).json({ status: "error", message: "Recipe not found" });
   await db.run("UPDATE recipes SET is_saved = 1 WHERE id = ?", [
     req.params.id,
   ]);
-  res.json({ status: "success" });
+  const relue = await db.get("SELECT id, is_saved FROM recipes WHERE id = ?", [
+    req.params.id,
+  ]);
+  res.json({ status: "success", recipe: relue });
 } catch (error) {
   console.error(error);
   res.status(500).json({ error: "Failed to save recipe" });

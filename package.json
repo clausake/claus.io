@@ -56,7 +56,11 @@
     "verify:document-items-voices": "node scripts/probe-document-items-voices.mjs",
     "verify:split": "python3 scripts/decouper-phases.py --verify",
     "verify:haccp": "npx playwright test test/e2e/haccp-contract.spec.ts --reporter=line",
-    "verify:haccp-mord": "python3 scripts/negative-test-haccp-contract.py"
+    "verify:haccp-mord": "python3 scripts/negative-test-haccp-contract.py",
+    "verify:recipes": "npx playwright test test/e2e/recipes-contract.spec.ts --reporter=line",
+    "verify:recipes-mord": "python3 scripts/negative-test-recipes-contract.py",
+    "verify:recipes-voices": "node scripts/probe-recipes-voices.mjs",
+    "verify:recipes-put": "node scripts/probe-put-recipes-voices.mjs"
   },
   "build": {
     "appId": "com.agentculinaire.os",
