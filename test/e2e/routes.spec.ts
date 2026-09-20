@@ -1095,3 +1095,53 @@ test("POST /api/generate-traditional-menu : avec fichier rend un corps exploitab
   expect(typeof corps).toBe("object");
   if (avec.status() === 200) expect(String(corps.status ?? "")).toBeTruthy();
 });
+test("POST /api/recipes/scan : sans fichier rend 400 NOMME, avec fichier rend un corps exploitable", async ({ request }) => {
+  const sans = await request.post(`${BASE}/api/recipes/scan`, { data: {} });
+  expect(sans.status()).toBe(400);
+  const body = await sans.json();
+  expect(String(body.message ?? "")).toContain("fichier");
+
+  // un PNG reel (2x2 pixels blanc) — la branche Ollama present rend 200 avec
+  // la structure JSON parsee; la branche absent rend 500 avec un corps
+  // exploitable (le nom du modele qui a echoue).
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/recipes/scan`, {
+    multipart: { file: { name: "scan-test.png", mimeType: "image/png", buffer: png } },
+  });
+  expect([200, 500]).toContain(avec.status());
+  const corps = await avec.json();
+  expect(typeof corps).toBe("object");
+  if (avec.status() === 500) expect(String(corps.message ?? "")).toContain("scan");
+});
+test("POST /api/haccp/documents/upload : sans fichier rend 200 (fileUrl null), avec fichier rend un corps exploitable", async ({ request }) => {
+  const tag = Date.now();
+  const sans = await request.post(`${BASE}/api/haccp/documents/upload`, { data: {} });
+  expect(sans.status()).toBe(200);
+  const corpsSans = await sans.json();
+  expect(typeof corpsSans.id).toBe("string");
+  expect(corpsSans.fileUrl ?? null).toBe(null);
+  expect(String(corpsSans.type ?? "")).toBeTruthy();
+  expect(String(corpsSans.name ?? "")).toBeTruthy();
+
+  // un PNG reel (2x2 pixels blanc) — la branche avec fichier rend 200 avec
+  // fileUrl=/uploads/<filename>.
+  const png = Buffer.from(
+    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
+      "49444154010000000000000000000000000000000000000000000000000000" +
+      "49454e44ae426082",
+    "hex",
+  );
+  const avec = await request.post(`${BASE}/api/haccp/documents/upload`, {
+    multipart: { file: { name: "haccp-test-" + tag + ".png", mimeType: "image/png", buffer: png } },
+  });
+  expect(avec.status()).toBe(200);
+  const corps = await avec.json();
+  expect(typeof corps.id).toBe("string");
+  expect(String(corps.fileUrl ?? "")).toContain("/uploads/");
+  expect(String(corps.fileUrl ?? "")).toContain(".png");
+});
