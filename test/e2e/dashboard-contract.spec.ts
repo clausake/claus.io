@@ -233,3 +233,61 @@ test("D5 GET /api/dashboard/stock-data avec articles: somme par categorie + coul
   expect(typeof legumes.color).toBe("string");
   expect(legumes.color.length).toBeGreaterThan(0);
 });
+
+// --- S1: la stats route rend le chiffre des donnees relues (DELTA), pas un
+// nombre fige. La ligne BAS est poste par la MEME voie que l UI (InventoryAudit
+// derive le statut des quantites), puis la DELETE ramene les DEUX champs a la
+// ligne de base. Le champs activeAlerts/totalStockValue sont juges ICI (la
+// regle du statut critique est jugee par S2 seule).
+test("S1 GET /api/dashboard/stats: DELTA activeAlerts + totalStockValue, puis retour a la ligne de base", async ({ request }) => {
+  const base = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(base.status()).toBe(200);
+  const baseBody = await base.json();
+  const baseAlerts = baseBody.activeAlerts;
+  const baseValue = baseBody.totalStockValue;
+  const inv = await request.post(`${BASE}/api/inventory`, {
+    data: { name: "Sonde Bas", quantity: 1, minStock: 2, unit: "kg", category: "Sec", unit_price: 1.5, yield_percent: 100 },
+  });
+  expect(inv.status()).toBe(200);
+  const relu = await inv.json();
+  expect(relu.status).toBe("critical"); // la voie UI derive le statut des quantites
+  const apres = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(apres.status()).toBe(200);
+  const apresBody = await apres.json();
+  expect(apresBody.activeAlerts).toBe(baseAlerts + 1);
+  expect(apresBody.totalStockValue).toBe(baseValue + 1.5);
+  const del = await request.delete(`${BASE}/api/inventory/${relu.id}`);
+  expect(del.status()).toBe(200);
+  const retour = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(retour.status()).toBe(200);
+  const retourBody = await retour.json();
+  expect(retourBody.activeAlerts).toBe(baseAlerts);
+  expect(retourBody.totalStockValue).toBe(baseValue);
+});
+
+// --- S2: la stats route rend le champ criticalItems des lignes REELLEMENT en
+// base (DELTA), pas un nombre fige. La ligne poste par la MEME voie que l UI
+// (InventoryAudit) porte le statut critique derive des quantites.
+test("S2 GET /api/dashboard/stats: DELTA criticalItems, puis retour a la ligne de base", async ({ request }) => {
+  const base = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(base.status()).toBe(200);
+  const baseBody = await base.json();
+  const baseCritical = baseBody.criticalItems;
+  const inv = await request.post(`${BASE}/api/inventory`, {
+    data: { name: "Sonde Critique", quantity: 0, minStock: 2, unit: "kg", category: "Sec", unit_price: 1.5, yield_percent: 100 },
+  });
+  expect(inv.status()).toBe(200);
+  const relu = await inv.json();
+  expect(relu.status).toBe("critical");
+  const apres = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(apres.status()).toBe(200);
+  const apresBody = await apres.json();
+  expect(apresBody.criticalItems).toBe(baseCritical + 1);
+  const del = await request.delete(`${BASE}/api/inventory/${relu.id}`);
+  expect(del.status()).toBe(200);
+  const retour = await request.get(`${BASE}/api/dashboard/stats`);
+  expect(retour.status()).toBe(200);
+  const retourBody = await retour.json();
+  expect(retourBody.criticalItems).toBe(baseCritical);
+});
+

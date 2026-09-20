@@ -144,6 +144,41 @@ const avantHier = () => { const d = new Date(Date.now() - 2*864e5); return `${d.
   console.log(`    TRANCHER: value=7.5 (3*2.5) pour Legumes + 20 (2*10) pour Viandes? couleur presente?`);
 }
 
+// --- D6 : stats BASELINE (sans donnee) ------------------------------------
+{
+  const r = await fetch(`${BASE}/api/dashboard/stats`);
+  const c = await r.json().catch(() => null);
+  console.log(`\n### D6 stats baseline sans donnee`);
+  console.log(`    status_http=${r.status}`);
+  console.log(`    corps=${JSON.stringify(c).slice(0, 300)}`);
+  console.log(`    TRANCHER: activeAlerts=0, criticalItems=0, totalStockValue=0, dailyLaborCost=0?`);
+}
+
+// --- D7 : stats DELTA avec une ligne de stock BAS (voie UI InventoryAudit) --
+{
+  const avant = await fetch(`${BASE}/api/dashboard/stats`);
+  const cAvant = await avant.json().catch(() => null);
+  const rInv = await fetch(`${BASE}/api/inventory`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Sonde Bas", quantity: 1, minStock: 2, unit: "kg", category: "Sec", unit_price: 1.5, yield_percent: 100, status: "critical" }),
+  });
+  const cInv = await rInv.json().catch(() => null);
+  console.log(`\n### D7 inventory BAS poste par la voie UI`);
+  console.log(`    status_http=${rInv.status} corps=${JSON.stringify(cInv).slice(0, 160)}`);
+  const apres = await fetch(`${BASE}/api/dashboard/stats`);
+  const cApres = await apres.json().catch(() => null);
+  console.log(`\n### D7b stats apres la ligne BAS`);
+  console.log(`    corps=${JSON.stringify(cApres).slice(0, 300)}`);
+  console.log(`    TRANCHER: activeAlerts DELTA +1, criticalItems DELTA +1, totalStockValue DELTA +1.5?`);
+  const del = await fetch(`${BASE}/api/inventory/${cInv.id}`, { method: "DELETE" });
+  console.log(`\n### D7c DELETE inventory BAS`);
+  console.log(`    status_http=${del.status}`);
+  const apresDel = await fetch(`${BASE}/api/dashboard/stats`);
+  const cApresDel = await apresDel.json().catch(() => null);
+  console.log(`    TRANCHER: activeAlerts/criticalItems/totalStockValue retournent a la ligne de base?`);
+  console.log(`    corps=${JSON.stringify(cApresDel).slice(0, 300)}`);
+}
+
 server.kill("SIGTERM");
 await new Promise((r) => setTimeout(r, 600));
 console.log("\nSONDE JOUEE (rc=0 = elle s est jouee; les verdicts sont ci-dessus).");
