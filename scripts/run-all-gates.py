@@ -74,7 +74,10 @@ DEFAUT = ["verify:split",
           # une de ces routes peut redevenir un 500 ou un 200 muet sans qu'aucun
           # lot ne le voie.
           "verify:recipes", "verify:recipes-mord",
-          "verify:recipes-voices", "verify:recipes-put"]
+          "verify:recipes-voices", "verify:recipes-put",
+          # La spec de routes generales (47 tests, port fige 3999): la spec
+          # reste NOMINALE (jouee manuellement) faute de gate.
+          "verify:routes"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
