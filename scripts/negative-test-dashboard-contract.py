@@ -39,7 +39,7 @@ WORK = os.path.expanduser("~/cd-morsure-dashboard")
 REGISTRE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         "registre-mutations-dashboard.py")
 SPEC = "test/e2e/dashboard-contract.spec.ts"
-CHEMINS = ["D1", "D2", "D3", "D4", "D5"]
+CHEMINS = ["D1", "D2", "D3", "D4", "D5", "S1", "S2"]
 SEP = chr(0x203A)  # le separateur du reporter Playwright, par codepoint
 
 
