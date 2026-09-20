@@ -170,6 +170,10 @@ statiquement dans `App.tsx` (→ chunk principal). Passés dans
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 13 - Dashboard: la route du creneau rendait une SEMAINE FACTICE sur zero ligne (20 sept.) -> `phases/sprint-13-sprint-13-dashboard-la-route-du-creneau-rend.md` (4809 octets, 80 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
 ## Sprint 10 - `verify:forecast` : une porte rouge qui ne jugeait rien, et un mode qui ment sur ses donnees (13 sept.) -> `phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md` (12755 octets, 222 lignes)
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.

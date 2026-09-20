@@ -105,7 +105,6 @@ try {
     activeAlerts: alerts.count,
     criticalItems: critical.count,
     dailyLaborCost: totalLaborCostToday,
-    monthlyTrend: "+5.2%",
   });
 } catch (error) {
   res
@@ -181,17 +180,12 @@ try {
     };
   });
 
-  if (totalFood === 0 && totalLabor === 0) {
-    return res.json([
-      { name: "Lun", cout: 4200, labor: 1200 },
-      { name: "Mar", cout: 3800, labor: 1200 },
-      { name: "Mer", cout: 5100, labor: 1400 },
-      { name: "Jeu", cout: 4600, labor: 1200 },
-      { name: "Ven", cout: 5900, labor: 1800 },
-      { name: "Sam", cout: 6200, labor: 2000 },
-      { name: "Dim", cout: 3100, labor: 1000 },
-    ]);
-  }
+  // LE CONTRAT (Sprint 13): la route rend la FENETRE REELLE, jamais une semaine
+  // inventee. Sur une base sans facture ni planning, le result contient les jours
+  // du creneau avec cout=0 et labor=0 (l'UI dessine ce qu'il y a, pas ce qu'il
+  // n'y a pas). Le fallback FAIT FAUX (Lun 4200 ... Dim) sur zero ligne: c'est la
+  // famille de Sprint 10 (« un mode qui ment sur ses donnees »), consigne pour
+  // la meme faute sur /api/purchasing/forecast.
   res.json(result);
 } catch (error) {
   console.error(error);
