@@ -61,7 +61,9 @@
     "verify:recipes-mord": "python3 scripts/negative-test-recipes-contract.py",
     "verify:recipes-voices": "node scripts/probe-recipes-voices.mjs",
     "verify:routes": "npx playwright test test/e2e/routes.spec.ts --reporter=line",
-    "verify:recipes-put": "node scripts/probe-put-recipes-voices.mjs"
+    "verify:recipes-put": "node scripts/probe-put-recipes-voices.mjs",
+    "verify:dashboard": "npx playwright test test/e2e/dashboard-contract.spec.ts --reporter=line",
+    "verify:dashboard-mord": "python3 scripts/negative-test-dashboard-contract.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

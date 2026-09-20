@@ -75,9 +75,15 @@ DEFAUT = ["verify:split",
           # lot ne le voie.
           "verify:recipes", "verify:recipes-mord",
           "verify:recipes-voices", "verify:recipes-put",
-          # La spec de routes generales (47 tests, port fige 3999): la spec
-          # reste NOMINALE (jouee manuellement) faute de gate.
-          "verify:routes"]
+          # La spec de routes generales (49 tests, port fige 3999): la spec est
+          # jouee par une porte depuis Sprint 12.1.
+          "verify:routes",
+          # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
+          # tableau de bord (cost-data + stock-data), chacune avec sa preuve
+          # de morsure. Sans elles, la route cost-data peut redevenir une
+          # SEMAINE FACTICE sur zero ligne (la famille de Sprint 10) sans
+          # qu'aucun lot ne le voie.
+          "verify:dashboard", "verify:dashboard-mord"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
