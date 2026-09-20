@@ -1,7 +1,7 @@
 {
- "original_octets": 140724,
- "original_sha256": "a3b5aaf92e41e19279b1a9c049b6d5b71c8b8eccdfa17bca33aea3aa57b5c5ad",
- "chaud_octets": 12634,
+ "original_octets": 145533,
+ "original_sha256": "19f376a8d62950ac696d2a4347d17ad011e26f2f72fac05d57910a7d762ddd8b",
+ "chaud_octets": 12935,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -23,6 +23,13 @@
    "octets": 7246,
    "lignes": 95,
    "sha256": "e091d40f55f8b8cd11b62a1cc615730250bf28be6b69670d97e076fe220ea838"
+  },
+  {
+   "fichier": "phases/sprint-13-sprint-13-dashboard-la-route-du-creneau-rend.md",
+   "titre": "## Sprint 13 - Dashboard: la route du creneau rendait une SEMAINE FACTICE sur zero ligne (20 sept.)",
+   "octets": 4809,
+   "lignes": 80,
+   "sha256": "d2d56eacb3bd611e039481b7a1244faae0a2f1034862b1431234a01e93bef181"
   },
   {
    "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
@@ -67,12 +74,12 @@
    "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
   }
  ],
- "lignes_chaud": 205,
- "tokens_approx_chaud": 3049,
+ "lignes_chaud": 209,
+ "tokens_approx_chaud": 3123,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "sprint-12 archive (12.7 Closes de suite) modifiee: la spec des routes generales entre dans le lot des portes, et POST /api/recipes/scan + POST /api/haccp/documents/upload entrent dans la spec des routes generales",
-  "date": "2026-09-20T03:12:59.750919",
+  "motif": "sprint-13 ajoutee au chaud + archive phases/sprint-13-sprint-13-dashboard-la-route-du-creneau-rend.md; ancre re-jugee par le segments() du juge",
+  "date": "2026-09-20T07:05:08.807382",
   "ancre_git": "0165577314c63506e7dc831d25475ed028590602",
   "chiffres_disque": {
    "server.ts": 258,
@@ -80,6 +87,6 @@
    "src/routes/*.ts": 20,
    "src/components/*.tsx": 19
   },
-  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine (0360a1fe) et n'est pas retabli; le recolle JUGE (a3b5aaf9) est la nouvelle ancre."
+  "note": "phases/.pre-split/PHASES.md.orig reste l etat d origine (0360a1fe) et n est pas retabli; le recolle JUGE (19f376a8) est la nouvelle ancre."
  }
 }
