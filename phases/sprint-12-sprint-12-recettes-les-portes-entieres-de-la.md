@@ -81,3 +81,15 @@ d'etre jugee.
   PUT du spec (le code NEW pose le CONTRAT: 400 + rejetees); le spec reste
   VALIDE (47 passed) avec le code NEW.
 
+
+### 12.7 Closes de suite (12.1, 12.2: 2026-09-20)
+
+- **La spec des routes generales ENTRE DANS LE LOT des portes**
+  (`verify:routes` dans `package.json` + `DEFAUT` de `scripts/run-all-gates.py`;
+  le lot rendait GATES=33 ROUGES=0 avec la porte de routes spec). La voie
+  « jouee manuellement » n'est plus une voie: le spec est joue par un gate.
+- **`POST /api/recipes/scan` et `POST /api/haccp/documents/upload` entre DANS
+  la spec des routes generales** (2 nouveaux tests, routes.spec.ts 49 tests):
+  la voie « nominale » n'est plus une voie: les deux routes sont jugees par un
+  gate (sans fichier -> 400 / fileUrl null; avec fichier -> corps exploitable).
+

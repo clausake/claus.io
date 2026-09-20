@@ -166,7 +166,7 @@ statiquement dans `App.tsx` (→ chunk principal). Passés dans
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
-## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.) -> `phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md` (6579 octets, 83 lignes)
+## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.) -> `phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md` (7246 octets, 95 lignes)
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 

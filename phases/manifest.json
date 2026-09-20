@@ -1,6 +1,6 @@
 {
- "original_octets": 140057,
- "original_sha256": "91d39c3afcbf96fe41f5efbbca41085d10e4a968137882057272986ef650e656",
+ "original_octets": 140724,
+ "original_sha256": "a3b5aaf92e41e19279b1a9c049b6d5b71c8b8eccdfa17bca33aea3aa57b5c5ad",
  "chaud_octets": 12634,
  "archives": [
   {
@@ -20,9 +20,9 @@
   {
    "fichier": "phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md",
    "titre": "## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.)",
-   "octets": 6579,
-   "lignes": 83,
-   "sha256": "b8f6b96ea369768e6344b296ed51291043f28d70e3584e7c5af06a0a4fdb1ef8"
+   "octets": 7246,
+   "lignes": 95,
+   "sha256": "e091d40f55f8b8cd11b62a1cc615730250bf28be6b69670d97e076fe220ea838"
   },
   {
    "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
@@ -68,18 +68,18 @@
   }
  ],
  "lignes_chaud": 205,
- "tokens_approx_chaud": 3100,
+ "tokens_approx_chaud": 3049,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "sprint-12 ajoutee au chaud + archive phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md; ancre re-jugee par le segments() du juge",
-  "date": "2026-09-20T01:40:18.146085",
-  "ancre_git": "92ae480fd98939cc08502249498fa50b1e22de91",
+  "motif": "sprint-12 archive (12.7 Closes de suite) modifiee: la spec des routes generales entre dans le lot des portes, et POST /api/recipes/scan + POST /api/haccp/documents/upload entrent dans la spec des routes generales",
+  "date": "2026-09-20T03:12:59.750919",
+  "ancre_git": "0165577314c63506e7dc831d25475ed028590602",
   "chiffres_disque": {
    "server.ts": 258,
    "src/App.tsx": 952,
    "src/routes/*.ts": 20,
    "src/components/*.tsx": 19
   },
-  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine (0360a1fe) et n'est pas retabli; le recolle JUGE (91d39c3a) est la nouvelle ancre."
+  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine (0360a1fe) et n'est pas retabli; le recolle JUGE (a3b5aaf9) est la nouvelle ancre."
  }
 }
