@@ -67,7 +67,14 @@ DEFAUT = ["verify:split",
           # Sans la porte `-mord`, l'une de ces routes peut redevenir un 200 muet
           # (releve en texte, lot a 0 kg, action corrective orphelinee) sans
           # qu'aucun lot ne le voie.
-          "verify:haccp", "verify:haccp-mord"]
+          "verify:haccp", "verify:haccp-mord",
+          # Le contrat RECETTES (Sprint 12): les routes d'ecriture du domain
+          # des recettes (POST/PUT/DELETE/save/generate-steps), chacune avec sa
+          # preuve de morsure et les sondes des voies REELLES. Sans elles,
+          # une de ces routes peut redevenir un 500 ou un 200 muet sans qu'aucun
+          # lot ne le voie.
+          "verify:recipes", "verify:recipes-mord",
+          "verify:recipes-voices", "verify:recipes-put"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

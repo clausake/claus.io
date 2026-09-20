@@ -1,7 +1,7 @@
 {
- "original_octets": 133478,
- "original_sha256": "7ff543d16716f93e485223fd30065b2be199697c654527e91eb46df17997c47e",
- "chaud_octets": 12267,
+ "original_octets": 140057,
+ "original_sha256": "91d39c3afcbf96fe41f5efbbca41085d10e4a968137882057272986ef650e656",
+ "chaud_octets": 12634,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -16,6 +16,13 @@
    "octets": 7976,
    "lignes": 123,
    "sha256": "df8710091ca8a24b5b5b11e4d22239e881fb4bd1cc080c56a178a8e269e758d6"
+  },
+  {
+   "fichier": "phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md",
+   "titre": "## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.)",
+   "octets": 6579,
+   "lignes": 83,
+   "sha256": "b8f6b96ea369768e6344b296ed51291043f28d70e3584e7c5af06a0a4fdb1ef8"
   },
   {
    "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
@@ -60,19 +67,19 @@
    "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
   }
  ],
- "lignes_chaud": 11834,
- "tokens_approx_chaud": 2958,
+ "lignes_chaud": 205,
+ "tokens_approx_chaud": 3100,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "chiffres du chaud corriges aux mesures disque (constat D1 de la revue independante, revifie par mes lectures)",
-  "date": "2026-09-17 21:16:48.906927",
-  "ancre_git": "6d970bc5877b54298c23996bd6d5d8fa8f8be76d",
+  "motif": "sprint-12 ajoutee au chaud + archive phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md; ancre re-jugee par le segments() du juge",
+  "date": "2026-09-20T01:40:18.146085",
+  "ancre_git": "92ae480fd98939cc08502249498fa50b1e22de91",
   "chiffres_disque": {
    "server.ts": 258,
    "src/App.tsx": 952,
    "src/routes/*.ts": 20,
    "src/components/*.tsx": 19
   },
-  "note": ".pre-split/PHASES.md.orig reste l'etat d'origine avec ses chiffres FAUX; il n'est pas retabli. Authorite = le chaud + `wc -l`."
+  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine (0360a1fe) et n'est pas retabli; le recolle JUGE (91d39c3a) est la nouvelle ancre."
  }
 }
