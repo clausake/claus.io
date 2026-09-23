@@ -215,3 +215,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 14.b - la voie bulk de l'auditeur : un 404 cru en succes, et deux ancres devenues ambigues (23 sept.) -> `phases/sprint-14-sprint-14-b-la-voie-bulk-de-l-auditeur-un-40.md` (3086 octets, 48 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+

@@ -1,11 +1,11 @@
 {
  "original_octets": 145533,
- "original_sha256": "f7da9bfb225b1131f36c46076b8c73c0b9cca8d664c9b5e755d60dea0e6968ec",
- "chaud_octets": 13546,
+ "original_sha256": "eb5c8be8c03584201ffa86557b81d168369c9caf74c169bbf00fed62617d7b33",
+ "chaud_octets": 13859,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
-   "titre": "## Sprint 4 \u2014 Fiabilite du temps reel (8 sept.)",
+   "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
    "octets": 33521,
    "lignes": 505,
    "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
@@ -75,7 +75,7 @@
   },
   {
    "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
-   "titre": "## Sprint 5 \u2014 Refermer la chaine logistique (10 sept.)",
+   "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
    "octets": 21920,
    "lignes": 339,
    "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
@@ -86,12 +86,31 @@
    "octets": 3137,
    "lignes": 41,
    "sha256": "0ad9b9bf5a8970b87c80d9c2f62d8ee5617f0ca07011e3f07f6f6cd4dca1b3ec"
+  },
+  {
+   "fichier": "phases/sprint-14-sprint-14-b-la-voie-bulk-de-l-auditeur-un-40.md",
+   "titre": "## Sprint 14.b - la voie bulk de l'auditeur : un 404 cru en succes, et deux ancres devenues ambigues (23 sept.)",
+   "octets": 3086,
+   "lignes": 48,
+   "sha256": "3c1aaddc676fb2bdc3a2ad10d26c5ec495d347afed2c21c17590e49e7ccb20db"
   }
  ],
- "lignes_chaud": 217,
- "tokens_approx_chaud": 3328,
+ "lignes_chaud": 221,
+ "tokens_approx_chaud": 3351,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
+  "motif": "suite 14.b (voie bulk de l'auditeur) ajoutee au chaud (stub) + archive phases/sprint-14-sprint-14-b-la-voie-bulk-de-l-auditeur-un-40.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+  "date": "2026-09-23T15:22:23.864409",
+  "ancre_git": "3809b1be90377278f6ed78ff27bc0a3dc2721ca3",
+  "chiffres_disque": {
+   "server.ts": 258,
+   "src/App.tsx": 952,
+   "src/routes/*.ts": 20,
+   "src/components/*.tsx": 19
+  },
+  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine et n'est pas retabli ; le recolle juge ci-dessus est la nouvelle ancre. | lignes_chaud stocke au compte de nouvelles lignes (convention des archives et du reancrage precedent), et non au compte de caracteres que le --apply du juge ecrit par bug."
+ },
+ "reancrage_precedent": {
   "motif": "sprint-14 ajoutee au chaud + archive phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md ; l'ancre est recalculee par la boucle du juge, jamais recopiee",
   "date": "2026-09-23T07:12:06.732003",
   "ancre_git": "2e77237a559e238ccf5c91c19de63bff4eb3cb51",
