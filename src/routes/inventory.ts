@@ -163,6 +163,191 @@ try {
     .json({ status: "error", message: "Failed to create inventory item" });
 }
 });
+router.post("/api/inventory/bulk", async (req, res) => {
+  // Voie d'import CSV de l'auditeur (InventoryAudit.tsx:156 poste { items }).
+  // Elle repondoit 404: la route n'existait pas, l'import n'inscrivait RIEN et
+  // l'UI affichait neanmoins un succes. Mesure par scripts/probe-inventory-bulk.mjs
+  // (POST /api/inventory/bulk -> 404, corps: null), consigne dans
+  // docs/audit-2026-09-20.md C3.
+  //
+  // Contrat: TOUT ou RIEN. Une seule ligne fautive refuse le LOT ENTIER et le
+  // compte-rendu nomme chaque fautive par "index:champ". Un import partial est
+  // le pire des imports: le chef qui valide un CSV de 80 lignes doit savoir, si
+  // le lot est refuse, QUELLES lignes et QUELS champs corriger.
+  //
+  // Les regles de forme sont celles du POST d'unite (mêmes helpers de
+  // src/shared/inventory-fields.ts): deux copies d'une borne = une peretration
+  // garantie le jour ou l'une est durcie et l'autre oubliee.
+  const brut = req.body?.items;
+  if (!Array.isArray(brut)) {
+    return res.status(400).json({
+      status: "error",
+      message: "items doit etre un tableau",
+      refused: ["items"],
+    });
+  }
+  if (brut.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "items est vide: rien a importer",
+      refused: ["items"],
+    });
+  }
+  // Un CSV de tableur depasse rarement cinquante lignes utiles; une garde de
+  // lot evite qu'un fichier de 200 ko ne bloque la base dans une seule
+  // transaction.
+  if (brut.length > 500) {
+    return res.status(400).json({
+      status: "error",
+      message: "Lot trop grand: 500 lignes au plus",
+      refused: ["items"],
+    });
+  }
+
+  const refus: string[] = [];
+  const prepares: {
+    id: string;
+    name: string;
+    quantity: number;
+    minStock: number;
+    unit: string;
+    status: string;
+    category: string;
+    unit_price: number;
+    yield_percent: number;
+  }[] = [];
+  const vuIds = new Set<string>();
+
+  brut.forEach((it: any, i: number) => {
+    const o = it && typeof it === "object" ? it : {};
+    // Une ligne qui n'est pas un objet est une faute nominative du fichier:
+    // elle est nommee comme tout le reste, jamais ignoree en silence.
+    if (it === null || typeof it !== "object") {
+      refus.push(i + ":ligne");
+      return;
+    }
+    const fautes: string[] = [];
+
+    const nom = texteALaCreation("name" in o, o.name, "Inconnu");
+    if (nom === undefined) fautes.push("name");
+
+    const unite = texteALaCreation("unit" in o, o.unit, "kg");
+    if (unite === undefined) fautes.push("unit");
+
+    const categorie = texteALaCreation("category" in o, o.category, "Uncategorized");
+    if (categorie === undefined) fautes.push("category");
+
+    const quantite = nombreALaCreation("quantity" in o, o.quantity, 0);
+    if (quantite === undefined || !estNombreExploitable(quantite, COLONNES_NUM.quantity.min, COLONNES_NUM.quantity.max))
+      fautes.push("quantity");
+    const minimum = nombreALaCreation("minStock" in o, o.minStock, 0);
+    if (minimum === undefined || !estNombreExploitable(minimum, COLONNES_NUM.minStock.min, COLONNES_NUM.minStock.max))
+      fautes.push("minStock");
+    const prix = nombreALaCreation("unit_price" in o, o.unit_price, 0);
+    if (prix === undefined || !estNombreExploitable(prix, COLONNES_NUM.unit_price.min, COLONNES_NUM.unit_price.max))
+      fautes.push("unit_price");
+    const rendement = nombreALaCreation("yield_percent" in o, o.yield_percent, 100);
+    if (rendement === undefined || !estNombreExploitable(rendement, COLONNES_NUM.yield_percent.min, COLONNES_NUM.yield_percent.max))
+      fautes.push("yield_percent");
+
+    let statut: string;
+    const brutS = o.status;
+    if (brutS === undefined) {
+      statut = statutDeparse(quantite as number, minimum as number);
+    } else if (typeof brutS !== "string" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {
+      fautes.push("status");
+      statut = "active";
+    } else {
+      statut = brutS.trim().toLowerCase();
+    }
+
+    const brutId = o.id;
+    const id = typeof brutId === "string" && brutId.trim() !== "" ? brutId.trim() : Date.now().toString(36) + "-" + i.toString(36);
+    if (vuIds.has(id)) fautes.push("id");
+    vuIds.add(id);
+
+    if (fautes.length > 0) {
+      for (const f of fautes) refus.push(i + ":" + f);
+      return;
+    }
+    prepares.push({
+      id,
+      name: nom as string,
+      quantity: quantite as number,
+      minStock: minimum as number,
+      unit: unite as string,
+      status: statut,
+      category: categorie as string,
+      unit_price: prix as number,
+      yield_percent: rendement as number,
+    });
+  });
+
+  if (refus.length > 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Champs refuses: aucune ligne n'est ecrite",
+      refused: refus,
+      importes: 0,
+    });
+  }
+
+  // Une clef deja prise dans la BASE refuse le lot entier, comme le POST d'unite
+  // refuse une clef prise (409, nommee). Verifiee en amont de la transaction
+  // pour ne pas inserer vingt lignes puis les rouler toutes d'un ROLLBACK.
+  const prises = await db.all(
+    "SELECT id FROM inventory WHERE id IN (" + prepares.map(() => "?").join(",") + ")",
+    prepares.map((p) => p.id),
+  );
+  if (prises.length > 0) {
+    return res.status(409).json({
+      status: "error",
+      message: "Un ou plusieurs articles portent deja cet identifiant",
+      ids_pris: prises.map((p: any) => p.id),
+      importes: 0,
+    });
+  }
+
+  await db.run("BEGIN IMMEDIATE");
+  let en_transaction = true;
+  try {
+    for (const p of prepares) {
+      const r = await db.run(
+        "INSERT INTO inventory (id, name, quantity, minStock, unit, status, category, unit_price, yield_percent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [p.id, p.name, p.quantity, p.minStock, p.unit, p.status, p.category, p.unit_price, p.yield_percent],
+      );
+      if (!r || r.changes !== 1) {
+        throw new Error("ligne non inseree: " + p.id);
+      }
+    }
+    await db.run("COMMIT");
+    en_transaction = false;
+    // Le compte-rendu est RE-LU en base (meme contrat que le POST et le PUT de
+    // ce fichier), pas recite depuis le corps de la requisette.
+    const relues: any[] = [];
+    for (const p of prepares) {
+      const relu = await db.get(
+        "SELECT id, name, quantity, minStock, unit, status, category, unit_price, yield_percent FROM inventory WHERE id = ?",
+        [p.id],
+      );
+      if (!relu) {
+        return res.status(500).json({ status: "error", message: "Ligne non relue apres import", importes: relues.length });
+      }
+      relues.push(relu);
+    }
+    res.json({ status: "success", importes: relues.length, ids: relues.map((r: any) => r.id), items: relues });
+  } catch (error) {
+    if (en_transaction) {
+      try {
+        await db.run("ROLLBACK");
+      } catch {
+        /* le ROLLBACK d'une transaction deja closee n'ajoute rien au diagnostic */
+      }
+    }
+    console.error("Error importing inventory items:", error);
+    res.status(500).json({ status: "error", message: "Echec de l'import en bloc", importes: 0 });
+  }
+});
 router.delete("/api/inventory/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM inventory WHERE id = ?", [req.params.id]);
