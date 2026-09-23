@@ -46,6 +46,8 @@
     "verify:import-contract": "node scripts/probe-supplier-import-contract.mjs",
     "verify:documents-validate": "python3 scripts/negative-test-documents-validate.py",
     "verify:supplier-probe": "node scripts/probe-supplier-price-contract.mjs",
+    "verify:kpi": "npx playwright test test/e2e/kpi-labor-cost.spec.ts --reporter=line",
+    "verify:reception": "npx playwright test test/e2e/reception-view.spec.ts --reporter=line",
     "verify:instance-mord-harnais": "python3 scripts/probe-garde-instance-harnais-mord.py",
     "verify:consume-mord": "python3 scripts/negative-test-consume-contract.py",
     "verify:consume": "npx playwright test test/e2e/consume-contract.spec.ts --reporter=line",

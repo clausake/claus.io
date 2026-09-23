@@ -211,3 +211,7 @@ Le travail Phases 0+1 a été fait avec **Qwen3 32B**. La Phase 2 est reprise
 avec **DeepSeek v4** (plus fort en coding). Ce fichier fait le lien : tout ce
 qui est nécessaire pour reprendre est ici. Ne pas refaire Phases 0/1, elles
 sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
+## Sprint 14 - Audit du 20 sept. : deux portes que nul n'appelait, cinquante-sept routes sans garde, une ecriture muette (23 sept.) -> `phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md` (3137 octets, 41 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
