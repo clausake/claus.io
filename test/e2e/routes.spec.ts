@@ -843,8 +843,7 @@ test("POST /api/alerts/:id/resolve : une alerte stock resolue quitte la liste ac
 });
 
 // --- Routes IA upload (menu.ts) -----------------------------------------
-// /api/analyze-menu, /api/generate-creative-menu, /api/generate-gastronomic-menu,
-// /api/generate-traditional-menu, /api/recipes/scan, /api/documents/upload,
+// /api/analyze-menu, /api/recipes/scan, /api/documents/upload,
 // /api/haccp/documents/upload sont des routes qui EXIGENT un fichier multipart.
 // Le contrat verifie est « refuser sans fichier + repondre un corps exploitable
 // dans les deux branches Ollama (present ou absent) », comme /api/ai/chat.
@@ -1026,74 +1025,6 @@ test("POST /api/epicure/analyze : ingredients non-tableau rend 400, tableau legi
   expect(typeof corpsOk).toBe("object");
   // le corps exploitable porte au moins un champ de resultat d'analyse
   expect(Object.keys(corpsOk).length).toBeGreaterThan(0);
-});
-
-// --- Menus generes par IA (menu.ts) --------------------------------------
-// Les trois routes /api/generate-creative-menu, /api/generate-gastronomic-menu
-// et /api/generate-traditional-menu exigent un fichier multipart (image) et
-// construisent un prompt; la branche Ollama present rend 200 avec un menu,
-// la branche absent rend 500 avec un corps exploitable. Un fichier ABSENT
-// rend 400 (la route exige un fichier pour le prompt, mais garde la voie
-// sans image: la saisie sans photo reste possible). Le contrat verifie est
-// « sortie explicite + corps exploitable » dans les deux branches.
-test("POST /api/generate-creative-menu : sans fichier rend 400, avec fichier rend un corps exploitable", async ({ request }) => {
-  // La voie SANS fichier reste possible (MenuAnalysis garde la saisie sans
-  // photo): la route interroge Ollama directement. Sur un runner sans modele
-  // elle sort en 500 avec un corps exploitable; avec modele elle rend un menu.
-  const sans = await request.post(`${BASE}/api/generate-creative-menu`, { data: {} });
-  expect([200, 500]).toContain(sans.status());
-  const corps = await sans.json();
-  expect(typeof corps).toBe("object");
-  if (sans.status() === 500) expect(String(corps.error ?? "").length).toBeGreaterThan(0);
-
-  const png = Buffer.from(
-    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
-      "49444154010000000000000000000000000000000000000000000000000000" +
-      "49454e44ae426082",
-    "hex",
-  );
-  const avec = await request.post(`${BASE}/api/generate-creative-menu`, {
-    multipart: { file: { name: "creative-test.png", mimeType: "image/png", buffer: png } },
-  });
-  expect([200, 500]).toContain(avec.status());
-  const corpsAvec = await avec.json();
-  expect(typeof corpsAvec).toBe("object");
-  if (avec.status() === 200) {
-    expect(String(corpsAvec.status ?? "")).toBe("success");
-    expect(Array.isArray(corpsAvec.creative_menu)).toBe(true);
-  }
-});
-
-test("POST /api/generate-gastronomic-menu : avec fichier rend un corps exploitable dans les deux branches", async ({ request }) => {
-  const png = Buffer.from(
-    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
-      "49444154010000000000000000000000000000000000000000000000000000" +
-      "49454e44ae426082",
-    "hex",
-  );
-  const avec = await request.post(`${BASE}/api/generate-gastronomic-menu`, {
-    multipart: { file: { name: "gastronomic-test.png", mimeType: "image/png", buffer: png } },
-  });
-  expect([200, 500]).toContain(avec.status());
-  const corps = await avec.json();
-  expect(typeof corps).toBe("object");
-  if (avec.status() === 200) expect(String(corps.status ?? "")).toBeTruthy();
-});
-
-test("POST /api/generate-traditional-menu : avec fichier rend un corps exploitable dans les deux branches", async ({ request }) => {
-  const png = Buffer.from(
-    "89504e470d0a1a0a0000000d4948445200000002000000020806000000aabbccdd" +
-      "49444154010000000000000000000000000000000000000000000000000000" +
-      "49454e44ae426082",
-    "hex",
-  );
-  const avec = await request.post(`${BASE}/api/generate-traditional-menu`, {
-    multipart: { file: { name: "traditional-test.png", mimeType: "image/png", buffer: png } },
-  });
-  expect([200, 500]).toContain(avec.status());
-  const corps = await avec.json();
-  expect(typeof corps).toBe("object");
-  if (avec.status() === 200) expect(String(corps.status ?? "")).toBeTruthy();
 });
 test("POST /api/recipes/scan : sans fichier rend 400 NOMME, avec fichier rend un corps exploitable", async ({ request }) => {
   const sans = await request.post(`${BASE}/api/recipes/scan`, { data: {} });

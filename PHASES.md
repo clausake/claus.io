@@ -219,3 +219,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 14.c - les trois generations de menu retirees, l'analyse conservee (24 sept.) -> `phases/sprint-14-sprint-14-c-les-trois-generations-de-menu-re.md` (3067 octets, 49 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
