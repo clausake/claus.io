@@ -83,7 +83,11 @@ DEFAUT = ["verify:split",
           # de morsure. Sans elles, la route cost-data peut redevenir une
           # SEMAINE FACTICE sur zero ligne (la famille de Sprint 10) sans
           # qu'aucun lot ne le voie.
-          "verify:dashboard", "verify:dashboard-mord"]
+          "verify:dashboard", "verify:dashboard-mord",
+          # Sprint 14: deux nouvelles portes (KPI de cout du travail et la
+          # vue reception, un fixture page -> les libs systeme du navigateur
+          # en CI).
+          "verify:kpi", "verify:reception"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

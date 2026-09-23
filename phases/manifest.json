@@ -1,11 +1,11 @@
 {
  "original_octets": 145533,
- "original_sha256": "d15f7cbd36e646ad28e863f84a025c768528602db06693be2843fcbba17918b8",
- "chaud_octets": 13223,
+ "original_sha256": "f7da9bfb225b1131f36c46076b8c73c0b9cca8d664c9b5e755d60dea0e6968ec",
+ "chaud_octets": 13546,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
-   "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
+   "titre": "## Sprint 4 \u2014 Fiabilite du temps reel (8 sept.)",
    "octets": 33521,
    "lignes": 505,
    "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
@@ -75,25 +75,32 @@
   },
   {
    "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
-   "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
+   "titre": "## Sprint 5 \u2014 Refermer la chaine logistique (10 sept.)",
    "octets": 21920,
    "lignes": 339,
    "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
+  },
+  {
+   "fichier": "phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md",
+   "titre": "## Sprint 14 - Audit du 20 sept. : deux portes que nul n'appelait, cinquante-sept routes sans garde, une ecriture muette (23 sept.)",
+   "octets": 3137,
+   "lignes": 41,
+   "sha256": "0ad9b9bf5a8970b87c80d9c2f62d8ee5617f0ca07011e3f07f6f6cd4dca1b3ec"
   }
  ],
- "lignes_chaud": 213,
- "tokens_approx_chaud": 3194,
+ "lignes_chaud": 217,
+ "tokens_approx_chaud": 3328,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "sprint-13.1 ajoutee au chaud + archive phases/sprint-13-1-dashboard-stats-la-delta-du-cham.md; ancre re-jugee par le segments() du juge",
-  "date": "2026-09-20T07:05:08.807382",
-  "ancre_git": "0165577314c63506e7dc831d25475ed028590602",
+  "motif": "sprint-14 ajoutee au chaud + archive phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md ; l'ancre est recalculee par la boucle du juge, jamais recopiee",
+  "date": "2026-09-23T07:12:06.732003",
+  "ancre_git": "2e77237a559e238ccf5c91c19de63bff4eb3cb51",
   "chiffres_disque": {
    "server.ts": 258,
    "src/App.tsx": 952,
    "src/routes/*.ts": 20,
    "src/components/*.tsx": 19
   },
-  "note": "phases/.pre-split/PHASES.md.orig reste l etat d origine (0360a1fe) et n est pas retabli; le recolle JUGE (d15f7cbd) est la nouvelle ancre."
+  "note": "phases/.pre-split/PHASES.md.orig reste l'etat d'origine et n'est pas retabli ; le recolle juge ci-dessus est la nouvelle ancre."
  }
 }
