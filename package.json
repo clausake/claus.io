@@ -53,6 +53,8 @@
     "verify:consume": "npx playwright test test/e2e/consume-contract.spec.ts --reporter=line",
     "verify:post-inventory": "npx playwright test test/e2e/post-inventory-contract.spec.ts --reporter=line",
     "verify:post-inventory-mord": "python3 scripts/negative-test-post-inventory-contract.py",
+    "verify:inventory-bulk": "node scripts/probe-inventory-bulk.mjs",
+    "verify:inventory-bulk-mord": "python3 scripts/negative-test-inventory-bulk.py",
     "verify:document-items": "npx playwright test test/e2e/document-items-contract.spec.ts --reporter=line",
     "verify:document-items-mord": "python3 scripts/negative-test-document-items.py",
     "verify:document-items-voices": "node scripts/probe-document-items-voices.mjs",

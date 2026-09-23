@@ -87,7 +87,13 @@ DEFAUT = ["verify:split",
           # Sprint 14: deux nouvelles portes (KPI de cout du travail et la
           # vue reception, un fixture page -> les libs systeme du navigateur
           # en CI).
-          "verify:kpi", "verify:reception"]
+          "verify:kpi", "verify:reception",
+          # La voie d'import CSV de l'auditeur (POST /api/inventory/bulk): elle
+          # repondoit 404 et l'UI affichait un succes (audit C3). La porte juge
+          # le contrat TOUT-OU-RIEN; sa morsure prouve que les douze verdicts
+          # peuvent rougir. Les retirer rend l'import jugeable partiellement
+          # sans qu'aucun lot ne le voie.
+          "verify:inventory-bulk", "verify:inventory-bulk-mord"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

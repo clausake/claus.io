@@ -66,8 +66,13 @@ MUTATIONS = [
      "P4"),
     ("M3 l'enum du statut s'ouvre (le 'normal' de l'ecran HACCP passe)",
      ROUTE,
-     "  } else if (typeof brutS !== \"string\" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {",
-     "  } else if (false) {",
+     # Le bloc de validation du statut est DESORMAIS ecrit dans DEUX routes
+     # (le POST d'unite et le POST en bloc), avec la MEMME regle (source UNIQUE
+     # des regles de forme). L'ancre mono-ligne etant retrouvee DEUX fois par
+     # substring, on l'etend d'une ligne de contexte pour ne muter QUE le POST
+     # d'unite -- qui est la route jugee par ce spec.
+     "  } else if (typeof brutS !== \"string\" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {\n    refus.push(\"status\");\n",
+     "  } else if (false) {\n    refus.push(\"status\");\n",
      "P3"),
     ("M4 la clef deja prise redevient un 500 « Failed to create »",
      ROUTE,
@@ -109,8 +114,10 @@ MUTATIONS = [
      "P1"),
     ("M8 le statut derive est fige au lieu d'etre calcule depuis les quantites",
      ROUTE,
-     "    statut = statutDeparse(quantite as number, minimum as number);",
-     "    statut = \"active\";",
+     # Meme disambiguation que M3 : la derivation du statut est partagee par le
+     # POST d'unite et le POST en bloc; l'ancre etendue ne mute que le premier.
+     "    statut = statutDeparse(quantite as number, minimum as number);\n  } else if (typeof brutS !== \"string\" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {\n",
+     "    statut = \"active\";\n  } else if (typeof brutS !== \"string\" || !STATUTS.includes(brutS.trim().toLowerCase() as (typeof STATUTS)[number])) {\n",
      "P3"),
     ("M9 le refus notifie redevient un 500 fourre",
      ROUTE,
