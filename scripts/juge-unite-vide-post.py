@@ -13,6 +13,7 @@ sont calcules DANS le kernel, jamais cites a l'oeil.
 """
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -74,6 +75,12 @@ def main():
         ["node", "--import", "tsx", "server.ts"],
         cwd=PROJ, env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        # le fils part dans SA PROPRE session : le fillet du conducteur tue le
+        # groupe entier au timeout ou au finally (un child.kill() ne vise que
+        # son pid, et le `tsx` qu'il a lui-même engendre lui survit — c'est
+        # precisement le fils remanant 456081 qui a tenu 3999 depuis le 23/09
+        # 08:09 et fait rougir la spec routes).
+        start_new_session=True,
     )
     try:
         pret = attendre_serveur()
@@ -129,11 +136,22 @@ def main():
             faits.append("SEM_B_UNIT_EN_BASE=ABSENT")
         print(" ".join(faits))
     finally:
-        try:
-            child.kill()
-            child.wait(timeout=6)
-        except Exception:
-            pass
+        # Le fils est DETACHE : il est chef de son propre groupe. `child.kill()`
+        # ne vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit
+        # (c'est precisement le fils remanant 456081 qui a tenu 3999 pendant
+        # vingt heures et fait rougir la spec routes). `os.killpg` SIGKILL tout
+        # le groupe.
+        for sig in ("SIGTERM", "SIGKILL"):
+            try:
+                os.killpg(child.pid, getattr(signal, sig))
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+            else:
+                try:
+                    child.wait(timeout=5)
+                    break
+                except subprocess.TimeoutExpired:
+                    continue
     return rc
 
 
