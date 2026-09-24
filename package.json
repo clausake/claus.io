@@ -67,7 +67,15 @@
     "verify:routes": "npx playwright test test/e2e/routes.spec.ts --reporter=line",
     "verify:recipes-put": "node scripts/probe-put-recipes-voices.mjs",
     "verify:dashboard": "npx playwright test test/e2e/dashboard-contract.spec.ts --reporter=line",
-    "verify:dashboard-mord": "python3 scripts/negative-test-dashboard-contract.py"
+    "verify:dashboard-mord": "python3 scripts/negative-test-dashboard-contract.py",
+    "verify:inventory-put-voices": "node scripts/probe-inventory-put-partial.mjs",
+    "verify:documents-validate-voices": "node scripts/probe-documents-validate-contract.mjs",
+    "verify:post-inventory-voices": "node scripts/probe-post-inventory-voices.mjs",
+    "verify:dashboard-voices": "node scripts/probe-dashboard-voices.mjs",
+    "verify:binding-semantiques": "node scripts/probe-binding-undefined.mjs",
+    "verify:consume-semantiques": "node scripts/probe-consume-semantiques.mjs",
+    "verify:number-statics": "node scripts/probe-number-statics.mjs",
+    "verify:indices-mord": "python3 scripts/negative-test-verify-indices.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
