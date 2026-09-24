@@ -27,13 +27,29 @@
 import { spawn } from "node:child_process";
 import { rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createServer } from "node:net";
 import process from "node:process";
 
 const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
 const OUT = join(process.cwd(), "test", "tmp-probe-docs-validate");
 const PORT = Number(process.env.PROBE_PORT || 4351);
 const BASE = "http://127.0.0.1:" + PORT;
-const TOKEN = "probe-docs-validate";
+const TOKEN = "probe-docs-validate-" + Date.now().toString(36);
+
+// La liberation prealable du port FIGE : sans elle, un fils remanant d'une
+// course precedente tient le port, la boucle d'attente juge LE FILS REMANANT
+// (qui porte le MEME jeton au regard du middleware) et la sonde SEM sur une
+// instance qu'elle n'a pas installee (observe le 24/09 : la SEMENCE IDENTIQUE
+// sur deux courses est le temoin du detache). L'echec franc sur un port pris
+// (PORT_OCCUPE=1) est le verdict, jamais une attente qui tourne jusqu'au
+// budget.
+function portLibre(p) {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(p, "127.0.0.1", () => probe.close(() => resolve(true)));
+  });
+}
 
 async function req(methode, chemin, corps) {
   const r = await fetch(BASE + chemin, {
@@ -64,6 +80,28 @@ const resumee = (g) => (g && g.best_supplier_price
 async function main() {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
+  try {
+    await portLibre(PORT);
+  } catch {
+    // LE FILS REMANANT TIENT LE PORT: la sonde JUGE QUI TIENT le port (le
+    // GET /api/settings et son en-tete), puis rend NOMMEMENT (jeton rendu,
+    // attendu). Un PORT_OCCUPE sans nom est un angle mort du capteur: le
+    // verdict doit dire QUI, pas seulement QUE le port est pris. La voie est
+    // celle de la spec routes.spec.ts (INSTANCE ETRANGERE sur divergence de
+    // jeton, distinguée de « serveur pas pret » par le nom du jeton rendu).
+    let jeton = null;
+    try {
+      const r = await fetch(BASE + "/api/settings", {
+        headers: { "X-Cookdrive-Instance": TOKEN },
+      });
+      if (r.ok) jeton = r.headers.get("x-cookdrive-instance");
+    } catch {}
+    console.log("RESULTATS PORT_OCCUPE=1 PORT=" + PORT
+      + " JETON_RENDU=" + JSON.stringify(jeton)
+      + " JETON_ATTENDU=" + JSON.stringify(TOKEN));
+    process.exitCode = 5;
+    return;
+  }
   const child = spawn(process.execPath, [BIN, "server.ts"], {
     cwd: process.cwd(),
     env: {
@@ -74,8 +112,16 @@ async function main() {
       COOKDRIVE_INSTANCE_TOKEN: TOKEN,
     },
     stdio: ["ignore", "ignore", "pipe"],
+    // le fils part dans SA PROPRE session : un SIGKILL sur le leader emporte
+    // tout l'arbre. Sans cela, un timeout du conducteur laissait ici un
+    // `tsx server.ts` orphelin qui tenait le port et empoisonnait la course
+    // suivante (observe le 23/09 : le LOT s'est arrete 20 min sur la sonde
+    // suivante, bloque sur un serveur qui n'etait plus le sien).
+    detached: true,
   });
-  child.on("error", () => {});
+  // EADDRINUSE sans handler laisse le process VIVANT sans servir : la boucle
+  // d'attente tourne alors jusqu'au budget et le verdict est perdu.
+  child.on("error", () => process.exit(6));
   const veilleur = setTimeout(() => { console.log("RESULTATS BUDGET_DEPASSE=1"); process.exit(4); }, 150000);
 
   try {
@@ -159,7 +205,11 @@ async function main() {
     console.log("RESULTATS " + T.join(" "));
   } finally {
     clearTimeout(veilleur);
-    child.kill("SIGKILL");
+    // Le fils est DETACHE : il est chef de son propre groupe. `child.kill` ne
+    // vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est
+    // precisement le fils remanant qui a tenu 4351 pendant 20 minutes et fait
+    // TIMEOUT la course suivante). `process.kill(-pid)` SIGKILL tout le groupe.
+    try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
     await Promise.race([
       new Promise((r) => child.on("exit", r)),
       new Promise((r) => setTimeout(r, 4000)),
