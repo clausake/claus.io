@@ -39,6 +39,8 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
 BASE = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import _sondes_serveur as ss
 WORKROOT = os.path.join(os.path.expanduser("~"), ".cook-probe-index-installe")
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
@@ -111,7 +113,7 @@ class Serveur:
     def start(self, data_dir):
         self.port = free_port()
         self.log = open(os.path.join(data_dir, "server.log"), "w")
-        self.proc = subprocess.Popen(
+        self.proc = ss.Popen_sonde(
             [NODE, os.path.join(BASE, "node_modules", ".bin", "tsx"), "server.ts"],
             cwd=BASE, stdout=self.log, stderr=self.log,
             env=dict(os.environ, PORT=str(self.port), USER_DATA_PATH=data_dir))

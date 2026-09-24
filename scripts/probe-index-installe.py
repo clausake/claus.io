@@ -16,6 +16,7 @@
 #     prouverait rien ;
 #   - la route repond toujours un JSON exploitable (les index ne doivent rien casser).
 import os
+import subprocess
 import sys
 import json
 import time
@@ -25,6 +26,8 @@ import urllib.request
 
 REPO = os.path.expanduser("~/cookdrive-project")
 os.chdir(REPO)
+sys.path.insert(0, os.path.join(REPO, "scripts"))
+import _sondes_serveur as ss
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
 
@@ -44,10 +47,10 @@ TODAY_NOM = JOURS[(time.localtime().tm_wday + 1) % 7]   # JS getDay(): 0 = diman
 
 
 def boot():
-    import subprocess
-    ch = subprocess.Popen([NODE, "node_modules/.bin/tsx", "server.ts"],
-                          env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ss.bootstrap(PORT)
+    ch = ss.Popen_sonde([NODE, "node_modules/.bin/tsx", "server.ts"],
+                        env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(200):
         try:
             with urllib.request.urlopen(BASE + "/health", timeout=2) as r:
@@ -55,16 +58,12 @@ def boot():
                 return ch
         except Exception:
             time.sleep(0.4)
-    ch.terminate()
+    ss.tuer_groupe(ch)
     raise SystemExit("serveur pas pret: la migration n'a pas tourne")
 
 
 def halt(ch):
-    ch.terminate()
-    try:
-        ch.wait(timeout=10)
-    except Exception:
-        ch.kill()
+    ss.tuer_groupe(ch)
 
 
 def db():

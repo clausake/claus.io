@@ -49,6 +49,8 @@ from datetime import date as _d, timedelta as _td
 
 REPO = os.path.expanduser(os.environ.get("COOKDRIVE_PROBE_REPO", "~/cookdrive-project"))
 os.chdir(REPO)
+sys.path.insert(0, os.path.join(os.path.expanduser("~/cookdrive-project"), "scripts"))
+import _sondes_serveur as ss
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
 
@@ -92,9 +94,10 @@ def http(method, path, payload=None):
 
 def boot():
     import subprocess
-    ch = subprocess.Popen([NODE, "node_modules/.bin/tsx", "server.ts"],
-                          env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ss.bootstrap(int(PORT))
+    ch = ss.Popen_sonde([NODE, "node_modules/.bin/tsx", "server.ts"],
+                        env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     stop = threading.Event()
 
     def hold():
@@ -108,17 +111,13 @@ def boot():
                 return ch, stop
         except Exception:
             time.sleep(0.4)
-    ch.terminate()
+    ss.tuer_groupe(ch)
     raise SystemExit("serveur pas pret: /health ne repond pas")
 
 
 def halt(ch, stop):
     stop.set()
-    ch.terminate()
-    try:
-        ch.wait(timeout=10)
-    except Exception:
-        ch.kill()
+    ss.tuer_groupe(ch)
 
 
 def con():
