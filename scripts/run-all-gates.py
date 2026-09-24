@@ -93,7 +93,19 @@ DEFAUT = ["verify:split",
           # le contrat TOUT-OU-RIEN; sa morsure prouve que les douze verdicts
           # peuvent rougir. Les retirer rend l'import jugeable partiellement
           # sans qu'aucun lot ne le voie.
-          "verify:inventory-bulk", "verify:inventory-bulk-mord"]
+          "verify:inventory-bulk", "verify:inventory-bulk-mord",
+          # Article 4 de l'audit du 20/09 (docs/audit-2026-09-20.md): les SONDES
+          # BRUTES qui ne portaient AUCUNE barre. Les quatre "-voices" jugent les
+          # VOIES REELLES de l'UI sur un serveur reel (la voie que le spec de
+          # contrat n'a jamais recopiee); les trois "semantiques" juge la BIBLIOTHEQUE
+          # node-sqlite3 / Number.* sur ce que la route suppose d'elle; la preuve
+          # de morsure d'indices prouve que le garde du harnais d'indices rougit.
+          # Retirer une de ces portes rend le contrat jugeable partiellement sans
+          # qu'aucun lot ne le voie.
+          "verify:inventory-put-voices", "verify:documents-validate-voices",
+          "verify:post-inventory-voices", "verify:dashboard-voices",
+          "verify:binding-semantiques", "verify:consume-semantiques",
+          "verify:number-statics", "verify:indices-mord"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
