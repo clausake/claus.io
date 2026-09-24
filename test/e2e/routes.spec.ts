@@ -13,6 +13,14 @@ import { Buffer } from "node:buffer";
 const PORT = 3999;
 const BASE = `http://127.0.0.1:${PORT}`;
 const DATA_DIR = path.join(process.cwd(), "test", "tmp-data");
+// Jeton d'instance : le fils de ce spec est le SEUL qui a le droit de servir
+// ce port. Sans cette confrontation, un fils remanant d'une course precedente
+// (qui porte le BON jeton au regard du middleware, mais pas le nôtre) fait
+// juger au spec une instance qu'il n'a pas installee : le rouge `SQLITE_CANTOPEN`
+// du 24/09 sur POST /api/robots/assign venait precisement de la (le POST/GET
+// allait sur la base ~/cookdrive-juge-unite-vide du voisin, jamais sur tmp-data
+// de la course).
+const INSTANCE_TOKEN = "routes-spec-" + Date.now().toString(36);
 
 let server: ChildProcess;
 
@@ -21,19 +29,37 @@ test.beforeAll(async () => {
   const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   server = spawn(process.execPath, [tsxBin, "server.ts"], {
     cwd: process.cwd(),
-    env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      USER_DATA_PATH: DATA_DIR,
+      COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
+    },
     stdio: "pipe",
   });
   server.stdout?.on("data", (d) => process.stdout.write(d));
   server.stderr?.on("data", (d) => process.stderr.write(d));
-  // wait for server to listen
+  // wait for server to listen ET confronte QUI REPOND (le garde d'instance) :
+  // un fils remanant qui porte le BON jeton au regard du middleware fait juger
+  // au spec une instance qu'il n'a pas installee. Ici il n'y a PAS de garde :
+  // la boucle d'attente confronte l'en-tête et rougit immediatement sur divergence,
+  // en distinguant « instance perimee » (defaut d'harnais) de « serveur pas pret »
+  // (defaut de produit). Verifie par le spec lui-meme (test/e2e/routes.spec.ts).
   const deadline = Date.now() + 30_000;
+  let pret = false;
   while (Date.now() < deadline) {
     try {
       const res = await fetch(`${BASE}/api/settings`);
-      if (res.ok) break;
+      const jeton = res.headers.get("x-cookdrive-instance");
+      if (res.ok && jeton === INSTANCE_TOKEN) { pret = true; break; }
+      if (res.ok && jeton && jeton !== INSTANCE_TOKEN) {
+        throw new Error(`INSTANCE ETRANGERE sur le port ${PORT} (${jeton}, attend ${INSTANCE_TOKEN})`);
+      }
     } catch {}
     await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!pret) {
+    throw new Error(`SERVEUR PAS PRET sur le port ${PORT} (boucle 30 s, jeton jamais confronte)`);
   }
 }, 45_000);
 
