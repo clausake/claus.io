@@ -111,7 +111,12 @@ DEFAUT = ["verify:split",
           "verify:inventory-put-voices", "verify:documents-validate-voices",
           "verify:post-inventory-voices", "verify:dashboard-voices",
           "verify:binding-semantiques", "verify:consume-semantiques",
-          "verify:number-statics", "verify:indices-mord"]
+          "verify:number-statics", "verify:indices-mord",
+          # La sonde du REDISPOST du POST /api/inventory: elle rejoue le payload
+          # EXACT que la porte npm envoie (unit:"") et dit si le contrat a bouge
+          # (400/200) — la porte du contrat la juge la spec, cette sonde-la dit
+          # CE QUE le serveur rend quand on lui poste la mutation.
+          "verify:juge-unite-vide"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

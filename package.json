@@ -75,7 +75,8 @@
     "verify:binding-semantiques": "node scripts/probe-binding-undefined.mjs",
     "verify:consume-semantiques": "node scripts/probe-consume-semantiques.mjs",
     "verify:number-statics": "node scripts/probe-number-statics.mjs",
-    "verify:indices-mord": "python3 scripts/negative-test-verify-indices.py"
+    "verify:indices-mord": "python3 scripts/negative-test-verify-indices.py",
+    "verify:juge-unite-vide": "python3 scripts/juge-unite-vide-post.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

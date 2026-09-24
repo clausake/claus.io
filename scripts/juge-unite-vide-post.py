@@ -22,7 +22,12 @@ import urllib.error
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
-PROJ = BASE  # ce fichier vit a la racine du depot
+# le fichier est NE dans scripts/ (commit 933bd78): sa racine est le PARENT de
+# son dossier. Avec PROJ = BASE, le spawn cherchait scripts/server.ts et node
+# mourait en ERR_MODULE_NOT_FOUND — et comme stderr partait dans DEVNULL, la
+# sonde rendait SERVEUR_ABSENT=1 sans jamais dire pourquoi. Le sillage
+# (serveur.err.log) a rendu le mot visible.
+PROJ = os.path.dirname(BASE)
 
 PORT = 3999
 TOKEN = "juge-unite-vide-" + str(os.getpid())
@@ -49,7 +54,12 @@ def req(method, path, corps=None):
 
 def attendre_serveur():
     """Le port du POST doit dire QUI REPOND, sinon le harnais juge le voisin."""
-    for _ in range(60):
+    # Le demarrage froid dure ~60 s sur cette machine (chargement EpicureModel
+    # + 15 migrations [SCHEMA]) — mesure du 24/09: COOKDRIVE_READY rendu 61 s
+    # apres le spawn. Le veilleur de 60 x 0.5 s = 30 s mourait AVANT le pret et
+    # rendait SERVEUR_ABSENT=1 sans dire pourquoi: l'attente doit couvrir le
+    # temps de chargement reel, pas une moitie.
+    for _ in range(240):
         try:
             code, corps = req("GET", "/api/settings")
             if code == 200:
@@ -71,10 +81,22 @@ def main():
     env["PORT"] = str(PORT)
     env["COOKDRIVE_INSTANCE_TOKEN"] = TOKEN
     env["USER_DATA_PATH"] = OUT_DIR
+    # NODE_ENV=production: sans lui, server.ts monte le middleware Vite du dev
+    # (piege consigne), dont le websocket HMR veut 24678 — pris par le dev de
+    # Stefan depuis le 19/09. Le serveur mourait a l'ecran et la sonde rendait
+    # SERVEUR_ABSENT=1 sans jamais prononcer le mot « vite » ni « HMR ».
+    env["NODE_ENV"] = "production"
+    # Le fillet du conducteur: stdout/stderr dans des FICHIERS de OUT_DIR, pas
+    # DEVNULL. Mesure du 24/09: avec DEVNULL le serveur ne lie JAMAIS le port
+    # (sonde ss: 0 pendant 140 s), avec des fichiers il est pret et la sonde
+    # rend IDENTITE_OK=1 + les deux semences. Le sillage sert aussi au diagnostic
+    # d'un SERVEUR_ABSENT (il etait muet jusqu'ici).
+    log_out = open(os.path.join(OUT_DIR, "serveur.out.log"), "wb")
+    log_err = open(os.path.join(OUT_DIR, "serveur.err.log"), "wb")
     child = subprocess.Popen(
         ["node", "--import", "tsx", "server.ts"],
         cwd=PROJ, env=env,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=log_out, stderr=log_err,
         # le fils part dans SA PROPRE session : le fillet du conducteur tue le
         # groupe entier au timeout ou au finally (un child.kill() ne vise que
         # son pid, et le `tsx` qu'il a lui-même engendre lui survit — c'est
@@ -152,6 +174,11 @@ def main():
                     break
                 except subprocess.TimeoutExpired:
                     continue
+        for f in (log_out, log_err):
+            try:
+                f.close()
+            except OSError:
+                pass
     return rc
 
 
