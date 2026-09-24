@@ -223,3 +223,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 14.d - les fils detaches ne survivent plus a leur harnais (24 sept.) -> `phases/sprint-14-sprint-14-d-les-fils-detaches-ne-survivent-p.md` (5864 octets, 91 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
