@@ -1,6 +1,6 @@
 {
   "original_octets": 145533,
-  "original_sha256": "c8b0372a241d82ea5ac0159bcc4cce55b901b73ade1636ffc205e4d3ba5fdf5b",
+  "original_sha256": "7f96f713fe1ce0656a891e70bd6930c1317492587f7c78ba0926d12f64ddf80a",
   "chaud_octets": 14148,
   "archives": [
     {
@@ -107,6 +107,13 @@
       "octets": 5864,
       "lignes": 91,
       "sha256": "1918b6618180ff72684d5532888d211c1b16d0fe58a96315fefaa49b9038496b"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-e-les-orphelines-jugees-une-a-une-.md",
+      "titre": "## Sprint 14.e - les orphelines jugees une a une, et cinq branchees (24 sept.)",
+      "octets": 4778,
+      "lignes": 94,
+      "sha256": "3ecc534c5bee9151a3b7bdff4d0846fde49ce587e7fae793a6b3f4126864ca89"
     }
   ],
   "lignes_chaud": 225,

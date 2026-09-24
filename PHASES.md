@@ -227,3 +227,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 14.e - les orphelines jugees une a une, et cinq branchees (24 sept.) -> `phases/sprint-14-sprint-14-e-les-orphelines-jugees-une-a-une-.md` (4778 octets, 94 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
