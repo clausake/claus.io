@@ -26,6 +26,7 @@
 import { spawn } from "node:child_process";
 import { rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createServer } from "node:net";
 import process from "node:process";
 
 const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
@@ -46,9 +47,32 @@ const CREER = {
   dlc: "2027-01-01",
 };
 
+// Un port IMPOSE ne se partage pas : « c'est MON fils qui y est » ne se prouve
+// qu'en exigeant le port LIBRE avant de binder. Sans ce controle, un fils
+// remanant d'une course precedente (qui porte, lui aussi, le BON jeton) fait
+// juger a la sonde une instance qu'elle n'a pas installee : le verdict sort
+// avec le jeton correct et une histoire d'etats qui n'est pas la sienne.
+// La boucle d'attente, elle, confronte deja `x-cookdrive-instance` et rougit
+// sur un etranger ; ce qui manquait etait la liberation prealable + l'echec
+// franc sur EADDRINUSE.
+function portLibre(p) {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(p, "127.0.0.1", () => probe.close(() => resolve(true)));
+  });
+}
+
 async function main() {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
+  try {
+    await portLibre(PORT);
+  } catch {
+    console.log("RESULTATS PORT_OCCUPE=1 PORT=" + PORT + " (un fils d'une course precedente y est encore)");
+    process.exitCode = 5;
+    return;
+  }
   const child = spawn(process.execPath, [BIN, "server.ts"], {
     cwd: process.cwd(),
     env: {
@@ -59,7 +83,16 @@ async function main() {
       COOKDRIVE_INSTANCE_TOKEN: TOKEN,
     },
     stdio: ["ignore", "ignore", "pipe"],
+    // le fils part dans SA PROPRE session : un SIGKILL sur le leader emporte
+    // tout l'arbre. Sans cela, un timeout du conducteur laissait ici un
+    // `tsx server.ts` orphelin qui tenait le port et empoisonnait la course
+    // suivante (observe le 23/09 : le LOT s'est arrete 20 min sur la sonde
+    // suivante, bloque sur un serveur qui n'etait plus le sien).
+    detached: true,
   });
+  // EADDRINUSE sans handler laisse le process VIVANT sans servir : la boucle
+  // d'attente tourne alors jusqu'au budget et le verdict est perdu.
+  child.on("error", () => process.exit(6));
 
   const put = async (id, body) => {
     const r = await fetch(`${BASE}/api/inventory/${id}`, {
@@ -148,8 +181,15 @@ async function main() {
 
     console.log("RESULTATS " + tokens.join(" "));
   } finally {
-    child.kill("SIGKILL");
-    await new Promise((r) => child.on("exit", r));
+    // Le fils est DETACHE : il est chef de son propre groupe. `child.kill` ne
+    // vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est
+    // precisement le fils remanant qui a tenu 4177 pendant 20 minutes et fait
+    // TIMEOUT la course suivante). `process.kill(-pid)` SIGKILL tout le groupe.
+    try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+    await Promise.race([
+      new Promise((r) => child.on("exit", r)),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
     rmSync(OUT, { recursive: true, force: true });
   }
 }
