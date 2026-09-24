@@ -114,9 +114,31 @@ DEFAUT = ["verify:split",
           "verify:number-statics", "verify:indices-mord",
           # La sonde du REDISPOST du POST /api/inventory: elle rejoue le payload
           # EXACT que la porte npm envoie (unit:"") et dit si le contrat a bouge
-          # (400/200) — la porte du contrat la juge la spec, cette sonde-la dit
+          # (400/200). La porte du contrat la juge la spec, cette sonde-la dit
           # CE QUE le serveur rend quand on lui poste la mutation.
-          "verify:juge-unite-vide"]
+          "verify:juge-unite-vide",
+          # --- Sprint 14.e: les sondes de l'article 4 C4 qui ont ete jugees
+          # une a une et trouvees CAPABLES de rougir (classification par AST du
+          # capteur: un chemin de sortie non nul conditionnel existe). Les
+          # brancher a un sens; les retirer rend ces contrats jugeables
+          # partiellement sans qu'aucun lot ne le voie.
+          #   labor-cost-zero : le KPI de cout du jour, juge par DELTA et par
+          #     contre-controles (jour voisin exclu, branche heritee, creneau
+          #     vide) -- la mutation F4 de scripts/mutation-test-labor.py.
+          #   put-yield : le PUT d'inventaire ecrit-il le rendement, en base.
+          #   module-contract : le module partage HACCP par octets, par tsc, et
+          #     le CONTRAT du token par EXECUTION (V5, consigne d'un verdict
+          #     promit mais jamais calcule: la docstring le promettoit depuis
+          #     sa creation sans que le corps ne le juge).
+          #   installe-index / installe-index-forecast : l'index est POSÉ, le
+          #     plan est PLEIN, la route rend un JSON exploitable.
+          "verify:labor-cost-zero", "verify:put-yield", "verify:module-contract",
+          "verify:installe-index", "verify:installe-index-forecast",
+          # La porte du CAPTEUR: il ne juge pas le produit, il juge que le
+          # depot ne produit pas de NOUVELLE sonde sans porte. Sans elle ici,
+          # le defaut de l'article 4 (une liste FIGEE qui ne voit pas ce qui
+          # s'ajoute) se rejoueroit sur le capteur lui-meme.
+          "verify:capteur-orphelines"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

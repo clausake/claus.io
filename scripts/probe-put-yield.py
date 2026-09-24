@@ -1,7 +1,10 @@
 # Sonde: le PUT /api/inventory/:id ecrit-il reellement yield_percent ?
 # La sonde e2e a rendu 2400 (rendement 100) la ou 3000 etait attendu (rendement 80).
-import json, os, shutil, sqlite3, subprocess, sys, threading, time
+import json, os, shutil, signal, sqlite3, subprocess, sys, threading, time
 import urllib.request, urllib.error
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _sondes_serveur as ss
 
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
@@ -24,12 +27,13 @@ def call(method, path, payload=None):
 
 
 shutil.rmtree(DATA, ignore_errors=True)
+ss.bootstrap(PORT)
 os.makedirs(DATA, exist_ok=True)
 tsxb = os.path.join(BASE_DIR, "node_modules", ".bin", "tsx")
 log = open(os.path.join(DATA, "server.log"), "w")
-proc = subprocess.Popen([NODE, tsxb, "server.ts"], cwd=BASE_DIR,
-                        env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
-                        stdout=log, stderr=log)
+proc = ss.Popen_sonde([NODE, tsxb, "server.ts"], cwd=BASE_DIR,
+                      env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                      stdout=log, stderr=log)
 
 deadline = time.time() + 30
 while time.time() < deadline:
@@ -42,7 +46,8 @@ else:
     print("SERVEUR PAS PRET -- log:")
     log.flush()
     print(open(os.path.join(DATA, "server.log"), encoding="utf-8", errors="replace").read()[-2500:])
-    proc.kill(); log.close()
+    ss.tuer_groupe(proc)
+    log.close()
     sys.exit(2)
 
 rc = 1
@@ -78,10 +83,7 @@ try:
     print("\nVERDICT PUT yield_percent:", "OK" if ok else "FAIL (le PUT n'ecrit pas le rendement)")
     rc = 0 if ok else 1
 finally:
-    proc.terminate()
-    try:
-        proc.wait(timeout=8)
-    except Exception:
-        proc.kill()
+    ss.tuer_groupe(proc)
+    log.close()
     shutil.rmtree(DATA, ignore_errors=True)
 sys.exit(rc)
