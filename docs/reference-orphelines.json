@@ -1,0 +1,194 @@
+{
+  "classes": {
+    "negative-test-consume-contract.py": "PORTEE",
+    "negative-test-dashboard-contract.py": "PORTEE",
+    "negative-test-document-items.py": "PORTEE",
+    "negative-test-documents-validate.py": "PORTEE",
+    "negative-test-forecast-graine.py": "PORTEE",
+    "negative-test-haccp-contract.py": "PORTEE",
+    "negative-test-inventory-bulk.py": "PORTEE",
+    "negative-test-inventory-put.py": "PORTEE",
+    "negative-test-post-inventory-contract.py": "PORTEE",
+    "negative-test-ready-parity.py": "PORTEE",
+    "negative-test-recipes-contract.py": "PORTEE",
+    "negative-test-supplier-import.py": "PORTEE",
+    "negative-test-supplier-price.py": "PORTEE",
+    "negative-test-verify-indices.py": "PORTEE",
+    "probe-ancres-haccp.py": "ORPHELINE",
+    "probe-binding-undefined.mjs": "PORTEE",
+    "probe-blocs-sprint11.py": "ORPHELINE",
+    "probe-consume-semantiques.mjs": "PORTEE",
+    "probe-dashboard-voices.mjs": "PORTEE",
+    "probe-document-items-voices.mjs": "PORTEE",
+    "probe-documents-validate-contract.mjs": "PORTEE",
+    "probe-emuns-haccp.py": "ORPHELINE",
+    "probe-forecast-real.py": "PORTEE",
+    "probe-forme-filtre.py": "ORPHELINE",
+    "probe-garde-instance-harnais-mord.py": "DEMI-PORTEE",
+    "probe-haccp-prerequis.py": "ORPHELINE",
+    "probe-index-forecast-installe.py": "PORTEE",
+    "probe-index-forecast.py": "ORPHELINE",
+    "probe-index-installe.py": "PORTEE",
+    "probe-index-reel.py": "ORPHELINE",
+    "probe-index-staffday.py": "ORPHELINE",
+    "probe-installeur-morsure.py": "PORTEE",
+    "probe-instance-garde-mord.py": "PORTEE",
+    "probe-instance-guard.mjs": "PORTEE",
+    "probe-inventory-bulk.mjs": "PORTEE",
+    "probe-inventory-put-partial.mjs": "PORTEE",
+    "probe-join-stats.py": "ORPHELINE",
+    "probe-labor-cost-zero.py": "PORTEE",
+    "probe-nplus1.py": "ORPHELINE",
+    "probe-number-statics.mjs": "PORTEE",
+    "probe-post-inventory-voices.mjs": "PORTEE",
+    "probe-put-recipes-voices.mjs": "PORTEE",
+    "probe-put-yield.py": "PORTEE",
+    "probe-ready-parity.mjs": "PORTEE",
+    "probe-recipes-voices.mjs": "PORTEE",
+    "probe-stats.py": "ORPHELINE",
+    "probe-supplier-import-contract.mjs": "PORTEE",
+    "probe-supplier-price-contract.mjs": "PORTEE",
+    "probe-verif-module.py": "PORTEE"
+  },
+  "compte": {
+    "DEMI-PORTEE": 1,
+    "ORPHELINE": 11,
+    "PORTEE": 37
+  },
+  "hors_loi": {},
+  "source": "scripts/capteur-orphelines.py",
+  "surveillees": {
+    "probe-ancres-haccp.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-blocs-sprint11.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-emuns-haccp.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-forme-filtre.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-garde-instance-harnais-mord.py": {
+      "cite_par": [
+        "package.json",
+        "scripts/verify-http.mjs",
+        "scripts/verify-perf.mjs",
+        "scripts/verify-ratelimit.mjs",
+        "scripts/verify-sse.mjs"
+      ],
+      "cite_par_reel": [
+        "package.json",
+        "scripts/verify-http.mjs",
+        "scripts/verify-perf.mjs",
+        "scripts/verify-ratelimit.mjs",
+        "scripts/verify-sse.mjs"
+      ],
+      "classe": "DEMI-PORTEE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": true,
+      "portes": [
+        "\"verify:instance-mord-harnais\""
+      ]
+    },
+    "probe-haccp-prerequis.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-index-forecast.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-index-reel.py": {
+      "cite_par": [
+        "scripts/probe-index-installe.py",
+        "scripts/probe-index-staffday.py"
+      ],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-index-staffday.py": {
+      "cite_par": [
+        "scripts/probe-index-reel.py"
+      ],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-join-stats.py": {
+      "cite_par": [
+        "scripts/probe-nplus1.py"
+      ],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-nplus1.py": {
+      "cite_par": [
+        "scripts/probe-join-stats.py"
+      ],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    },
+    "probe-stats.py": {
+      "cite_par": [],
+      "cite_par_reel": [],
+      "classe": "ORPHELINE",
+      "conducteur": false,
+      "defaut": false,
+      "package_json": false,
+      "portes": []
+    }
+  },
+  "total_sondes": 49
+}
