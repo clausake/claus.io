@@ -69,7 +69,22 @@ async function main() {
   try {
     await portLibre(PORT);
   } catch {
-    console.log("RESULTATS PORT_OCCUPE=1 PORT=" + PORT + " (un fils d'une course precedente y est encore)");
+    // LE FILS REMANANT TIENT LE PORT: la sonde JUGE QUI TIENT le port (le
+    // GET /api/settings et son en-tete), puis rend NOMMEMENT (jeton rendu,
+    // attendu). Un PORT_OCCUPE sans nom est un angle mort du capteur: le
+    // verdict doit dire QUI, pas seulement QUE le port est pris. La voie est
+    // celle de la spec routes.spec.ts (INSTANCE ETRANGERE sur divergence de
+    // jeton, distinguée de « serveur pas pret » par le nom du jeton rendu).
+    let jeton = null;
+    try {
+      const r = await fetch(`${BASE}/api/settings`, {
+        headers: { "X-Cookdrive-Instance": TOKEN },
+      });
+      if (r.ok) jeton = r.headers.get("x-cookdrive-instance");
+    } catch {}
+    console.log("RESULTATS PORT_OCCUPE=1 PORT=" + PORT
+      + " JETON_RENDU=" + JSON.stringify(jeton)
+      + " JETON_ATTENDU=" + JSON.stringify(TOKEN));
     process.exitCode = 5;
     return;
   }

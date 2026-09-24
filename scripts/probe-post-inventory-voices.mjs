@@ -28,7 +28,7 @@ import fs from "fs";
 import { createServer } from "net";
 
 const DATA_DIR = path.join(process.cwd(), "test", "tmp-probe-post");
-const TOKEN = "probe-post-inventory";
+const TOKEN = `probe-post-inventory-${process.pid}-${Date.now().toString(36)}`;
 
 async function portLibre() {
   return await new Promise((resolve, reject) => {
@@ -48,10 +48,19 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
   cwd: process.cwd(),
+  detached: true,
   env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
   stdio: "pipe",
 });
 server.on("error", () => process.exit(9));
+const groupKilled = () => {
+  try { process.kill(-server.pid, "SIGKILL"); } catch {}
+};
+// Le fils est DETACHE : il est chef de son propre groupe. `server.kill` ne
+// vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est
+// precisement le fils remanant qui a tenu les ports FIGES depuis les courses
+// precedentes). `process.kill(-pid)` SIGKILL tout le groupe.
+server.on("exit", () => groupKilled());
 
 const deadline = Date.now() + 45000;
 let pret = false;
@@ -136,5 +145,6 @@ for (const [label, body] of [["S8 {}", {}], ["S8b name=42 (nombre)", { name: 42,
 }
 
 server.kill("SIGTERM");
+groupKilled();
 await new Promise((r) => setTimeout(r, 600));
 console.log("\nSONDE JOUEE (rc=0 = elle s'est jouee; les verdicts sont au-dessus, asserts par aucun test).");

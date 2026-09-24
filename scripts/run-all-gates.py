@@ -45,6 +45,12 @@ DEFAUT = ["verify:split",
           # partiellement sans que personne ne le voie.
           "verify:supplier-price", "verify:supplier-import",
           "verify:documents-validate",
+          # Les TROIS portes de la chaine d'achat (Sprint 14): la sonde du
+          # REDISPOST (import-contract), la sonde du POST unitaire
+          # (supplier-probe) et la sonde de l'installeur (installeur-morsure).
+          # Les retirer rend la chaine jugeable partiellement sans qu'aucun
+          # lot ne le voie (la famille de verify:forecast du Sprint 10).
+          "verify:import-contract", "verify:supplier-probe", "verify:installeur",
           # Les deux portes d'ECRITURE d'inventaire du Sprint 8, chacune avec sa
           # preuve de morsure: consume (decrement de stock du chariot de
           # production) et post-inventory (la CREATION, qui avait TROIS voies dans

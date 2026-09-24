@@ -36,13 +36,31 @@
 import { spawn } from "node:child_process";
 import { rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createServer } from "node:net";
 import process from "node:process";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 
 const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
 const OUT = join(process.cwd(), "test", "tmp-probe-spri-import");
 const PORT = Number(process.env.PROBE_PORT || 4331);
 const BASE = "http://127.0.0.1:" + PORT;
-const TOKEN = "probe-spri-import";
+const TOKEN = "probe-spri-import-" + Date.now().toString(36);
+
+// La liberation prealable du port FIGE : sans elle, un fils remanant d'une
+// course precedente tient le port, la boucle d'attente juge LE FILS REMANANT
+// (qui porte le MEME jeton au regard du middleware) et la sonde SEM sur une
+// instance qu'elle n'a pas installee (observe le 24/09 : la SEMENCE IDENTIQUE
+// sur deux courses est le temoin du detache). L'echec franc sur un port pris
+// (PORT_OCCUPE=1) est le verdict, jamais une attente qui tourne jusqu'au
+// budget.
+function portLibre(p) {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(p, "127.0.0.1", () => probe.close(() => resolve(true)));
+  });
+}
 
 async function req(methode, chemin, corps) {
   const r = await fetch(BASE + chemin, {
@@ -89,6 +107,28 @@ function resumee(g) {
 async function main() {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
+  try {
+    await portLibre(PORT);
+  } catch {
+    // LE FILS REMANANT TIENT LE PORT: la sonde JUGE QUI TIENT le port (le
+    // GET /api/settings et son en-tete), puis rend NOMMEMENT (jeton rendu,
+    // attendu). Un PORT_OCCUPE sans nom est un angle mort du capteur: le
+    // verdict doit dire QUI, pas seulement QUE le port est pris. La voie est
+    // celle de la spec routes.spec.ts (INSTANCE ETRANGERE sur divergence de
+    // jeton, distinguée de « serveur pas pret » par le nom du jeton rendu).
+    let jeton = null;
+    try {
+      const r = await fetch(BASE + "/api/settings", {
+        headers: { "X-Cookdrive-Instance": TOKEN },
+      });
+      if (r.ok) jeton = r.headers.get("x-cookdrive-instance");
+    } catch {}
+    console.log("RESULTATS PORT_OCCUPE=1 PORT=" + PORT
+      + " JETON_RENDU=" + JSON.stringify(jeton)
+      + " JETON_ATTENDU=" + JSON.stringify(TOKEN));
+    process.exitCode = 5;
+    return;
+  }
   const child = spawn(process.execPath, [BIN, "server.ts"], {
     cwd: process.cwd(),
     env: {
@@ -99,8 +139,16 @@ async function main() {
       COOKDRIVE_INSTANCE_TOKEN: TOKEN,
     },
     stdio: ["ignore", "ignore", "pipe"],
+    // le fils part dans SA PROPRE session : un SIGKILL sur le leader emporte
+    // tout l'arbre. Sans cela, un timeout du conducteur laissait ici un
+    // `tsx server.ts` orphelin qui tenait le port et empoisonnait la course
+    // suivante (observe le 23/09 : le LOT s'est arrete 20 min sur la sonde
+    // suivante, bloque sur un serveur qui n'etait plus le sien).
+    detached: true,
   });
-  child.on("error", () => {});
+  // EADDRINUSE sans handler laisse le process VIVANT sans servir : la boucle
+  // d'attente tourne alors jusqu'au budget et le verdict est perdu.
+  child.on("error", () => process.exit(6));
   const veilleur = setTimeout(() => {
     console.log("RESULTATS BUDGET_DEPASSE=1");
     process.exit(4);
@@ -132,19 +180,50 @@ async function main() {
       status: "ok", category: "Epicerie", unit_price: 1000,
     });
     const iid = art.json && art.json.id;
+    // ⚠ L'UNITÉ VIDE EST UNE DONNÉE HÉRITÉE, pas une saisie de l'écran: le
+    //    contrat du POST /api/inventory REFUSE `unit: ""` (le garde du texte
+    //    blanc), et l'UI n'envoie jamais cette forme. La voie LEGITIME est celle
+    //    de la spec e2e supplier-import-contract.spec.ts (l.186-196): la route
+    //    cree l'article proprement (unit: "kg"), puis le SEMIS DIRECT de
+    //    bas-niveau lui met l'unité vide via open({filename, driver:
+    //    sqlite3.Database}), et la semence est PROUVEE par pose.changes === 1.
+    //    Poster `unit: ""` au POST (l'ancienne voie de cette sonde) rendait
+    //    400 et la sonde rendait SEM_ART_SANS_UNITE=0 => rc=2 : INJOUABLE.
     const vide = await req("POST", "/api/inventory", {
-      name: "Sonde Sel Sans Unite", quantity: 10, minStock: 1, unit: "",
+      name: "Sonde Sel Sans Unite", quantity: 10, minStock: 1, unit: "kg",
       status: "ok", category: "Epicerie", unit_price: 1000,
     });
     const iidVide = vide.json && vide.json.id;
+    // SEMIS DIRECT PROUVE (pose.changes === 1), jamais suppose: un UPDATE de
+    // ZERO ligne rendrait SEM_ART_SANS_UNITE=0 (la semence sans objet).
+    let poseUnitVide = -1;
+    if (typeof iidVide === "string") {
+      const dbLocal = await open({
+        filename: join(OUT, "agent_culinaire.db"),
+        driver: sqlite3.Database,
+      });
+      await dbLocal.run("PRAGMA busy_timeout = 8000");
+      const pose = await dbLocal.run("UPDATE inventory SET unit = '' WHERE id = ?", [iidVide]);
+      poseUnitVide = pose.changes ?? -1;
+      await dbLocal.close();
+    }
     const reluVide = (await req("GET", "/api/inventory")).json || [];
     const ligneVide = reluVide.find((x) => x.id === iidVide);
     T.push("SEM_FOURN=" + (typeof sid === "string" ? 1 : 0)
          + " SEM_ART=" + (typeof iid === "string" ? 1 : 0)
          + " SEM_ART_SANS_UNITE=" + (typeof iidVide === "string" ? 1 : 0)
+         + " SEM_POSE_UNIT_VIDE=" + poseUnitVide
          + " CODES=" + [fourn.code, art.code, vide.code].join("/")
          + " UNITE_EN_BASE=" + J(ligneVide ? ligneVide.unit : "ABSENT"));
     if (typeof sid !== "string" || typeof iid !== "string" || typeof iidVide !== "string") {
+      console.log("RESULTATS " + T.join(" "));
+      process.exitCode = 2;
+      return;
+    }
+    // La semence PROUVEE: pose.changes !== 1 est une semence sans objet — le
+    // verdict porterait sur du vide (le piege des index « refuses par mesure »
+    // sur des scans vides). La sortie est NOMMEE, jamais rendue comme absence.
+    if (poseUnitVide !== 1 || !ligneVide || ligneVide.unit !== "") {
       console.log("RESULTATS " + T.join(" "));
       process.exitCode = 2;
       return;
@@ -273,7 +352,11 @@ async function main() {
     console.log("RESULTATS " + T.join(" "));
   } finally {
     clearTimeout(veilleur);
-    child.kill("SIGKILL");
+    // Le fils est DETACHE : il est chef de son propre groupe. `child.kill` ne
+    // vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est
+    // precisement le fils remanant qui a tenu 4331 pendant 20 minutes et fait
+    // TIMEOUT la course suivante). `process.kill(-pid)` SIGKILL tout le groupe.
+    try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
     await Promise.race([
       new Promise((r) => child.on("exit", r)),
       new Promise((r) => setTimeout(r, 4000)),
