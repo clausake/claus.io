@@ -158,7 +158,14 @@ DEFAUT = ["verify:split",
           # composants locaux). Elle dit DIVERGENT et ne depend pas de
           # l'heure ou on la joue; sa morsure est l'amplitude, qui doit
           # rester de sept jours calendriers dans chaque fuseau.
-          "verify:juge-fuseaux", "verify:fuseau-cost-data"]
+          "verify:juge-fuseaux", "verify:fuseau-cost-data",
+          # Sprint 15 (Tache 5): la porte du CAPTEUR DE FOURNISSEURS. Elle ne
+          # sonde PAS les serveurs reels du poste (dont la vie depend du
+          # chargement du modele, mene par le maitre d'ouvrage): elle juge la
+          # SONDE elle-même sur neuf serveurs fictifs dont le comportement est
+          # ecrit d'avance, morsure incluse. Deterministe: jouable au lot sans
+          # jamais rendre un faux rouge a une heure donnee.
+          "verify:fournisseur-sonde"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de

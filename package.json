@@ -26,6 +26,7 @@
     "verify:perf": "node scripts/verify-perf.mjs",
     "verify:http": "node scripts/verify-http.mjs",
     "verify:sse": "node scripts/verify-sse.mjs",
+    "verify:fournisseur-sonde": "node test/banc/juge-sonde-fournisseur.mjs",
     "verify:ratelimit": "node scripts/verify-ratelimit.mjs",
     "audit:perf": "node scripts/audit-perf.mjs",
     "verify:bundle": "node scripts/verify-bundle.mjs",
