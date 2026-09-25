@@ -231,3 +231,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 14.f - la porte D1 etait rouge une fois par nuit, et c'etait vrai (25 sept.) -> `phases/sprint-14-sprint-14-f-la-porte-d1-etait-rouge-une-fois.md` (12783 octets, 244 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
