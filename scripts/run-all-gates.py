@@ -138,7 +138,27 @@ DEFAUT = ["verify:split",
           # depot ne produit pas de NOUVELLE sonde sans porte. Sans elle ici,
           # le defaut de l'article 4 (une liste FIGEE qui ne voit pas ce qui
           # s'ajoute) se rejoueroit sur le capteur lui-meme.
-          "verify:capteur-orphelines"]
+          "verify:capteur-orphelines",
+          # Sprint 14.f: la couverture des FUSEAUX de la porte D1. C'est ici
+          # qu'est le PIEGE a consigner, et pourquoi la MATRICE n'y est pas.
+          # `matrice-fuseaux-d1.sh` depend de l'HEURE REELLE: hors du creneau
+          # divergent (00:00-02:00 local) AUCUNE de ses zones ne diverge de
+          # UTC, elle rend alors `MATRICE_NON_PRONONCEE rc=4` -- un refus
+          # legitime de prononcer, mais que CE harnais compte comme ROUGE (il
+          # ne connait que rc==0). Brancher la matrice ici ferait une porte
+          # faussement rouge vingt-deux heures sur vingt-quatre: exactement la
+          # famille des verdicts-mensonges que l'article 4 denonce.
+          # L'examen de couverture, lui, fabrique ses vingt-quatre instants (le
+          # suffixe Z fige l'echelle a UTC) et juge donc la couverture du jeu
+          # sans dependre de l'horloge du serveur: il est vert a toute heure.
+          # La matrice reste jouee a la main, dans le creneau, quand elle a
+          # quelque chose a dire (les deux verdicts de 14.f, AVANT et APRES).
+          #   La sonde du FUSEAU: elle fige son instant et rend, par fuseau,
+          # les dates des DEUX voies (UTC par toISOString, locale par les
+          # composants locaux). Elle dit DIVERGENT et ne depend pas de
+          # l'heure ou on la joue; sa morsure est l'amplitude, qui doit
+          # rester de sept jours calendriers dans chaque fuseau.
+          "verify:juge-fuseaux", "verify:fuseau-cost-data"]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
