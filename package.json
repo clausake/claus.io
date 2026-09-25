@@ -82,7 +82,9 @@
     "verify:module-contract": "python3 scripts/probe-verif-module.py",
     "verify:installe-index": "python3 scripts/probe-index-installe.py",
     "verify:installe-index-forecast": "python3 scripts/probe-index-forecast-installe.py",
-    "verify:capteur-orphelines": "python3 scripts/capteur-orphelines.py"
+    "verify:capteur-orphelines": "python3 scripts/capteur-orphelines.py",
+    "verify:juge-fuseaux": "python3 scripts/juge-couverture-fuseaux-d1.py",
+    "verify:fuseau-cost-data": "node scripts/probe-fuseau-cost-data.mjs"
   },
   "build": {
     "appId": "com.agentculinaire.os",
