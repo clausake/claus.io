@@ -166,6 +166,43 @@ export function calculatePricePerRef(rawPrice: number, supplierUnit: string, inv
   return rawPrice * (inventoryMod / supplierMod);
 }
 
+/**
+ * Date ISO (`YYYY-MM-DD`) DU JOUR LOCAL, et non de la date UTC.
+ *
+ * POURQUOI CETTE FONCTION EXISTE (defaut consigne au Sprint 14.f, mesure
+ * 25/09). `new Date().toISOString().split("T")[0]` rend la date du jour EN
+ * UTC. Pour le client (Europe/Paris, CEST = UTC+2), entre 00:00 et 02:00 du
+ * matin, UTC est ENCORE LA VEILLE: la fenetre "les 7 derniers jours" de
+ * /api/dashboard/cost-data perdait le jour en cours et affichait une journee
+ * fantome du lendemain. Prouve par execution (scripts/probe-fuseau-cost-data
+ * .mjs, joue a instant FIGE dans cinq fuseaux): a l'instant du creneau
+ * maudit, la voie UTC rend 2026-09-24 pendant que trois des cinq voies
+ * locales rendent 2026-09-25 -- DIVERGENTS=3 -- et les deux voies gardent
+ * une amplitude de sept jours (AMPLITUDES=7,7,7,7,7).
+ *
+ * Le defaut etait LATENT: la porte D1 (test/e2e/dashboard-contract.spec.ts:
+ * 115) est verte ~22 h/24 et ne rougit que dans ce creneau. Une seule course
+ * ne la dit donc pas -- d'ou scripts/matrice-fuseaux-d1.sh, qui la joue sous
+ * six fuseaux dont la COUVERTURE EST MESUREE 24/24 par
+ * scripts/juge-couverture-fuseaux-d1.py (a toute heure de la journee, au
+ * moins un fuseau de la liste diverge de UTC: la matrice ne peut pas rendre
+ * un vert muet).
+ *
+ * La voie par les composants locaux est LA SEULE QUI NE DEPENDE PAS du
+ * reglage de l'host: toISOString() melangerait deux echelles (l'instant UTC
+ * et le calendrier civil local), ce qui n'est pas un calendrier.
+ *
+ * Ne pas confondre avec `dateISO(brut)` de src/shared/haccp-fields.ts, qui
+ * VALIDITE une saisie et peut rendre `undefined`; ici la date est CALCULEE
+ * et toujours rendue (une date du jour, pas une donnee).
+ */
+export function jourLocalISO(decal: number = 0): string {
+  const d = new Date(Date.now() - decal * 86_400_000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 export interface OllamaUrlSettings {
   ollama_url?: string;
 }

@@ -1,6 +1,7 @@
 // Routes : Tableau de bord (stats, couts, stock)
 import { Router } from "express";
 import type { Database } from "sqlite";
+import { jourLocalISO } from "../shared/util.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -51,8 +52,10 @@ try {
   const today = daysOfWeek[new Date().getDay()];
   // Date ISO DU JOUR LOCAL: toISOString() serait UTC et, entre 00:00 et
   // 01:00 en CEST, donnerait la veille -> un cout journalier faux ce creneau-la.
-  const nowLocal = new Date();
-  const todayISO = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, "0")}-${String(nowLocal.getDate()).padStart(2, "0")}`;
+  // Date du jour LOCAL par le helper partage (src/shared/util.ts: jourLocalISO).
+  // La raison du LOCAL et non de UTC est consigneee sur le helper, pas ici (une borne
+  // dupliquee se perime en silence -- la lecon des BUDGETS d'audit-perf.mjs).
+  const todayISO = jourLocalISO(0);
   // ⚠ Le filtre porte sur `date` (la colonne que l'APP ecrit vraiment), pas sur
   // `day` seul. POST /api/staff ecrit day = date = "<ISO>" (StaffPlanning envoie
   // des dates ISO), donc `WHERE day = 'thursday'` ne rapportait AUCUNE ligne et
@@ -115,8 +118,17 @@ try {
 router.get("/api/dashboard/cost-data", async (req, res) => {
 try {
   const { start, end } = req.query;
-  const startDate = start ? String(start) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const endDate = end ? String(end) : new Date().toISOString().split('T')[0];
+  // ⚠ Sprint 14.f: les bornes etaient calculees en UTC (toISOString) alors que le
+  // calendrier du chef est LOCAL. Entre 00:00 et 02:00 (CEST), UTC est la VEILLE:
+  // la fenetre perdait le jour en cours et le tableau affichait une journee
+  // fantome. Prouve par execution + porte par la porte D1 sous SIX fuseaux
+  // (scripts/matrice-fuseaux-d1.sh). La COUVERTURE de ce jeu n'est pas
+  // supposee mais MESUREE par scripts/juge-couverture-fuseaux-d1.py, qui
+  // balaie les 24 heures et rend 24/24 pour le jeu a six zones (celui a
+  // quatre laissait 5 heures nues, et a cinq en laissait 3, ou la porte
+  // dirait VERT sans rien mesurer).
+  const startDate = start ? String(start) : jourLocalISO(7);
+  const endDate = end ? String(end) : jourLocalISO(0);
   
   const foodCosts = await db.all(`
     SELECT 
