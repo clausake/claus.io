@@ -28,6 +28,7 @@
     "verify:sse": "node scripts/verify-sse.mjs",
     "verify:fournisseur-sonde": "node test/banc/juge-sonde-fournisseur.mjs",
     "verify:ocr-modeles": "python3 scripts/verif-modeles-ocr.py",
+    "verify:serveurs-locaux": "npx tsx test/banc/juge-serveurs-locaux.mjs",
     "verify:ratelimit": "node scripts/verify-ratelimit.mjs",
     "audit:perf": "node scripts/audit-perf.mjs",
     "verify:bundle": "node scripts/verify-bundle.mjs",
