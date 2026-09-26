@@ -10,6 +10,11 @@ import {
   cibleDuReglage, argvDeCible, parseSortieSonde, detecterServeursLocaux,
   type ReglageLlmBrut,
 } from "../shared/fournisseur/index.js";
+import {
+  etatAssistant, jouerEpreuve, jugerEpreuve, attendusEpreuve,
+  consignerDemarrage, reinitialiserEpreuve,
+} from "../services/assistant.js";
+import { rangerClef, lireClef, etatClef } from "../services/coffre.js";
 
 const router = Router();
 
@@ -37,9 +42,16 @@ router.get("/api/llm/tester", async (req, res) => {
   }
   const sonde = path.join(process.cwd(), "scripts", "sonde-fournisseur.mjs");
   try {
+    // La clef part par l'ENVIRONNEMENT du fils (la decision du 25/09 : la
+    // sonde la lit du seul environment), rangee dans le coffre du systeme
+    // (tache 12). Jamais par l'URL, jamais le corps, jamais le argv.
+    const clef = lireClef(construit.cible.nom === "reglage"
+      ? (String((settingsStore.value as Record<string, unknown>).llm_choix ?? "") || "reglage")
+      : construit.cible.nom);
     const sortie = await new Promise<string>((resolve, reject) => {
       const fils = spawn(process.execPath, [sonde, ...argvDeCible(construit.cible)], {
         stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, CLEF_REGLAGE: clef ?? "" },
       });
       let buf = "";
       fils.stdout.on("data", (d) => { buf += d.toString(); });
@@ -53,6 +65,58 @@ router.get("/api/llm/tester", async (req, res) => {
     res.json({ vivant: false, cibles: [], defaut: "SONDE_IMPROUVABLE",
                detail: String((e as Error)?.message ?? e) });
   }
+});
+
+/** /api/assistant/etat : l'etat machine du demarrage (tache 10) — sans
+ *  epreuve reussie dans CE processus, l'application doit rester sur
+ *  l'assistant. */
+router.get("/api/assistant/etat", (_req, res) => {
+  res.json(etatAssistant());
+});
+
+/** /api/assistant/epreuve : l'epreuve du demarrage (contrat, etape 3). Elle
+ *  est jugee par l'OCR SEUL sur la piece du banc — « le moteur OCR determine,
+ *  le cerveau LLM ne fait que ranger » : aucun LLM ne complete un champ.
+ *  LA MORSURE : ?test=muet force la voie de lecture a ne RENDRE AUCUNE LIGNE ;
+ *  le verdict doit rougir en EPREUVE_MUETTE (la regle des capteurs morts). */
+router.get("/api/assistant/epreuve", async (req, res) => {
+  if (String(req.query["test"] ?? "") === "muet") {
+    // La voie forcee : les attendus sont lus (le compte est le vrai), mais
+    // AUCUNE ligne n'est rendue — un verdict rouge nomme, pas un 200 muet.
+    const v = jugerEpreuve([], attendusEpreuve());
+    res.json({ ...v, reussi: false });
+    return;
+  }
+  res.json(await jouerEpreuve());
+});
+
+/** /api/assistant/consigner : ne consigne (install_termine_le,
+ *  fournisseur_choisi) QUE si l'epreuve est acquise dans CE processus.
+ *  ?test=forget remise a zero l'epreuve — la morsure qui prouve qu'un
+ *  « consigner » herite d'un certificat d'avant ne peut pas exister. */
+router.post("/api/assistant/consigner", (req, res) => {
+  if (String(req.query["test"] ?? "") === "forget") reinitialiserEpreuve();
+  const fournisseur = typeof req.body?.fournisseur === "string" ? req.body.fournisseur : "";
+  const r = consignerDemarrage(fournisseur);
+  res.status(r.ok ? 200 : 412).json(r);
+});
+
+/** /api/clef (Taches 10-12) : ranger une clef dans le coffre du systeme, et
+ *  rendre SON ETAT seulement. GET ne rend JAMAIS la valeur — juste
+ *  {presente, chiffre}. POST ne consigne que via coffre.ts (safeStorage sous
+ *  Electron ; fichier 0600 non chiffre hors Electron, rendu `chiffre:false`,
+ *  jamais maquille en trousseau). */
+router.get("/api/clef", (req, res) => {
+  const fournisseur = String(req.query["fournisseur"] ?? "");
+  const etat = etatClef(fournisseur);
+  res.status("ok" in etat && etat.ok === false ? 400 : 200).json(etat);
+});
+router.post("/api/clef", (req, res) => {
+  const fournisseur = typeof req.body?.fournisseur === "string" ? req.body.fournisseur : "";
+  const clef = typeof req.body?.clef === "string" ? req.body.clef : "";
+  const r = rangerClef(fournisseur, clef);
+  // La reponse ne porte JAMAIS la clef — seulement l'etat du rangement.
+  res.status("ok" in r && r.ok === false ? 400 : 200).json(r);
 });
 
 /** /api/llm/detecter : les serveurs locaux detectes sur les ports d'usage

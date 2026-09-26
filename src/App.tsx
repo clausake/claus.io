@@ -32,11 +32,18 @@ import { TRANSLATIONS } from "./data/translations";
 import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
 import { LandingPage, NavItem } from "./components/views";
+import { Assistant } from "./components/Assistant";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
+  // L'assistant de premier demarrage (Tache 10) : il s'ouvre tant que le
+  // demarrage n'est PAS consigne (`install_termine_le` absent de settings —
+  // la consignation ne vient que de /api/assistant/consigner, qui exige
+  // l'epreuve reussie). La decision est prise par le SERVEUR, pas par un
+  // drapeau local que l'on pourrait vider.
+  const [assistantRequis, setAssistantRequis] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [cartItems, setCartItems] = useState<any[]>(INITIAL_CART);
@@ -120,6 +127,17 @@ export default function App() {
   };
 
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+
+  // L'etat du demarrage est demande AU SERVEUR une fois par seance (jamais
+  // dans le corps du rendu : un fetch par rendu serait une boucle). Un etat
+  // injoignable ne boucle pas l'utilisateur sur l'assistant : on laisse
+  // passer, le Reglages reste la voie de reprise.
+  useEffect(() => {
+    fetch("/api/assistant/etat")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("etat " + r.status))))
+      .then((d) => setAssistantRequis(!d.install_termine_le))
+      .catch(() => setAssistantRequis(false));
+  }, []);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -346,6 +364,12 @@ export default function App() {
 
   if (showLanding) {
     return <LandingPage onEnter={() => setShowLanding(false)} t={t} />;
+  }
+
+  // L'assistant de premier demarrage (Tache 10) : tant que le serveur dit que
+  // l'epreuve n'est pas consignée, c'est LUI qui tient l'ecran.
+  if (assistantRequis === true) {
+    return <Assistant t={t} onTermine={() => setAssistantRequis(false)} />;
   }
 
   return (

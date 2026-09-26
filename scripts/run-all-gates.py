@@ -175,6 +175,11 @@ DEFAUT = ["verify:split",
           # port libre, jeton d'instance verifie) et joue /api/llm/tester avec
           # sa morsure muette — la voie est libre, pas de port fixe partage.
           "verify:reglage-llm",
+          # verify:assistant (Tache 10) : l'etat machine de l'epreuve, juge par
+          # lecteur FABRIQUE (le vrai Paddle n'est jamais joue par une porte —
+          # les poids sont hors git, la course dependrait de l'infrastructure
+          # d'autrui). Morsures : muet, forget, clef vide, clef qui ressort.
+          "verify:assistant",
           # verify:ocr-modeles EST volontairement HORS DEFAUT : les poids OCR
           # (12,8 Mo) ne sont pas sous git (decision du contrat, tache 7).
           # Dans un clone neuf sans les poids, la porte rougiROIT pour une
