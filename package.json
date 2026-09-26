@@ -116,6 +116,13 @@
       "**/node_modules/sqlite3/**/*",
       "**/node_modules/@xenova/**/*",
       "**/node_modules/ollama/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/ocr/modeles",
+        "to": "ocr/modeles",
+        "filter": ["**/*.onnx", "**/*.txt"]
+      }
     ]
   },
   "dependencies": {
