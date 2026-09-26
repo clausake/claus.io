@@ -10,7 +10,7 @@ import datetime as dt
 import json
 import re
 
-PIECE = "/home/clausake/.hermes/cache/scratch/facture-synthetique.attendus.json"
+PIECE = "test/banc/facture-synthetique.attendus.json"
 
 # Les lignes de la piece, telles que le generateur les imprime
 LIGNES = [
