@@ -239,3 +239,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 15.b - extraResources pose : le consigne de la tache 7 etait trop timide (26 sept.) -> `phases/sprint-15-sprint-15-b-extraresources-pose-le-consigne-.md` (1190 octets, 22 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
