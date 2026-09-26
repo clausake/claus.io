@@ -243,3 +243,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 15.c - le moteur de recherche de l'IA locale, et la porte au jumeau deterministe (26 sept.) -> `phases/sprint-15-sprint-15-c-le-moteur-de-recherche-de-l-ia-l.md` (3319 octets, 55 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
