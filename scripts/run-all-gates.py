@@ -166,6 +166,11 @@ DEFAUT = ["verify:split",
           # ecrit d'avance, morsure incluse. Deterministe: jouable au lot sans
           # jamais rendre un faux rouge a une heure donnee.
           "verify:fournisseur-sonde",
+          # verify:serveurs-locaux EST jouee au lot : le juge demarre ses
+          # propres serveurs stubs sur ports ephemeres (jumeau deterministe).
+          # Les ports d'usage reels ne sont JAMAIS joues par la porte — un
+          # serveur qu'un humain lance/stoppe est un outil, pas une porte.
+          "verify:serveurs-locaux",
           # verify:ocr-modeles EST volontairement HORS DEFAUT : les poids OCR
           # (12,8 Mo) ne sont pas sous git (decision du contrat, tache 7).
           # Dans un clone neuf sans les poids, la porte rougiROIT pour une

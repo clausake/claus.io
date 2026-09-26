@@ -26,6 +26,13 @@ export type {
 } from "./types.js";
 export { FournisseurInconnu } from "./types.js";
 export { FOURNISSEURS_BLANCS, estBlanc, chercheFournisseur } from "./blanc.js";
+// La meme lecon qu'en haut: une re-exportation oubliee rend l'appelant `undefined`
+// en silence. Les serveurs locaux (Tache 8) sortent par l'index, pas en direct.
+export {
+  PORTS_USAGE, DELAI_SONDE_MS, MESSAGE_AUCUN_MOTEUR,
+  detecterServeursLocaux, etatMoteurLocal, modelesDeLaReponse,
+  type ServeurLocal, type FetchModeles,
+} from "./serveurs-locaux.js";
 
 /** Le transport est la voie par ou l'on fait l'appel reel. Injectee au test. */
 export type Transport = (
