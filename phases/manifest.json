@@ -1,7 +1,7 @@
 {
  "original_octets": 145533,
- "original_sha256": "1002d553531f0104c9a341de681ca18a572315b3714bb3a4317a3e318634f510",
- "chaud_octets": 15558,
+ "original_sha256": "366f0bc7294580e413d61ac82fad9efbbc2a849d98e3b0cba6ac72fe2ab5031e",
+ "chaud_octets": 15861,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -135,19 +135,26 @@
    "octets": 1190,
    "lignes": 22,
    "sha256": "7a37bb71fd062775c1ead82c4f1acec81c526779a66cf6b8e6bdf4be60d113e8"
+  },
+  {
+   "fichier": "phases/sprint-15-sprint-15-c-le-moteur-de-recherche-de-l-ia-l.md",
+   "titre": "## Sprint 15.c - le moteur de recherche de l'IA locale, et la porte au jumeau deterministe (26 sept.)",
+   "octets": 3319,
+   "lignes": 55,
+   "sha256": "fb82271c48a75deb042d5c0c2bd2079989dcc38dc29403bb34ec79f0b284a9bb"
   }
  ],
- "lignes_chaud": 245,
- "tokens_approx_chaud": 3770,
+ "lignes_chaud": 249,
+ "tokens_approx_chaud": 3845,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "sprint 15.b (extraResources : les poids suivent le livrable) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-b-extraresources-pose-le-consigne-.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-26T20:37:20.221817",
+  "motif": "sprint 15.c (moteur de recherche de l'IA locale + sa porte a jumeau deterministe) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-c-le-moteur-de-recherche-de-l-ia-l.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+  "date": "2026-09-26T21:17:26.173283",
   "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
  },
  "reancrage_precedent": {
-  "motif": "sprint 15 (cle en main LLM + OCR hors ligne : taches 1-7) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-cle-en-main-llm-choix-ocr-hors-lig.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-26T20:34:25.665654",
+  "motif": "sprint 15.b (extraResources : les poids suivent le livrable) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-b-extraresources-pose-le-consigne-.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+  "date": "2026-09-26T20:37:20.221817",
   "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
  }
 }
