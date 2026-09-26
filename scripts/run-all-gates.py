@@ -171,6 +171,10 @@ DEFAUT = ["verify:split",
           # Les ports d'usage reels ne sont JAMAIS joues par la porte — un
           # serveur qu'un humain lance/stoppe est un outil, pas une porte.
           "verify:serveurs-locaux",
+          # verify:reglage-llm (Tache 9) : le juge lance le VRAI serveur (tsx,
+          # port libre, jeton d'instance verifie) et joue /api/llm/tester avec
+          # sa morsure muette — la voie est libre, pas de port fixe partage.
+          "verify:reglage-llm",
           # verify:ocr-modeles EST volontairement HORS DEFAUT : les poids OCR
           # (12,8 Mo) ne sont pas sous git (decision du contrat, tache 7).
           # Dans un clone neuf sans les poids, la porte rougiROIT pour une
