@@ -2,12 +2,13 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { ollamaSettingsRef } from "../shared/ollama.js";
+import type { ReglageFournisseur } from "../shared/fournisseur/types.js";
 
 // Paramètres applicatifs (settings.json dans le dossier de données utilisateur).
 // Une instance partagée est lue/écrite par les routes /api/settings et par
 // les composants qui en dépendent (modèle Ollama, langue, etc.).
 
-export interface AppSettings {
+export interface AppSettings extends ReglageFournisseur {
   model_name?: string;
   custom_model?: string;
   ollama_url?: string;
