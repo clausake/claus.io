@@ -71,6 +71,12 @@ export function updateSettings(patch: Partial<AppSettings>): AppSettings {
   } catch (e) {
     console.error("Unable to save settings file", e);
   }
-  console.log("[OLLAMA] Paramètres mis à jour :", settingsStore.value);
+  // La fuite fermee (Tache 12, contrat : « jamais dans le code d'un appel
+  // d'outil — les arguments sont journalises ») : ce log rendoit les Reglages
+  // ENTiers a la console, clefs comprises. Il ne rend plus que les NOMS des
+  // champs touches — jamais une valeur (une valeur de reglage peut etre une
+  // URL interne, un identifiant, ou demain un champ secret qui aurait glisse
+  // par un autre chemin que le coffre).
+  console.log("[OLLAMA] Paramètres mis à jour :", Object.keys(patch).join(", "));
   return settingsStore.value;
 }
