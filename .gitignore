@@ -68,3 +68,8 @@ __pycache__/
 # que le contrat refuse. Telecharges une fois hors depot, juges par empreinte
 # contre scripts/modeles-ocr.manifest.json (npm run verify:ocr-modeles).
 resources/ocr/modeles/
+
+# La banque de factures reels du chef (Tache 11) : personnelles et
+# confidentielles (prix + fournisseurs) — hors git. Le README reste sous git.
+test/fixtures/factures/*
+!test/fixtures/factures/README.md
