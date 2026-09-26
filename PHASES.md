@@ -235,3 +235,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 15 - Cle en main LLM, choix OCR hors ligne (26 sept.) -> `phases/sprint-15-sprint-15-cle-en-main-llm-choix-ocr-hors-lig.md` (5613 octets, 95 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+

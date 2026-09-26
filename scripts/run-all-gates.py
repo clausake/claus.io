@@ -165,7 +165,15 @@ DEFAUT = ["verify:split",
           # SONDE elle-même sur neuf serveurs fictifs dont le comportement est
           # ecrit d'avance, morsure incluse. Deterministe: jouable au lot sans
           # jamais rendre un faux rouge a une heure donnee.
-          "verify:fournisseur-sonde"]
+          "verify:fournisseur-sonde",
+          # verify:ocr-modeles EST volontairement HORS DEFAUT : les poids OCR
+          # (12,8 Mo) ne sont pas sous git (decision du contrat, tache 7).
+          # Dans un clone neuf sans les poids, la porte rougiROIT pour une
+          # absence qui n'est pas un defaut du produit. Elle est jouee par
+          # l'installeur (tache 14) et a la main ; sa morsure est prouvee par
+          # test/banc/juge-modeles-ocr.py (trois fautes injectees, verrouillees
+          # par le juge lui-meme).
+          ]
 
 # Le contrat de ce lot: les portes sont LUEES dans package.json, jamais recopiees
 # ici. Une liste recopiee se perime silencieusement des qu'une porte change de
