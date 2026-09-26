@@ -33,6 +33,13 @@ export {
   detecterServeursLocaux, etatMoteurLocal, modelesDeLaReponse,
   type ServeurLocal, type FetchModeles,
 } from "./serveurs-locaux.js";
+// Le reglage LLM visible (Tache 9) : cible du reglage + verdict de la sonde.
+export {
+  DEFAUT_OLLAMA, cibleDuReglage, argvDeCible, parseSortieSonde,
+  fournisseursProposables,
+  type ReglageLlmBrut, type CibleSonde, type ConstructionCible,
+  type VerdictCible, type VerdictSonde,
+} from "./reglage-llm.js";
 
 /** Le transport est la voie par ou l'on fait l'appel reel. Injectee au test. */
 export type Transport = (

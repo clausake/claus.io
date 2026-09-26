@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
   Activity,
+  Brain,
   Check,
   ClipboardList,
+  Cpu,
   Download,
+  Globe,
   Lock,
   Menu as MenuIcon,
+  Play,
+  Server,
   Settings,
   Smartphone,
 } from "lucide-react";
@@ -17,6 +22,12 @@ import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "./ui/Toast";
+// Le panneau « Intelligence » (Tache 9) puise sa liste de fournisseurs ICI —
+// la VRAIE liste blanche (blanc.ts est pur : aucun reseau, aucun node ; on
+// n'importe pas l'index du module, qui porte la partie serveur node:http).
+// La cible et le verdict viennent de /api/llm/tester : c'est le serveur qui
+// construit la cible et joue la sonde, jamais l'UI qui rejouerait la regle.
+import { FOURNISSEURS_BLANCS } from "../shared/fournisseur/blanc.js";
 
 export function SettingsView({
   settings,
@@ -44,6 +55,29 @@ export function SettingsView({
 
   const [licenseKey, setLicenseKey] = React.useState("");
 
+  // Panneau « Intelligence » (Sprint 15, Tâche 9). Le choix, l'URL et le
+  // modèle sont les champs `llm_*` du contrat (ReglageFournisseur) ; ils
+  // rentrent dans `settings` par setSettings, persistés par /api/settings.
+  const [choixIa, setChoixIa] = React.useState<"local" | "ollama" | "en-ligne">(
+    settings?.llm_choix === "ollama"
+      ? "ollama"
+      : settings?.llm_choix && settings.llm_choix !== "llamacpp"
+        ? "en-ligne"
+        : "local",
+  );
+  const [fournisseurIa, setFournisseurIa] = React.useState<string>(
+    settings?.llm_choix && settings.llm_choix !== "ollama" &&
+    settings.llm_choix !== "llamacpp"
+      ? String(settings.llm_choix)
+      : "",
+  );
+  const [urlIa, setUrlIa] = React.useState<string>(settings?.llm_url ?? "");
+  const [modeleIa, setModeleIa] = React.useState<string>(settings?.llm_modele ?? "");
+  const [serveursDetectes, setServeursDetectes] = React.useState<any[]>([]);
+  const [aucunMoteur, setAucunMoteur] = React.useState(false);
+  const [verdictIa, setVerdictIa] = React.useState<any>(null);
+  const [testIaEnCours, setTestIaEnCours] = React.useState(false);
+
   const fetchLicense = async () => {
     try {
       const res = await fetch("/api/trial-status");
@@ -52,6 +86,65 @@ export function SettingsView({
     } catch (e) {
       console.error("Error fetching license", e);
     }
+  };
+
+  // Les trois voies de l'IA (Tâche 8 livrait le moteur de recherche) :
+  // /api/llm/detecter ne rend JAMAIS un tableau muet — si rien n'est trouvé,
+  // le message AUCUN_MOTEUR_TROUVE est rendu, pas caché.
+  const detecterLesMoteurs = async () => {
+    try {
+      const res = await fetch("/api/llm/detecter");
+      const data = await res.json();
+      setServeursDetectes(Array.isArray(data.serveurs) ? data.serveurs : []);
+      setAucunMoteur(data.message === "AUCUN_MOTEUR_TROUVE");
+    } catch (e) {
+      setServeursDetectes([]);
+      setAucunMoteur(true);
+    }
+  };
+
+  // Le bouton « Tester » (Tâche 5) : persiste le réglage courant côté serveur,
+  // PUIS joue la vraie sonde via /api/llm/tester et rend le verdict nommé.
+  const ecrireReglageIa = async () => {
+    const llm = reglageIaCourant();
+    await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(llm),
+    });
+    setSettings((s: any) => ({ ...s, ...llm }));
+    return llm;
+  };
+
+  const reglageIaCourant = () => ({
+    llm_choix:
+      choixIa === "ollama"
+        ? "ollama"
+        : choixIa === "en-ligne"
+          ? fournisseurIa || FOURNISSEURS_BLANCS[0].nom.toLowerCase()
+          : "llamacpp",
+    llm_url: urlIa.trim(),
+    llm_modele: modeleIa.trim(),
+  });
+
+  const testerLlm = async () => {
+    setTestIaEnCours(true);
+    setVerdictIa(null);
+    try {
+      await ecrireReglageIa();
+      const res = await fetch("/api/llm/tester");
+      const data = await res.json();
+      setVerdictIa(data);
+    } catch (e) {
+      setVerdictIa({ vivant: false, cibles: [], defaut: "TEST_IMPROUVABLE" });
+    } finally {
+      setTestIaEnCours(false);
+    }
+  };
+
+  const enregistrerLlm = async () => {
+    await ecrireReglageIa();
+    toast(t.intelligenceEnregistre || "Réglage de l'intelligence enregistré.", "success");
   };
 
   React.useEffect(() => {
@@ -67,7 +160,22 @@ export function SettingsView({
     fetchNetwork();
     fetchLicense();
     checkOllama();
+    detecterLesMoteurs();
   }, []);
+
+  // Les réglages arrivent du serveur APRÈS le premier rendu (App.tsx les
+  // charge en asynchrone) : le panneau se cale dessus dès qu'ils tombent.
+  React.useEffect(() => {
+    if (!settings?.llm_choix) return;
+    setUrlIa(settings.llm_url ?? "");
+    setModeleIa(settings.llm_modele ?? "");
+    if (settings.llm_choix === "ollama") setChoixIa("ollama");
+    else if (settings.llm_choix === "llamacpp") setChoixIa("local");
+    else {
+      setChoixIa("en-ligne");
+      setFournisseurIa(String(settings.llm_choix));
+    }
+  }, [settings?.llm_choix, settings?.llm_url, settings?.llm_modele]);
 
   const handleUnlock = async () => {
     try {
@@ -687,6 +795,167 @@ export function SettingsView({
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white font-mono focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
                 />
               </div>
+            </div>
+          </section>
+
+          {/* Section Intelligence (Sprint 15, Tâche 9) : le choix de l'IA se
+              lit et s'écrit dans la langue du chef. Trois boutons — Local
+              (détecté), Ollama, En ligne — deux champs (URL, modèle), un
+              bouton « Tester » qui joue la sonde (Tâche 5) par /api/llm/tester.
+              Tant que le verdict est rouge, « Enregistrer » reste désarmé.
+              Jamais de champ clef d'API ici : la clef vit dans le trousseau
+              du système (Tâche 12), pas dans ce panneau ni dans settings. */}
+          <section className="led-glow-container bg-black/40 border-emerald-500/20 shadow-none">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl mr-4">
+                <Brain className="w-5 h-5" />
+              </div>
+              {t.intelligenceTitre || "Intelligence"}
+            </h3>
+            <p className="text-sm text-slate-400 -mt-4 mb-6">
+              {t.intelligenceDesc || "Choisissez le moteur qui analyse vos documents."}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <button
+                onClick={() => { setChoixIa("local"); setVerdictIa(null); }}
+                className={`p-4 rounded-xl border text-left transition-all ${choixIa === "local" ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30"}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Cpu className="w-4 h-4 text-emerald-400" />
+                  {t.intelligenceLocal || "Local (détecté)"}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-2 font-mono">
+                  {serveursDetectes.length > 0
+                    ? serveursDetectes.map((s) => `${s.moteur}:${s.port}`).join(" · ")
+                    : aucunMoteur
+                      ? (t.intelligenceAucunMoteur || "AUCUN_MOTEUR_TROUVE")
+                      : "…"}
+                </span>
+              </button>
+              <button
+                onClick={() => { setChoixIa("ollama"); setVerdictIa(null); }}
+                className={`p-4 rounded-xl border text-left transition-all ${choixIa === "ollama" ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30"}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Server className="w-4 h-4 text-emerald-400" />
+                  {t.intelligenceOllama || "Ollama"}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-2 font-mono">
+                  {serveursDetectes.some((s) => s.moteur === "ollama")
+                    ? `${serveursDetectes.find((s) => s.moteur === "ollama").urlBase}`
+                    : "http://127.0.0.1:11434"}
+                </span>
+              </button>
+              <button
+                onClick={() => { setChoixIa("en-ligne"); setVerdictIa(null); }}
+                className={`p-4 rounded-xl border text-left transition-all ${choixIa === "en-ligne" ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30"}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  {t.intelligenceEnLigne || "En ligne"}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-2 font-mono">
+                  {t.intelligenceEnLigneAide || "Un fournisseur de la liste blanche, validé."}
+                </span>
+              </button>
+            </div>
+
+            {aucunMoteur && choixIa === "local" && (
+              <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold leading-relaxed">
+                {t.intelligenceAucunMoteurDesc
+                  || "Aucun moteur local trouvé sur les ports d'usage. Installez llama.cpp, Ollama, ou choisissez « En ligne »."}
+              </div>
+            )}
+
+            {choixIa === "en-ligne" && (
+              <div className="mb-6">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
+                  {t.intelligenceFournisseur || "Fournisseur"}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {FOURNISSEURS_BLANCS.map((f) => (
+                    <button
+                      key={f.nom}
+                      onClick={() => {
+                        const bas = f.nom.toLowerCase();
+                        setFournisseurIa(bas);
+                        setVerdictIa(null);
+                      }}
+                      className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all ${fournisseurIa === f.nom.toLowerCase() ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-white/10 text-slate-400 hover:border-white/30"}`}
+                    >
+                      {f.nom}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-500 italic mt-2">
+                  {t.intelligenceClefAide
+                    || "La clef d'API ne se saisit pas ici : elle est demandée à la première ouverture et rangée dans le trousseau du système."}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  {t.intelligenceUrl || "URL du moteur"}
+                </label>
+                <input
+                  type="text"
+                  value={urlIa}
+                  onChange={(e) => { setUrlIa(e.target.value); setVerdictIa(null); }}
+                  placeholder={choixIa === "ollama" ? "http://127.0.0.1:11434" : choixIa === "local" ? "http://127.0.0.1:8080" : "https://… (optionnel)"}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white font-mono focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
+                />
+                <p className="text-[10px] text-slate-500 italic">
+                  {choixIa === "en-ligne"
+                    ? (t.intelligenceUrlEnLigneDesc || "L'URL confirme le fournisseur de la liste blanche ; elle ne peut pas le remplacer.")
+                    : null}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  {t.intelligenceModele || "Nom du modèle"}
+                </label>
+                <input
+                  type="text"
+                  value={modeleIa}
+                  onChange={(e) => { setModeleIa(e.target.value); setVerdictIa(null); }}
+                  placeholder={choixIa === "ollama" ? "ex : qwen2.5:7b-instruct" : "ex : qwen2.5-7b-instruct-q4_k_m.gguf"}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white font-mono focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={testerLlm}
+                disabled={testIaEnCours}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500/10 text-brand-500 border border-brand-500/30 text-xs font-bold hover:bg-brand-500/20 transition-all disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5" />
+                {testIaEnCours
+                  ? (t.intelligenceTestEnCours || "Test en cours...")
+                  : (t.intelligenceTester || "Tester")}
+              </button>
+              <button
+                onClick={enregistrerLlm}
+                disabled={verdictIa === null || verdictIa.vivant !== true}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all"
+                title={verdictIa === null || verdictIa.vivant !== true
+                  ? (t.intelligenceEnregistrerBloque || "Le test doit réussir avant d'enregistrer.")
+                  : undefined}
+              >
+                <Check className="w-3.5 h-3.5" />
+                {t.intelligenceEnregistrer || "Enregistrer"}
+              </button>
+              {verdictIa !== null && !testIaEnCours && (
+                <span className={`text-xs font-black uppercase tracking-tighter ${verdictIa.vivant ? "text-emerald-400" : "text-red-500"}`}>
+                  {verdictIa.vivant
+                    ? `${t.intelligenceTestVert || "Le moteur répond"}${verdictIa.cibles?.[0]?.modele ? ` (${verdictIa.cibles[0].modele})` : ""}`
+                    : `${t.intelligenceTestRouge || "Test échoué"}${verdictIa.defaut ? ` (${verdictIa.defaut})` : ""}`}
+                </span>
+              )}
             </div>
           </section>
 

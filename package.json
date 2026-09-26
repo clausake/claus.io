@@ -87,7 +87,8 @@
     "verify:installe-index-forecast": "python3 scripts/probe-index-forecast-installe.py",
     "verify:capteur-orphelines": "python3 scripts/capteur-orphelines.py",
     "verify:juge-fuseaux": "python3 scripts/juge-couverture-fuseaux-d1.py",
-    "verify:fuseau-cost-data": "node scripts/probe-fuseau-cost-data.mjs"
+    "verify:fuseau-cost-data": "node scripts/probe-fuseau-cost-data.mjs",
+    "verify:reglage-llm": "node test/banc/juge-reglage-llm.mjs"
   },
   "build": {
     "appId": "com.agentculinaire.os",
@@ -122,7 +123,10 @@
       {
         "from": "resources/ocr/modeles",
         "to": "ocr/modeles",
-        "filter": ["**/*.onnx", "**/*.txt"]
+        "filter": [
+          "**/*.onnx",
+          "**/*.txt"
+        ]
       }
     ]
   },
