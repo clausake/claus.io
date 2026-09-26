@@ -63,3 +63,8 @@ license_private.pem
 # Cache d'octets des harnais de mesure Python (scripts/probe-*.py). Genere a
 # chaque execution, jamais une source.
 __pycache__/
+
+# Poids OCR embarques (Sprint 15 tache 7) : 12,8 Mo hors git — la lourdeur
+# que le contrat refuse. Telecharges une fois hors depot, juges par empreinte
+# contre scripts/modeles-ocr.manifest.json (npm run verify:ocr-modeles).
+resources/ocr/modeles/
