@@ -89,7 +89,10 @@
     "verify:juge-fuseaux": "python3 scripts/juge-couverture-fuseaux-d1.py",
     "verify:fuseau-cost-data": "node scripts/probe-fuseau-cost-data.mjs",
     "verify:reglage-llm": "node test/banc/juge-reglage-llm.mjs",
-    "verify:assistant": "node test/banc/juge-assistant.mjs"
+    "verify:assistant": "node test/banc/juge-assistant.mjs",
+    "verify:ocr-moteur": "python3 scripts/juge-ocr.py paddle",
+    "verify:ocr-moteur-mord": "python3 test/banc/juge-ocr-b.py",
+    "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts"
   },
   "build": {
     "appId": "com.agentculinaire.os",
@@ -118,7 +121,10 @@
     "asarUnpack": [
       "**/node_modules/sqlite3/**/*",
       "**/node_modules/@xenova/**/*",
-      "**/node_modules/ollama/**/*"
+      "**/node_modules/ollama/**/*",
+      "**/node_modules/onnxruntime-node/bin/**/*",
+      "**/node_modules/@napi-rs/canvas*/**/*.node",
+      "**/node_modules/ppu-paddle-ocr/**/*"
     ],
     "extraResources": [
       {

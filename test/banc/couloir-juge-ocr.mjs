@@ -18,6 +18,23 @@ if (!image) { console.error("usage: couloir-juge-ocr.mjs <image> [moteur]"); pro
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 try {
+  // LA MORSURE (jouee par juge-ocr-b.py, jamais par la porte nominale) :
+  // COOKDRIVE_OCR_MORSURE pointe un JSON {lignes:[...]} qui REMPLACE la
+  // sortie du moteur. C'est ainsi qu'on prouve que le juge mord : retirer une
+  // ligne de consigne doit faire rougir le compte des champs — un juge qui
+  // rend 7/7 sur des lignes retirees ne juge rien. Sans cette variable,
+  // c'est le VRAI moteur qui joue.
+  const morsure = process.env.COOKDRIVE_OCR_MORSURE;
+  if (morsure && morsure !== "") {
+    const fs = await import("node:fs");
+    const brut = JSON.parse(fs.readFileSync(morsure, "utf8"));
+    if (!Array.isArray(brut.lignes))
+      throw new Error("COOKDRIVE_OCR_MORSURE: attendu {lignes:[...]}");
+    process.stdout.write(JSON.stringify({
+      lignes: brut.lignes.map((l) => String(l)), moteur: "paddle", duree_ms: 1,
+    }));
+    process.exit(0);
+  }
   const O = await import(path.join(RACINE, "src/shared/ocr.js"));
   const lu = await O.lireTexte(path.resolve(image), { moteur });
   process.stdout.write(JSON.stringify({ lignes: lu.lignes, moteur: lu.moteur, duree_ms: lu.duree_ms }));
