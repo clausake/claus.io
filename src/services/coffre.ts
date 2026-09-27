@@ -20,7 +20,12 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { settingsPath } from "./settings.js";
 
-const requireCjs = createRequire(import.meta.url);
+// createRequire FIGE sur un chemin du cwd : sous le bundle CJS du livrable
+// (esbuild --format=cjs), `import.meta.url` est UNDEFINED et createRequire
+// rougit a la naissance du serveur (faute mesuree sur la piece dist-server/
+// server.cjs le 27/09). createRequire ne fait que demander un chemin de
+// reference pour resoudre `electron` — un nom du cwd convient.
+const requireCjs = createRequire(path.join(process.cwd(), "cookdrive-coffre.cjs"));
 
 export interface EtatClef {
   readonly fournisseur: string;

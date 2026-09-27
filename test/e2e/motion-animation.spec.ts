@@ -23,6 +23,13 @@ let server: any;
 
 test.beforeAll(async () => {
   fs.rmSync(DATA, { recursive: true, force: true });
+  fs.mkdirSync(DATA, { recursive: true });
+  // L'assistant de premier demarrage (Tache 10) tient l'ecran tant que le
+  // demarrage n'est pas consigne : meme piege que la landing, consigne ici
+  // par le MEME chemin que le produit ecrit (settings.json du serveur de test).
+  fs.writeFileSync(path.join(DATA, "settings.json"),
+    JSON.stringify({ install_termine_le: new Date().toISOString(),
+                    fournisseur_choisi: "ollama" }));
   if (!fs.existsSync(path.join(process.cwd(), "dist", "index.html"))) {
     throw new Error("dist/ absent : lancer `npm run build` avant cette suite");
   }

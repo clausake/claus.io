@@ -88,6 +88,14 @@ async function attendrePortLibre(port: number, maxMs = 8000): Promise<void> {
 test.beforeAll(async () => {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
   fs.mkdirSync(DATA_DIR, { recursive: true });
+  // L'assistant de premier demarrage (Tache 10) tient l'ecran tant que le
+  // demarrage n'est pas consigne : un test d'UI qui n'a pas consigne reste
+  // sur l'assistant et rougit en accusant SON panneau d'etre absent — le
+  // piege de la landing, bis. On consigne le demarrage par le MME chemin que
+  // le produit ecrit (settings.json), la ou le serveur le lit.
+  fs.writeFileSync(path.join(DATA_DIR, "settings.json"),
+    JSON.stringify({ install_termine_le: new Date().toISOString(),
+                    fournisseur_choisi: "ollama" }));
   if (!fs.existsSync(path.join(process.cwd(), "dist", "index.html"))) {
     throw new Error(
       "dist/ absent : lancer `npm run build` avant cette suite (meme contrat que motion-animation.spec.ts)",

@@ -1,5 +1,6 @@
 // Routes : Paramètres + statut Ollama + infos réseau + le juge LLM (Tache 9)
 import { Router } from "express";
+import fs from "fs";
 import os from "os";
 import path from "path";
 import { spawn } from "child_process";
@@ -40,7 +41,15 @@ router.get("/api/llm/tester", async (req, res) => {
     res.json({ vivant: false, cibles: [], defaut: construit.defaut });
     return;
   }
-  const sonde = path.join(process.cwd(), "scripts", "sonde-fournisseur.mjs");
+  const sonde = [
+    // Le livrable Electron : la sonde est LIVREE (extraResources — sans elle,
+    // le bouton « Tester » du paquet ne rend rien et le verdict tombe en
+    // SONDE_MUETTE, la faute mesuree le 27/09 sur la piece dist-server).
+    path.join((process as unknown as { resourcesPath?: string }).resourcesPath
+      ?? process.cwd(), "scripts", "sonde-fournisseur.mjs"),
+    path.join(process.cwd(), "scripts", "sonde-fournisseur.mjs"),
+  ].find((p) => p && fs.existsSync(p))
+    ?? path.join(process.cwd(), "scripts", "sonde-fournisseur.mjs");
   try {
     // La clef part par l'ENVIRONNEMENT du fils (la decision du 25/09 : la
     // sonde la lit du seul environment), rangee dans le coffre du systeme
@@ -60,7 +69,11 @@ router.get("/api/llm/tester", async (req, res) => {
       fils.on("close", () => resolve(buf));
     });
     const v = parseSortieSonde(FILTRE_TEST(sortie, String(req.query["test"] ?? "")));
-    res.json({ ...v, defaut: v.cibles[0]?.defaut });
+    // Une sonde qui ne rend AUCUNE ligne est un capteur mort : le verdict est
+    // NOMME (SONDE_MUETTE), jamais un `cibles: []` muet — la regle des
+    // capteurs, la branche que la piece livree a fait rougir le 27/09.
+    const defaut = v.cibles.length === 0 ? "SONDE_MUETTE" : v.cibles[0]?.defaut;
+    res.json({ ...v, defaut });
   } catch (e) {
     res.json({ vivant: false, cibles: [], defaut: "SONDE_IMPROUVABLE",
                detail: String((e as Error)?.message ?? e) });
