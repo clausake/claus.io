@@ -1,0 +1,16 @@
+{
+ "produit": "Haferflocken 500 g",
+ "langue": "de",
+ "lignes": [
+  [
+   "MINDESTENS HALTBAR BIS",
+   "15/09/2026"
+  ],
+  [
+   "CHARGE HF25-318",
+   null
+  ]
+ ],
+ "verdict_attendu": "ACCEPTE",
+ "aujourdhui": "2026-09-25"
+}
