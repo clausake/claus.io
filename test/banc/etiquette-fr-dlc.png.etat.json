@@ -1,0 +1,16 @@
+{
+ "produit": "Yaourt brassage aux fruits",
+ "langue": "fr",
+ "lignes": [
+  [
+   "A CONSOMMER JUSQU'AU",
+   "25/10/2026"
+  ],
+  [
+   "LOT LF26097 A",
+   null
+  ]
+ ],
+ "verdict_attendu": "ACCEPTE",
+ "aujourdhui": "2026-09-25"
+}

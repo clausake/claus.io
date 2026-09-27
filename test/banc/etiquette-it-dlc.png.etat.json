@@ -1,0 +1,16 @@
+{
+ "produit": "Mozzarella di bufala",
+ "langue": "it",
+ "lignes": [
+  [
+   "DA CONSUMARSI ENTRO",
+   "02/10/2026"
+  ],
+  [
+   "LOTE MB26-092",
+   null
+  ]
+ ],
+ "verdict_attendu": "ACCEPTE",
+ "aujourdhui": "2026-09-25"
+}

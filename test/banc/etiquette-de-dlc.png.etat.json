@@ -1,0 +1,16 @@
+{
+ "produit": "Frischkäse Kräuter",
+ "langue": "de",
+ "lignes": [
+  [
+   "VERBRAUCHEN BIS",
+   "05/10/2026"
+  ],
+  [
+   "CHARGE KA26-095",
+   null
+  ]
+ ],
+ "verdict_attendu": "ACCEPTE",
+ "aujourdhui": "2026-09-25"
+}
