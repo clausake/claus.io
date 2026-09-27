@@ -94,7 +94,8 @@
     "verify:ocr-moteur-mord": "python3 test/banc/juge-ocr-b.py",
     "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts",
     "verify:livrable": "python3 scripts/probe-livrable-14.py",
-    "verify:extraction": "python3 scripts/negative-test-extraction.py"
+    "verify:extraction": "python3 scripts/negative-test-extraction.py",
+    "verify:langues-formats": "python3 scripts/mesurer-langues-formats.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
