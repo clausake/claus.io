@@ -1,7 +1,7 @@
 {
   "name": "agent-culinaire-os",
   "description": "Assistant culinaire IA",
-  "author": "Agent Culinaire OS",
+  "author": "ClausIO <clausake@localhost>",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -92,7 +92,8 @@
     "verify:assistant": "node test/banc/juge-assistant.mjs",
     "verify:ocr-moteur": "python3 scripts/juge-ocr.py paddle",
     "verify:ocr-moteur-mord": "python3 test/banc/juge-ocr-b.py",
-    "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts"
+    "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts",
+    "verify:livrable": "python3 scripts/probe-livrable-14.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
@@ -134,6 +135,10 @@
           "**/*.onnx",
           "**/*.txt"
         ]
+      },
+      {
+        "from": "scripts/sonde-fournisseur.mjs",
+        "to": "scripts/sonde-fournisseur.mjs"
       }
     ]
   },
@@ -225,5 +230,7 @@
     "lightningcss-linux-arm64-gnu": "1.32.0",
     "lightningcss-linux-x64-gnu": "1.32.0",
     "lightningcss-win32-x64-msvc": "1.32.0"
-  }
+  },
+  "maintainer": "ClausIO <clausake@localhost>",
+  "homepage": "https://gitlab.com/cookdrive-group/cookdrive-project"
 }
