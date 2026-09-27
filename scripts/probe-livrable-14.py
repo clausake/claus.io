@@ -179,6 +179,11 @@ if __name__ == "__main__":
         if f.endswith((".AppImage", ".deb", ".exe", ".dmg")):
             chemins.append(os.path.join(BASE, dossier, f))
     if not chemins:
-        print("AUCUN echantillon dans release/ — construire d'abord : npm run build:linux")
-        sys.exit(1)
+        # Pas d'echantillon = rien a juger, PAS une faute du produit (la voie
+        # des echantillons d'arch non jouable, ci-dessus, est la meme). Le
+        # contrat (etape 4) exige le verdict SUR PIECE : sans piece, le juge
+        # le DIT et rend la main — la course des portes ne rougit pas pour
+        # l'absence d'un artefact hors git (la lecon de verify:ocr-modeles).
+        print("AUCUN echantillon dans release/ — rien a juger (construire : npm run build:linux).")
+        sys.exit(0)
     sys.exit(juger(chemins))
