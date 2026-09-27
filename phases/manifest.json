@@ -1,7 +1,7 @@
 {
  "original_octets": 145533,
- "original_sha256": "93486fc65e773ca9e59bd73132321a1e0fcf004338dfb19e22455bebba778e7f",
- "chaud_octets": 16492,
+ "original_sha256": "b3eae0696a76436c9651e06ff37aa669b8c507ac1e68f067e19bc537f8269935",
+ "chaud_octets": 16782,
  "archives": [
   {
    "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -156,19 +156,26 @@
    "octets": 5839,
    "lignes": 104,
    "sha256": "7d897fac82fe60be0e8167b6215ea1718dd346d96c6fd205752097ccf7ae0d71"
+  },
+  {
+   "fichier": "phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md",
+   "titre": "## Sprint 15.f - le contrat d'extraction et la locale DECLAREE (taches 15-16) (27 sept.)",
+   "octets": 5070,
+   "lignes": 88,
+   "sha256": "d14e10ea146f6541cba0d7d3bbab002d7bd9b0d9be9eee6512e09253de948876"
   }
  ],
- "lignes_chaud": 257,
- "tokens_approx_chaud": 4000,
+ "lignes_chaud": 261,
+ "tokens_approx_chaud": 4072,
  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
  "reancrage": {
-  "motif": "sprint 15.e (assistant de premier demarrage + coffre safeStorage + juge OCR par piece + livrable juge sur piece, taches 10-14) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-e-l-assistant-le-coffre-le-juge-oc.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-27T06:26:48.452525",
+  "motif": "sprint 15.f (contrat d'extraction anti-hallucination: 4 gardes + 6 mutations mordantes; locale DECLAREE: matrice + porte morsure, taches 15-16) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+  "date": "2026-09-27T07:58:57.658524",
   "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
  },
  "reancrage_precedent": {
-  "motif": "sprint 15.d (panneau Intelligence : reglages llm_* visibles + la route du juge + la fuite de clef fermee au POST) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-d-le-panneau-intelligence-le-bouto.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-26T22:22:12.547831",
+  "motif": "sprint 15.e (assistant de premier demarrage + coffre safeStorage + juge OCR par piece + livrable juge sur piece, taches 10-14) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-e-l-assistant-le-coffre-le-juge-oc.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+  "date": "2026-09-27T06:26:48.452525",
   "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
  }
 }
