@@ -1,0 +1,16 @@
+{
+ "produit": "Filet de bar sous vide",
+ "langue": "fr",
+ "lignes": [
+  [
+   "A CONSOMMER JUSQU'AU",
+   "20/09/2026"
+  ],
+  [
+   "LOT LB26-081",
+   null
+  ]
+ ],
+ "verdict_attendu": "PASSEE",
+ "aujourdhui": "2026-09-25"
+}

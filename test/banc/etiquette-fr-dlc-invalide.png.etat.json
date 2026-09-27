@@ -1,0 +1,16 @@
+{
+ "produit": "Crème dessert vanille",
+ "langue": "fr",
+ "lignes": [
+  [
+   "A CONSOMMER JUSQU'AU",
+   "31/02/2026"
+  ],
+  [
+   "LOT CV26-077",
+   null
+  ]
+ ],
+ "verdict_attendu": "DATE_INVALIDE",
+ "aujourdhui": "2026-09-25"
+}

@@ -192,6 +192,7 @@ DEFAUT = ["verify:split",
           "verify:llm-fournisseur",
           "verify:extraction",
           "verify:langues-formats",
+          "verify:etiquettes-dlc",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,

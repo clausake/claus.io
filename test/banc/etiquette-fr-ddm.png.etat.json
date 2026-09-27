@@ -1,0 +1,16 @@
+{
+ "produit": "Riz basmati 5 kg",
+ "langue": "fr",
+ "lignes": [
+  [
+   "À CONSOMMER DE PRÉFÉRENCE AVANT LE",
+   "20/09/2026"
+  ],
+  [
+   "LOT RB25412 B",
+   null
+  ]
+ ],
+ "verdict_attendu": "ACCEPTE",
+ "aujourdhui": "2026-09-25"
+}
