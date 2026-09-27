@@ -66,6 +66,12 @@ def juger_piece(image: str, attendus: dict, moteur: str):
     lignes = [norm(l) for l in lu["lignes"]]
     champs = {}
     for nom, texte in attendus.items():
+        if texte == "ABSENT DE LA PIECE":
+            # Champ NA : la piece publique ne porte pas ce champ (mesure
+            # 27/09 : les factures du jeu public n'ont pas de SIRET). Le
+            # compter MANQUE falsifierait le score — le juge le nomme NA.
+            champs[nom] = {"atteint": True, "cer": 0.0, "na": True}
+            continue
         cible = norm(texte)
         # Le juge par LIGNES (egaute ou inclusion) ; le taux d'erreur regarde
         # la MEILLEURE ligne (la distance d'edition la plus courte), pas la
