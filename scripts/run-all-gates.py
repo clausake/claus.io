@@ -190,6 +190,7 @@ DEFAUT = ["verify:split",
           # voies du routage + le reglage LLM, juges au banc (le contrat nomme
           # la porte ; les juges existants sont joues sous leur nom).
           "verify:llm-fournisseur",
+          "verify:extraction",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,
