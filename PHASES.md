@@ -255,3 +255,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
+## Sprint 15.f - le contrat d'extraction et la locale DECLAREE (taches 15-16) (27 sept.) -> `phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md` (5070 octets, 88 lignes)
+
+> Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
+
