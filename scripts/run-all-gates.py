@@ -180,6 +180,16 @@ DEFAUT = ["verify:split",
           # les poids sont hors git, la course dependrait de l'infrastructure
           # d'autrui). Morsures : muet, forget, clef vide, clef qui ressort.
           "verify:assistant",
+          # verify:ocr-moteur-mord (Tache 11) : la morsure du juge OCR joue la
+          # CONSIGNE fabriquee (le couloir court-circuite le moteur) — elle ne
+          # depend pas des poids et peut rester au lot. La course NOMINALE
+          # verify:ocr-moteur est HORS DEFAUT, pour la MEME raison que
+          # verify:ocr-modeles : elle joue le vrai moteur et exige les poids
+          # (12,8 Mo hors git).
+          # verify:llm-fournisseur (Tache 13) : les trois
+          # voies du routage + le reglage LLM, juges au banc (le contrat nomme
+          # la porte ; les juges existants sont joues sous leur nom).
+          "verify:llm-fournisseur",
           # verify:ocr-modeles EST volontairement HORS DEFAUT : les poids OCR
           # (12,8 Mo) ne sont pas sous git (decision du contrat, tache 7).
           # Dans un clone neuf sans les poids, la porte rougiROIT pour une
