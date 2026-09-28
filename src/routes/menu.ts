@@ -13,6 +13,25 @@ import { STANDARD_QUANTITIES_PROMPT, STANDARD_QUANTITIES_ES_PROMPT, STANDARD_QUA
 export default function createRouter(db: Database) {
   const router = Router();
 
+// Sprint 16 : normaliser la catégorie lue par l'IA en une carte du produit
+// (entree/plat/dessert). La liste est écrite d'avance, jamais devinée ; la
+// même liste joue pour les cinq langues (les libellés français, anglais,
+// allemand, espagnol, italien) et toute valeur non reconnue reste telle
+// quelle.
+const CARTE_LISTE: Array<{ carte: string; mots: RegExp }> = [
+  { carte: "entree", mots: /entree|entr[eé]|starter|appetizer|vorspeise|aperitivo|antipasto|primi/i },
+  { carte: "plat", mots: /plat|main course|main dish|hauptgang|hauptgericht|secondo|principal/i },
+  { carte: "dessert", mots: /dessert|postre|nachspeise/i },
+];
+function normaliserCarte(categorie: string): string {
+  const c = String(categorie).trim().toLowerCase();
+  if (c === "") return "";
+  for (const { carte, mots } of CARTE_LISTE) {
+    if (mots.test(c)) return carte;
+  }
+  return c;
+}
+
 router.post("/api/analyze-menu", upload.single("file"), async (req, res) => {
 console.log(
   "[OLLAMA] Re\xE7u une demande d'analyse de menu (D\xE9composer menu)...",
@@ -164,7 +183,17 @@ recette: "Recipe Name", categorie: "Kategorie", ingredients: [{name: "Name", qua
   const parsedData = safeJsonParse(cleanResponse) as LlmResponse & { fiches_techniques?: Array<Record<string, unknown>> };
   if (parsedData.fiches_techniques) {
     parsedData.fiches_techniques = parsedData.fiches_techniques.map(
-      (recipe) => ({ ...recipe, source_image_url: imageUrl }),
+      (recipe) => ({
+        ...recipe,
+        source_image_url: imageUrl,
+        // Sprint 16 : la catégorie lue par l'IA sur le menu papier est NORMALISÉE
+        // en une carte du produit (entree/plat/dessert) — « Starter, Main
+        // Course, or Dessert » et les catégories textuelles locales (« Entrée »,
+        // « Starter »...) se rangent dans la bonne carte. Une valeur non
+        // reconnue reste telle quelle (la carte UI la range en « Fiches
+        // Importées » ; jamais de devinette).
+        dish_type: normaliserCarte(String((recipe as any).categorie ?? "")),
+      }),
     );
   }
   res.json(parsedData);

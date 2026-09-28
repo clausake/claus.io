@@ -261,7 +261,6 @@ MUTATIONS = [
     dict(id="M11", fichier=RT, attendu="P8",
          titre="PUT sur un id absent redevient un 200 muet + lignes fantomes",
          avant=L(
-             '  const { name, ingredients, preparation_steps } = req.body;',
              '  const recetteExistante = await db.get(',
              '    "SELECT id FROM recipes WHERE id = ?",',
              '    [req.params.id],',
@@ -270,7 +269,6 @@ MUTATIONS = [
              '  if (typeof name !== "string" || name.trim() === "") {',
          ),
          apres=L(
-             '  const { name, ingredients, preparation_steps } = req.body;',
              '  const recetteExistante = { id: req.params.id };',
              '  if (false) return res.status(404).json({ status: "error", message: "Recipe not found" });',
              '  if (typeof name !== "string" || name.trim() === "") {',

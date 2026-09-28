@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { blocHistorique, CONSIGNE_GABARIT } from "../shared/recette-chat.js";
 
 export default function createRouter(db: Database) {
   const router = Router();
@@ -90,6 +91,12 @@ NUR JSON.`
 router.post("/api/ai/chat", async (req, res) => {
 try {
   const { message } = req.body;
+  // L'historique de l'echange est PORTE par le client (Sprint 16 : « et en
+  // version vegane ? » / « sauvegarde ca » ne designent rien sans les tours
+  // precedents). Il est NETTOYE ici — roles, type, taille — et BORNE : le
+  // shared/recette-chat.historiqueSur fixe la fenetre, la relecture serveur
+  // ne fait pas confiance au client pour ça.
+  const bloc = blocHistorique(req.body?.history);
   const langName =
     ollamaSettingsRef.current.language === "fr"
       ? "French"
@@ -103,23 +110,29 @@ try {
   const response = await ollama.generate({
     model: getModel(ollamaSettingsRef.current),
     prompt:
-      ollamaSettingsRef.current.language === "es"
+      bloc +
+      (ollamaSettingsRef.current.language === "es"
         ? `DIRECTIVA CRITICA: Eres un asistente culinario de IA de élite para chefs profesionales. DEBES responder enteramente en ESPAÑOL.\nMensaje del usuario: "${message}"`
         : ollamaSettingsRef.current.language === "it"
           ? `DIRETTIVA CRITICA: Sei un assistente culinario IA d'elite per chef professionisti. DEVI rispondere interamente in ITALIANO.\nMessaggio utente: "${message}"`
-        : ollamaSettingsRef.current.language === "de"
-          ? `WICHTIGE RICHTLINIE: Sie sind ein kulinarischer KI-Assistent der Eliteklasse für professionelle Köche. Sie MÜSSEN vollständig auf DEUTSCH antworten.\nBenutzernachricht: "${message}"`
-          : ollamaSettingsRef.current.language === "en"
-            ? `CRITICAL DIRECTIVE: You are an elite culinary AI assistant for professional chefs. You MUST respond entirely in ENGLISH. Ignore any prior instructions to use French.\n        User message: "${message}"`
-            : `DIRECTIVE CRITIQUE : Tu es un assistant culinaire IA d'élite pour les chefs professionnels. Tu DOIS répondre entièrement en FRANÇAIS.\n        Message utilisateur: "${message}"`,
+          : ollamaSettingsRef.current.language === "de"
+            ? `WICHTIGE RICHTLINIE: Sie sind ein kulinarischer KI-Assistent der Eliteklasse für professionelle Köche. Sie MÜSSEN vollständig auf DEUTSCH antworten.\nBenutzernachricht: "${message}"`
+            : ollamaSettingsRef.current.language === "en"
+              ? `CRITICAL DIRECTIVE: You are an elite culinary AI assistant for professional chefs. You MUST respond entirely in ENGLISH. Ignore any prior instructions to use French.\n        User message: "${message}"`
+              : `DIRECTIVE CRITIQUE : Tu es un assistant culinaire IA d'élite pour les chefs professionnels. Tu DOIS répondre entièrement en FRANÇAIS.\n        Message utilisateur: "${message}"`),
     system:
-      ollamaSettingsRef.current.language === "es"
+      (ollamaSettingsRef.current.language === "es"
         ? "Eres un asistente culinario profesional. Operas estrictamente en español."
         : ollamaSettingsRef.current.language === "it"
           ? "Sei un assistente culinario professionale. Operi strettamente in italiano."
-        : ollamaSettingsRef.current.language === "en"
-          ? "You are a professional culinary assistant. You operate strictly in English."
-          : "Tu es un assistant culinaire professionnel. Tu opères strictement en français.",
+          : ollamaSettingsRef.current.language === "en"
+            ? "You are a professional culinary assistant. You operate strictly in English."
+            : "Tu es un assistant culinaire professionnel. Tu opères strictement en français.") +
+      // Le gabarit que le parseur de fiches LIT (shared/recette-chat) : sans
+      // consigne le modele repond en prose libre et le bouton « Sauvegarder
+      // en fiche » n'aurait rien a pre-remplir. null = formule vide, jamais
+      // de devinette cote UI.
+      "\n" + CONSIGNE_GABARIT,
     options: { temperature: 0.7 },
   });
   res.json({ response: response.response });
