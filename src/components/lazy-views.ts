@@ -21,6 +21,10 @@ export const SettingsView = lazy(() =>
   import("./SettingsView").then(m => ({ default: m.SettingsView })));
 export const CulinaryChat = lazy(() =>
   import("./CulinaryChat").then(m => ({ default: m.CulinaryChat })));
+// Sprint 16 : CulinaryChat est maintenant importé DIRECTEMENT par MenuAnalysis
+// (l'atelier vit dans l'onglet Ingenierie des Menus). Cette exportation lazy
+// garde le chunk isolé, mais l'écran du chat en onglet autonome est retiré.
+
 export const RobotManagement = lazy(() =>
   import("./RobotManagement").then(m => ({ default: m.RobotManagement })));
 export const StaffPlanning = lazy(() =>

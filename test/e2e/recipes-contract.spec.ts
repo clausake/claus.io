@@ -417,6 +417,46 @@ test("R5 PUT /api/recipes/:id valide: la recette est relue et ses ingredients re
   expect(Array.isArray(p1.corps.created_inventory), "created_inventory rendu").toBe(true);
 });
 
+// R5b PUT /api/recipes/:id dish_type PORTE (Sprint 16: le chef deplace une
+// fiche d'une carte a l'autre puis sauvegarde — la carte est relue) et
+// l'unite du formulaire PORTEE a la ligne d'inventaire.
+test("R5b PUT /api/recipes/:id dish_type + unit portes au PUT", async ({ request }) => {
+  req = request;
+  const tag = "R5b " + Date.now();
+  const cr = await poste("/api/recipes", {
+    name: "Sonde R5b " + tag,
+    category: "Plat",
+    dish_type: "plat",
+    ingredients: [{ inventory_name: "Beurre " + tag, quantity_per_person: 0.02, unit: "kg" }],
+    preparation_steps: "",
+  });
+  expect(cr.code).toBe(200);
+  const id = cr.corps.id as string;
+  // Deplacement de carte : plat -> entree
+  const pDish = await poute(`/api/recipes/${id}`, {
+    name: "Sonde R5b ENTREE " + tag,
+    ingredients: [{ inventory_name: "Beurre " + tag, quantity_per_person: 0.02, unit: "g" }],
+    preparation_steps: "Trop de beurre pour une entree.",
+    dish_type: "entree",
+  });
+  expect(pDish.code, "PUT avec dish_type=entree acceptee").toBe(200);
+  const reluDish = (await lire("/api/recipes")).find((r: any) => r.id === id);
+  expect(reluDish.dish_type, "dish_type est relue ENTREE").toBe("entree");
+  // L'unite du formulaire (g) est PORTEE a la ligne d'inventaire.
+  const inv = await lire("/api/inventory");
+  const beurre = inv.find((i: any) => i.name === "Beurre " + tag);
+  expect(beurre?.unit, "l'unite du formulaire est relue sur l'inventaire").toBe("g");
+  // MORSURE : dish_type hors cartes est REJETE nomme.
+  const pMorsure = await poute(`/api/recipes/${id}`, {
+    name: "Sonde R5b ENTREE " + tag,
+    ingredients: [{ inventory_name: "Beurre " + tag, quantity_per_person: 0.02, unit: "g" }],
+    preparation_steps: "x",
+    dish_type: "steak",
+  });
+  expect(pMorsure.code, "dish_type hors cartes REJETE").toBe(400);
+  expect(pMorsure.corps.refused, "refused inclut dish_type").toContain("dish_type");
+});
+
 // P2 PUT name absent → 400 refused ['name']; recipe NOT modified
 test("P2 PUT /api/recipes/:id name absent est refuse (la recette reste intacte)", async ({ request }) => {
   req = request;
