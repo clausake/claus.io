@@ -1,181 +1,188 @@
 {
- "original_octets": 145533,
- "original_sha256": "b3eae0696a76436c9651e06ff37aa669b8c507ac1e68f067e19bc537f8269935",
- "chaud_octets": 16782,
- "archives": [
-  {
-   "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
-   "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
-   "octets": 33521,
-   "lignes": 505,
-   "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
+  "original_octets": 145533,
+  "original_sha256": "700daa3405bb4007a748f333632a42f431857e12329f524f7269e4188aa26abc",
+  "chaud_octets": 16991,
+  "archives": [
+    {
+      "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
+      "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
+      "octets": 33521,
+      "lignes": 505,
+      "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
+    },
+    {
+      "fichier": "phases/sprint-11-sprint-11-haccp-deux-regles-que-le-produit-l.md",
+      "titre": "## Sprint 11 - HACCP: deux regles que le produit laissait au client, et un harnais qui contamine ses propres bras (16 sept.)",
+      "octets": 7976,
+      "lignes": 123,
+      "sha256": "df8710091ca8a24b5b5b11e4d22239e881fb4bd1cc080c56a178a8e269e758d6"
+    },
+    {
+      "fichier": "phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md",
+      "titre": "## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.)",
+      "octets": 7246,
+      "lignes": 95,
+      "sha256": "e091d40f55f8b8cd11b62a1cc615730250bf28be6b69670d97e076fe220ea838"
+    },
+    {
+      "fichier": "phases/sprint-13-sprint-13-dashboard-la-route-du-creneau-rend.md",
+      "titre": "## Sprint 13 - Dashboard: la route du creneau rendait une SEMAINE FACTICE sur zero ligne (20 sept.)",
+      "octets": 4809,
+      "lignes": 80,
+      "sha256": "d2d56eacb3bd611e039481b7a1244faae0a2f1034862b1431234a01e93bef181"
+    },
+    {
+      "fichier": "phases/sprint-13-1-dashboard-stats-la-delta-du-cham.md",
+      "titre": "## Sprint 13.1 - Dashboard/stats: la DELTA du champ critigue au lieu d un nombre fige (20 sept.)",
+      "octets": 4038,
+      "lignes": 69,
+      "sha256": "a7c0ec9e2ee4443b60b1cf0159c08d796d6394d0f74cadc2d4bb6211c90184fd"
+    },
+    {
+      "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
+      "titre": "## Sprint 10 - `verify:forecast` : une porte rouge qui ne jugeait rien, et un mode qui ment sur ses donnees (13 sept.)",
+      "octets": 12755,
+      "lignes": 222,
+      "sha256": "f7ee7de7dd3ece648e20157350736b0e7d228c5a28a9d9e1ffa7fe30c591d217"
+    },
+    {
+      "fichier": "phases/sprint-09-sprint-9-les-lignes-a-la-creation-les-deux-p.md",
+      "titre": "## Sprint 9 - Les lignes a la creation: les DEUX portes restantes de `document_items` (13 sept.)",
+      "octets": 8650,
+      "lignes": 155,
+      "sha256": "bb6451b4cde26c61f10160a43eb8529ebc6589df4def7e31865f32329e083527"
+    },
+    {
+      "fichier": "phases/sprint-08-sprint-8-post-api-inventory-consume-la-route.md",
+      "titre": "## Sprint 8 - POST /api/inventory/consume : la route que personne ne jugeait (12 sept.)",
+      "octets": 18292,
+      "lignes": 300,
+      "sha256": "980b25578aac01223897a4d7429b7e8b5874a4af27aa72f66963bdac62e8ac74"
+    },
+    {
+      "fichier": "phases/sprint-07-sprint-7-la-colonne-de-prix-fournisseur-a-tr.md",
+      "titre": "## Sprint 7 - La colonne de prix fournisseur a TROIS portes d'ecriture, et une seule etait garde (12 sept.)",
+      "octets": 10493,
+      "lignes": 167,
+      "sha256": "9a62a6ec304cbcf29a455e773cd06c677b74c498dcf370b34989a4fd37ccbe81"
+    },
+    {
+      "fichier": "phases/sprint-06-sprint-6-le-port-de-la-fenetre-et-la-voie-d-.md",
+      "titre": "## Sprint 6 - Le port de la fenetre et la voie d'ecriture d'inventaire, juges (12 sept.)",
+      "octets": 9879,
+      "lignes": 154,
+      "sha256": "74fb45264631904eb3d942f0e366a925e70bab3ea34566b41f1c704f772d615f"
+    },
+    {
+      "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
+      "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
+      "octets": 21920,
+      "lignes": 339,
+      "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
+    },
+    {
+      "fichier": "phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md",
+      "titre": "## Sprint 14 - Audit du 20 sept. : deux portes que nul n'appelait, cinquante-sept routes sans garde, une ecriture muette (23 sept.)",
+      "octets": 3137,
+      "lignes": 41,
+      "sha256": "0ad9b9bf5a8970b87c80d9c2f62d8ee5617f0ca07011e3f07f6f6cd4dca1b3ec"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-b-la-voie-bulk-de-l-auditeur-un-40.md",
+      "titre": "## Sprint 14.b - la voie bulk de l'auditeur : un 404 cru en succes, et deux ancres devenues ambigues (23 sept.)",
+      "octets": 3086,
+      "lignes": 48,
+      "sha256": "3c1aaddc676fb2bdc3a2ad10d26c5ec495d347afed2c21c17590e49e7ccb20db"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-c-les-trois-generations-de-menu-re.md",
+      "titre": "## Sprint 14.c - les trois generations de menu retirees, l'analyse conservee (24 sept.)",
+      "octets": 3067,
+      "lignes": 49,
+      "sha256": "2c6f815ae9a0a828cf49df9736fe3beae0a47b31f2d9fa355d648855661e2827"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-d-les-fils-detaches-ne-survivent-p.md",
+      "titre": "## Sprint 14.d - les fils detaches ne survivent plus a leur harnais (24 sept.)",
+      "octets": 5864,
+      "lignes": 91,
+      "sha256": "1918b6618180ff72684d5532888d211c1b16d0fe58a96315fefaa49b9038496b"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-e-les-orphelines-jugees-une-a-une-.md",
+      "titre": "## Sprint 14.e - les orphelines jugees une a une, et cinq branchees (24 sept.)",
+      "octets": 4778,
+      "lignes": 94,
+      "sha256": "3ecc534c5bee9151a3b7bdff4d0846fde49ce587e7fae793a6b3f4126864ca89"
+    },
+    {
+      "fichier": "phases/sprint-14-sprint-14-f-la-porte-d1-etait-rouge-une-fois.md",
+      "titre": "## Sprint 14.f - la porte D1 etait rouge une fois par nuit, et c'etait vrai (25 sept.)",
+      "octets": 12783,
+      "lignes": 244,
+      "sha256": "c9d7c132771fed08cc09c3628b3294ea18d4fc190f767cd6ad9c8e89a049716a"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-cle-en-main-llm-choix-ocr-hors-lig.md",
+      "titre": "## Sprint 15 - Cle en main LLM, choix OCR hors ligne (26 sept.)",
+      "octets": 5613,
+      "lignes": 95,
+      "sha256": "c4d93b02ffbfd406326bd2e3c4799eea746a79f184b81d566adeb7580743c199"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-b-extraresources-pose-le-consigne-.md",
+      "titre": "## Sprint 15.b - extraResources pose : le consigne de la tache 7 etait trop timide (26 sept.)",
+      "octets": 1190,
+      "lignes": 22,
+      "sha256": "7a37bb71fd062775c1ead82c4f1acec81c526779a66cf6b8e6bdf4be60d113e8"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-c-le-moteur-de-recherche-de-l-ia-l.md",
+      "titre": "## Sprint 15.c - le moteur de recherche de l'IA locale, et la porte au jumeau deterministe (26 sept.)",
+      "octets": 3319,
+      "lignes": 55,
+      "sha256": "fb82271c48a75deb042d5c0c2bd2079989dcc38dc29403bb34ec79f0b284a9bb"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-d-le-panneau-intelligence-le-bouto.md",
+      "titre": "## Sprint 15.d - le panneau Intelligence : le bouton Tester joue la vraie sonde, et la fuite de la clef est fermee au POST (26 sept.)",
+      "octets": 5576,
+      "lignes": 90,
+      "sha256": "2fccc3e7d881aaae65dccba061e857b2a4b175095a33aa18c3015e0672d6566a"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-e-l-assistant-le-coffre-le-juge-oc.md",
+      "titre": "## Sprint 15.e - l'assistant, le coffre, le juge OCR et le livrable juge sur piece (27 sept.)",
+      "octets": 5839,
+      "lignes": 104,
+      "sha256": "7d897fac82fe60be0e8167b6215ea1718dd346d96c6fd205752097ccf7ae0d71"
+    },
+    {
+      "fichier": "phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md",
+      "titre": "## Sprint 15.f - le contrat d'extraction et la locale DECLAREE (taches 15-16) (27 sept.)",
+      "octets": 5070,
+      "lignes": 88,
+      "sha256": "d14e10ea146f6541cba0d7d3bbab002d7bd9b0d9be9eee6512e09253de948876"
+    },
+    {
+      "fichier": "phases/sprint-16-sprint-16-a-l-onglet-ingenierie-des-menus-de.md",
+      "titre": "## Sprint 16.a - l'onglet Ingenierie des Menus devient le chat, les fiches se rangent en trois cartes (27 sept.)",
+      "octets": 4165,
+      "lignes": 67,
+      "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
+    }
+  ],
+  "lignes_chaud": 263,
+  "tokens_approx_chaud": 4124,
+  "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
+  "reancrage": {
+    "motif": "sprint 16.a (chat plein ecran dans Ingenierie des Menus, fiches en TROIS CARTES pretes a sauvegarder pre-remplies, fiches editables 100 %, normaliserCarte cote serveur) ajoute au chaud (stub) + archive phases/sprint-16-sprint-16-a-l-onglet-ingenierie-des-menus-de.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-09-28T16:13:57.886792",
+    "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre."
   },
-  {
-   "fichier": "phases/sprint-11-sprint-11-haccp-deux-regles-que-le-produit-l.md",
-   "titre": "## Sprint 11 - HACCP: deux regles que le produit laissait au client, et un harnais qui contamine ses propres bras (16 sept.)",
-   "octets": 7976,
-   "lignes": 123,
-   "sha256": "df8710091ca8a24b5b5b11e4d22239e881fb4bd1cc080c56a178a8e269e758d6"
-  },
-  {
-   "fichier": "phases/sprint-12-sprint-12-recettes-les-portes-entieres-de-la.md",
-   "titre": "## Sprint 12 - Recettes: les portes entieres de la route qui gardait un 200 muet (19 sept.)",
-   "octets": 7246,
-   "lignes": 95,
-   "sha256": "e091d40f55f8b8cd11b62a1cc615730250bf28be6b69670d97e076fe220ea838"
-  },
-  {
-   "fichier": "phases/sprint-13-sprint-13-dashboard-la-route-du-creneau-rend.md",
-   "titre": "## Sprint 13 - Dashboard: la route du creneau rendait une SEMAINE FACTICE sur zero ligne (20 sept.)",
-   "octets": 4809,
-   "lignes": 80,
-   "sha256": "d2d56eacb3bd611e039481b7a1244faae0a2f1034862b1431234a01e93bef181"
-  },
-  {
-   "fichier": "phases/sprint-13-1-dashboard-stats-la-delta-du-cham.md",
-   "titre": "## Sprint 13.1 - Dashboard/stats: la DELTA du champ critigue au lieu d un nombre fige (20 sept.)",
-   "octets": 4038,
-   "lignes": 69,
-   "sha256": "a7c0ec9e2ee4443b60b1cf0159c08d796d6394d0f74cadc2d4bb6211c90184fd"
-  },
-  {
-   "fichier": "phases/sprint-10-sprint-10-verify-forecast-une-porte-rouge-qu.md",
-   "titre": "## Sprint 10 - `verify:forecast` : une porte rouge qui ne jugeait rien, et un mode qui ment sur ses donnees (13 sept.)",
-   "octets": 12755,
-   "lignes": 222,
-   "sha256": "f7ee7de7dd3ece648e20157350736b0e7d228c5a28a9d9e1ffa7fe30c591d217"
-  },
-  {
-   "fichier": "phases/sprint-09-sprint-9-les-lignes-a-la-creation-les-deux-p.md",
-   "titre": "## Sprint 9 - Les lignes a la creation: les DEUX portes restantes de `document_items` (13 sept.)",
-   "octets": 8650,
-   "lignes": 155,
-   "sha256": "bb6451b4cde26c61f10160a43eb8529ebc6589df4def7e31865f32329e083527"
-  },
-  {
-   "fichier": "phases/sprint-08-sprint-8-post-api-inventory-consume-la-route.md",
-   "titre": "## Sprint 8 - POST /api/inventory/consume : la route que personne ne jugeait (12 sept.)",
-   "octets": 18292,
-   "lignes": 300,
-   "sha256": "980b25578aac01223897a4d7429b7e8b5874a4af27aa72f66963bdac62e8ac74"
-  },
-  {
-   "fichier": "phases/sprint-07-sprint-7-la-colonne-de-prix-fournisseur-a-tr.md",
-   "titre": "## Sprint 7 - La colonne de prix fournisseur a TROIS portes d'ecriture, et une seule etait garde (12 sept.)",
-   "octets": 10493,
-   "lignes": 167,
-   "sha256": "9a62a6ec304cbcf29a455e773cd06c677b74c498dcf370b34989a4fd37ccbe81"
-  },
-  {
-   "fichier": "phases/sprint-06-sprint-6-le-port-de-la-fenetre-et-la-voie-d-.md",
-   "titre": "## Sprint 6 - Le port de la fenetre et la voie d'ecriture d'inventaire, juges (12 sept.)",
-   "octets": 9879,
-   "lignes": 154,
-   "sha256": "74fb45264631904eb3d942f0e366a925e70bab3ea34566b41f1c704f772d615f"
-  },
-  {
-   "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
-   "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
-   "octets": 21920,
-   "lignes": 339,
-   "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
-  },
-  {
-   "fichier": "phases/sprint-14-audit-du-20-sept-deux-portes-que-n.md",
-   "titre": "## Sprint 14 - Audit du 20 sept. : deux portes que nul n'appelait, cinquante-sept routes sans garde, une ecriture muette (23 sept.)",
-   "octets": 3137,
-   "lignes": 41,
-   "sha256": "0ad9b9bf5a8970b87c80d9c2f62d8ee5617f0ca07011e3f07f6f6cd4dca1b3ec"
-  },
-  {
-   "fichier": "phases/sprint-14-sprint-14-b-la-voie-bulk-de-l-auditeur-un-40.md",
-   "titre": "## Sprint 14.b - la voie bulk de l'auditeur : un 404 cru en succes, et deux ancres devenues ambigues (23 sept.)",
-   "octets": 3086,
-   "lignes": 48,
-   "sha256": "3c1aaddc676fb2bdc3a2ad10d26c5ec495d347afed2c21c17590e49e7ccb20db"
-  },
-  {
-   "fichier": "phases/sprint-14-sprint-14-c-les-trois-generations-de-menu-re.md",
-   "titre": "## Sprint 14.c - les trois generations de menu retirees, l'analyse conservee (24 sept.)",
-   "octets": 3067,
-   "lignes": 49,
-   "sha256": "2c6f815ae9a0a828cf49df9736fe3beae0a47b31f2d9fa355d648855661e2827"
-  },
-  {
-   "fichier": "phases/sprint-14-sprint-14-d-les-fils-detaches-ne-survivent-p.md",
-   "titre": "## Sprint 14.d - les fils detaches ne survivent plus a leur harnais (24 sept.)",
-   "octets": 5864,
-   "lignes": 91,
-   "sha256": "1918b6618180ff72684d5532888d211c1b16d0fe58a96315fefaa49b9038496b"
-  },
-  {
-   "fichier": "phases/sprint-14-sprint-14-e-les-orphelines-jugees-une-a-une-.md",
-   "titre": "## Sprint 14.e - les orphelines jugees une a une, et cinq branchees (24 sept.)",
-   "octets": 4778,
-   "lignes": 94,
-   "sha256": "3ecc534c5bee9151a3b7bdff4d0846fde49ce587e7fae793a6b3f4126864ca89"
-  },
-  {
-   "fichier": "phases/sprint-14-sprint-14-f-la-porte-d1-etait-rouge-une-fois.md",
-   "titre": "## Sprint 14.f - la porte D1 etait rouge une fois par nuit, et c'etait vrai (25 sept.)",
-   "octets": 12783,
-   "lignes": 244,
-   "sha256": "c9d7c132771fed08cc09c3628b3294ea18d4fc190f767cd6ad9c8e89a049716a"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-cle-en-main-llm-choix-ocr-hors-lig.md",
-   "titre": "## Sprint 15 - Cle en main LLM, choix OCR hors ligne (26 sept.)",
-   "octets": 5613,
-   "lignes": 95,
-   "sha256": "c4d93b02ffbfd406326bd2e3c4799eea746a79f184b81d566adeb7580743c199"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-b-extraresources-pose-le-consigne-.md",
-   "titre": "## Sprint 15.b - extraResources pose : le consigne de la tache 7 etait trop timide (26 sept.)",
-   "octets": 1190,
-   "lignes": 22,
-   "sha256": "7a37bb71fd062775c1ead82c4f1acec81c526779a66cf6b8e6bdf4be60d113e8"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-c-le-moteur-de-recherche-de-l-ia-l.md",
-   "titre": "## Sprint 15.c - le moteur de recherche de l'IA locale, et la porte au jumeau deterministe (26 sept.)",
-   "octets": 3319,
-   "lignes": 55,
-   "sha256": "fb82271c48a75deb042d5c0c2bd2079989dcc38dc29403bb34ec79f0b284a9bb"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-d-le-panneau-intelligence-le-bouto.md",
-   "titre": "## Sprint 15.d - le panneau Intelligence : le bouton Tester joue la vraie sonde, et la fuite de la clef est fermee au POST (26 sept.)",
-   "octets": 5576,
-   "lignes": 90,
-   "sha256": "2fccc3e7d881aaae65dccba061e857b2a4b175095a33aa18c3015e0672d6566a"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-e-l-assistant-le-coffre-le-juge-oc.md",
-   "titre": "## Sprint 15.e - l'assistant, le coffre, le juge OCR et le livrable juge sur piece (27 sept.)",
-   "octets": 5839,
-   "lignes": 104,
-   "sha256": "7d897fac82fe60be0e8167b6215ea1718dd346d96c6fd205752097ccf7ae0d71"
-  },
-  {
-   "fichier": "phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md",
-   "titre": "## Sprint 15.f - le contrat d'extraction et la locale DECLAREE (taches 15-16) (27 sept.)",
-   "octets": 5070,
-   "lignes": 88,
-   "sha256": "d14e10ea146f6541cba0d7d3bbab002d7bd9b0d9be9eee6512e09253de948876"
+  "reancrage_precedent": {
+    "motif": "sprint 15.f (contrat d'extraction anti-hallucination: 4 gardes + 6 mutations mordantes; locale DECLAREE: matrice + porte morsure, taches 15-16) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-09-27T07:58:57.658524",
+    "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
   }
- ],
- "lignes_chaud": 261,
- "tokens_approx_chaud": 4072,
- "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
- "reancrage": {
-  "motif": "sprint 15.f (contrat d'extraction anti-hallucination: 4 gardes + 6 mutations mordantes; locale DECLAREE: matrice + porte morsure, taches 15-16) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-f-le-contrat-d-extraction-et-la-lo.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-27T07:58:57.658524",
-  "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
- },
- "reancrage_precedent": {
-  "motif": "sprint 15.e (assistant de premier demarrage + coffre safeStorage + juge OCR par piece + livrable juge sur piece, taches 10-14) ajoutee au chaud (stub) + archive phases/sprint-15-sprint-15-e-l-assistant-le-coffre-le-juge-oc.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-  "date": "2026-09-27T06:26:48.452525",
-  "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre. lignes_chaud au compte des nouvelles lignes (convention des archives), non au compte de caracteres du --apply du juge (bug connu)."
- }
 }

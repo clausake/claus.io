@@ -366,9 +366,22 @@ export const TRANSLATIONS: any = {
     stockDistribution: "Répartition Stock",
     valueByCategory: "Valeur par catégorie",
     menuEngineering: "Ingénierie des Menus",
+    menuChatSubtitle:
+      "Discutez vos recettes avec l'assistant ; les fiches prêtes se rangent en Entrée, Plat, Dessert.",
+    backToChat: "Retour au chat culinaire",
+    cartesFichesPretes: "Fiches prêtes à sauvegarder",
+    carteVide: "Affinez une recette dans le chat : elle apparaîtra ici.",
+    sauvegarderEnFiche: "Sauvegarder en fiche technique",
+    ficheEnvoyee: "✓ Envoyée à valider",
+    ouvrirOngletFiches: "Ouvrir l'onglet Fiches Techniques →",
+    sansNom: "Sans nom",
+    etapesLabel: "étapes",
+    ficheIllisible:
+      "Cette proposition n'est plus lisible en fiche complète.",
+    ongletFichesInjoignable:
+      "L'onglet Fiches Techniques est injoignable depuis cet écran.",
     menuAnalysisSubtitle:
-      "Analyse intelligente et planification stratégique de l'IA",
-    backToModes: "Retour aux modes",
+      "Analyse du menu papier : fiches décomposées automatiquement.",
 
     modeDecompose: "Décomposition Menu",
 

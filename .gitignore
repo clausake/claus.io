@@ -73,3 +73,10 @@ resources/ocr/modeles/
 # confidentielles (prix + fournisseurs) — hors git. Le README reste sous git.
 test/fixtures/factures/*
 !test/fixtures/factures/README.md
+
+# Builds Electron locaux (3,4 Go) — distribues hors depot, jamais versionnes
+release/
+# Poids linguistique tesseract telecharge hors depot (juges par empreinte comme resources/ocr)
+fra.traineddata
+# session Hermes locale
+.hermes/

@@ -47,6 +47,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [cartItems, setCartItems] = useState<any[]>(INITIAL_CART);
+  // La fiche nee du chat culinaire en route vers l'onglet Fiches Techniques
+  // (Sprint 16) : MenuAnalysis la depose ici, FichesTechniques la consomme.
+  const [ficheDepuisChat, setFicheDepuisChat] = useState<any | null>(null);
   const [settings, setSettings] = useState<any>({
     model_name: "llama3.2-vision",
     custom_model: "gemma-12b-it-qat",
@@ -539,9 +542,13 @@ export default function App() {
               <NavItem
                 icon={<MessageSquare className="w-6 h-6" />}
                 label={t.chat}
-                isActive={activeTab === "chat"}
+                isActive={activeTab === "menus"}
                 onClick={() => {
-                  setActiveTab("chat");
+                  // Sprint 16 : le chat culinaire est DESORMAIS dans
+                  // l'onglet Ingenierie des Menus (la « diversite » generee
+                  // est annulee, l'echange est l'atelier). L'entree de
+                  // menu mene la.
+                  setActiveTab("menus");
                   if (window.innerWidth < 768) setIsSidebarOpen(false);
                 }}
                 isOpen={isSidebarOpen}
@@ -845,7 +852,7 @@ export default function App() {
 
         {/* Content Area */}
         <div
-          className={`flex-1 overflow-auto ${activeTab === "chat" ? "p-0" : "p-4 md:p-8"} custom-scrollbar relative`}
+          className={`flex-1 overflow-auto p-4 md:p-8 custom-scrollbar relative`}
         >
           <Suspense fallback={
             <div className="flex items-center justify-center h-full min-h-[300px]">
@@ -860,12 +867,17 @@ export default function App() {
           {activeTab === "menus" && (
             <div className="animate-in fade-in duration-200">
               <LazyViews.MenuAnalysis
-                cartItems={cartItems}
-                setCartItems={setCartItems}
                 setActiveTab={setActiveTab}
                 t={t}
                 settings={settings}
                 showNotification={showNotification}
+                onOuvrirFiche={(recette, carte) => {
+                  // Le geste du chef : la fiche nee du chat part dans
+                  // l'onglet Fiches Techniques en formulaire PRE-REMPLI,
+                  // jamais en ecriture directe (edition 100 % avant save).
+                  setFicheDepuisChat({ recette, carte });
+                  setActiveTab("recipes");
+                }}
               />
             </div>
           )}
@@ -949,12 +961,9 @@ export default function App() {
                 setCartItems={setCartItems}
                 t={t}
                 showNotification={showNotification}
+                ficheDepuisChat={ficheDepuisChat}
+                ficheDepuisChatConsommee={() => setFicheDepuisChat(null)}
               />
-            </div>
-          )}
-          {activeTab === "chat" && (
-            <div className="h-full animate-in fade-in duration-200">
-              <LazyViews.CulinaryChat t={t} settings={settings} />
             </div>
           )}
           {activeTab === "settings" && (

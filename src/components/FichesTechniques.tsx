@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Bookmark,
   BookOpen,
   Check,
   CheckCircle2,
@@ -36,12 +37,26 @@ export function FichesTechniques({
   setCartItems,
   t,
   showNotification,
+  ficheDepuisChat,
+  ficheDepuisChatConsommee,
 }: {
   activeTab: string;
   cartItems?: any[];
   setCartItems?: any;
   t: any;
   showNotification: (m: string, type?: any) => void;
+  // La fiche nee du chat culinaire (Sprint 16) : MenuAnalysis la remet via
+  // App, elle ouvre le VRAI formulaire en pre-rempli — le chef edite texte
+  // et quantites a 100 % puis enregistre. Apres consommation, App vide.
+  ficheDepuisChat?: {
+    recette: {
+      nom: string;
+      ingredients: Array<{ nom: string; quantite: number | null; unite: string }>;
+      etapes: string[];
+    };
+    carte: "entree" | "plat" | "dessert";
+  } | null;
+  ficheDepuisChatConsommee?: () => void;
 }) {
   const toast = useToast();
   const [pendingDeleteRecipe, setPendingDeleteRecipe] = useState<string | null>(null);
@@ -68,6 +83,32 @@ export function FichesTechniques({
   const outerModalScrollRef = useRef<HTMLDivElement>(null);
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sprint 16 : la fiche nee du chat culinaire arrive ici PRE-REMPLIE. Le
+  // formulaire est le seul chemin d'enregistrement — le chef edite le texte
+  // et les quantites a 100 % avant de sauver ; jamais d'ecriture directe.
+  useEffect(() => {
+    if (!ficheDepuisChat) return;
+    const { recette, carte } = ficheDepuisChat;
+    setSelectedRecipeForModal({
+      id: "manual-" + Date.now(),
+      name: recette.nom || "",
+      category: "chat",
+      dish_type: carte,
+      ingredients: (recette.ingredients || []).map((ing: any, idx: number) => ({
+        id: "ing-" + Date.now() + "-" + idx,
+        inventory_name: ing.nom,
+        name: ing.nom,
+        quantity_per_person: ing.quantite === null || ing.quantite === undefined ? "" : ing.quantite,
+        unit: ing.unite || "kg",
+        unit_price: 0,
+      })),
+      preparation_steps: (recette.etapes || []).join("\n"),
+      is_saved: false,
+    });
+    if (ficheDepuisChatConsommee) ficheDepuisChatConsommee();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ficheDepuisChat]);
 
   const handleFileScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -353,6 +394,14 @@ export function FichesTechniques({
 
   const saveRecipe = async (recipe: any) => {
     try {
+      // Sprint 16 : la carte (entree/plat/dessert) est PORTEE a l'enregistre-
+      // ment — c'est elle qui range la fiche dans le bon dossier. Defaut : la
+      // categorie du dossier courant si c'est une carte, sinon "plat".
+      const carteDeLaFiche = ["entree", "plat", "dessert"].includes(recipe.dish_type)
+        ? recipe.dish_type
+        : ["entree", "plat", "dessert"].includes(recipe.category)
+          ? recipe.category
+          : "plat";
       if (recipe.id.startsWith("manual-")) {
         const res = await fetch(`/api/recipes`, {
           method: "POST",
@@ -360,6 +409,7 @@ export function FichesTechniques({
           body: JSON.stringify({
             name: recipe.name,
             category: recipe.category,
+            dish_type: carteDeLaFiche,
             ingredients: recipe.ingredients,
             preparation_steps: recipe.preparation_steps,
           }),
@@ -379,6 +429,9 @@ export function FichesTechniques({
               inventory_name: ing.inventory_name,
               inventory_id: ing.inventory_id,
               quantity_per_person: ing.quantity_per_person,
+              // L'unite est editable a 100 % dans le formulaire : sans elle
+              // au PUT, la correction du chef restait purement locale.
+              unit: ing.unit,
             })),
             preparation_steps: recipe.preparation_steps,
           }),
@@ -525,23 +578,23 @@ export function FichesTechniques({
 
   const categories = [
     {
-      id: "creative",
-      name: t.creativeMenu || "Menu Créatif",
-      icon: Clock,
+      id: "entree",
+      name: t.starter || "Entrées",
+      icon: ChefHat,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+    },
+    {
+      id: "plat",
+      name: t.mainCourse || "Plats",
+      icon: ChefHat,
       color: "text-blue-500",
       bg: "bg-blue-500/10",
     },
     {
-      id: "gastronomic",
-      name: t.highGastronomy || t.gastronomy || "Haute Gastronomie",
-      icon: Sparkles,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-    },
-    {
-      id: "traditional",
-      name: t.traditionalCatering || "Bistro Chic",
-      icon: ChefHat,
+      id: "dessert",
+      name: t.dessert || "Desserts",
+      icon: Bookmark,
       color: "text-amber-500",
       bg: "bg-amber-500/10",
     },
@@ -553,6 +606,27 @@ export function FichesTechniques({
       bg: "bg-brand-500/10",
     },
   ];
+
+  // Sprint 16 : les dossiers sont les TROIS cartes Entree / Plat / Dessert
+  // (le plat se range par carte, plus « Fiches Importees » pour l'empreinte
+  // optique du menu papier). Les anciens dossiers des generations annulees
+  // (creative / gastronomic / traditional) ne sont plus proposes ; les lignes
+  // deja en base avec ces categories restent visibles via « Fiches Importees ».
+  const appartientDossier = (r: any, dossierId: string) => {
+    const cat = r.category || "general";
+    if (dossierId === "decompose") {
+      return !["entree", "plat", "dessert"].includes(r.dish_type) ||
+        cat === "general" || cat === "decompose";
+    }
+    const tType = r.dish_type || "plat";
+    if (tType === dossierId) return true;
+    // Les fiches importees sans dish_type rangees par categorie textuelle
+    // (legacy « Plat ») rejoignent leur carte.
+    if (dossierId === "plat" && /plat/i.test(cat)) return true;
+    if (dossierId === "entree" && /entree|entrée/i.test(cat)) return true;
+    if (dossierId === "dessert" && /dessert/i.test(cat)) return true;
+    return false;
+  };
 
   return (
     <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 overflow-hidden relative">
@@ -649,11 +723,7 @@ export function FichesTechniques({
           {categories.map((cat) => {
             const count = (
               viewMode === "book" ? savedRecipes : generatedRecipes
-            ).filter(
-              (r: any) =>
-                (r.category || "general") === cat.id ||
-                (cat.id === "decompose" && r.category === "general"),
-            ).length;
+            ).filter((r: any) => appartientDossier(r, cat.id)).length;
             return (
               <button
                 key={cat.id}
@@ -692,9 +762,7 @@ export function FichesTechniques({
             // MODE GENERATED
 
             generatedRecipes.filter(
-              (r: any) =>
-                (r.category || "general") === selectedCategory ||
-                (selectedCategory === "decompose" && r.category === "general"),
+              (r: any) => appartientDossier(r, selectedCategory),
             ).length === 0 ? (
               <div className="text-center py-20 bg-[#0A0A0A] rounded-3xl border border-white/5">
                 <BookOpen className="w-16 h-16 text-slate-600 mx-auto mb-6" />
@@ -710,10 +778,7 @@ export function FichesTechniques({
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {generatedRecipes
                   .filter(
-                    (r: any) =>
-                      (r.category || "general") === selectedCategory ||
-                      (selectedCategory === "decompose" &&
-                        r.category === "general"),
+                    (r: any) => appartientDossier(r, selectedCategory),
                   )
                   .map((recipe) => (
                     <div
@@ -1094,9 +1159,7 @@ export function FichesTechniques({
                   const hasItems =
                     savedRecipes.filter(
                       (r: any) =>
-                        ((r.category || "general") === selectedCategory ||
-                          (selectedCategory === "decompose" &&
-                            r.category === "general")) &&
+                        appartientDossier(r, selectedCategory) &&
                         r.name &&
                         r.name.toUpperCase().startsWith(letter),
                     ).length > 0;
@@ -1123,10 +1186,7 @@ export function FichesTechniques({
               {["entree", "plat", "dessert"].map((dishType) => {
                 const filteredSortedRecipes = savedRecipes
                   .filter(
-                    (r: any) =>
-                      (r.category || "general") === selectedCategory ||
-                      (selectedCategory === "decompose" &&
-                        r.category === "general"),
+                    (r: any) => appartientDossier(r, selectedCategory),
                   )
                   .filter(
                     (r: any) =>
@@ -1512,10 +1572,7 @@ export function FichesTechniques({
         })}
               {savedRecipes
                 .filter(
-                  (r: any) =>
-                    (r.category || "general") === selectedCategory ||
-                    (selectedCategory === "decompose" &&
-                      r.category === "general"),
+                  (r: any) => appartientDossier(r, selectedCategory),
                 )
                 .filter(
                   (r: any) =>

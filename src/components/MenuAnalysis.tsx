@@ -3,11 +3,10 @@ import {
   Bookmark,
   CheckCircle2,
   ChefHat,
-  Clock,
   Download,
   FileText,
-  Menu as MenuIcon,
-  Sparkles,
+  MessageSquareText,
+  Salad,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -17,91 +16,109 @@ import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useToast } from "./ui/Toast";
+import { CulinaryChat } from "./CulinaryChat";
+import { parserRecette, type RecetteChat } from "../shared/recette-chat";
+
+// L'onglet « Ingenierie des Menus » (Sprint 16).
+//
+// Decisions du maitre d'ouvrage (journal 22/09, sprint 14.c ; completee le
+// 27/09) : la generation automatique de trois menus (creatif / gastronomique
+// / traditionnel, la « diversite ») est ANNULEE. Le chef AFFINE ses recettes
+// EN DISCUTANT avec l'assistant culinaire ; les fiches nees de l'echange sont
+// rangees par categorie — Entrée, Plat, Dessert — dans TROIS CARTES, pretes
+// a etre sauvegardees dans l'onglet Fiches Techniques (le chef valide le
+// formulaire : jamais d'ecriture en base sans lui). L'empreinte optique du
+// menu papier (« Analyser un menu ») est CONSERVEE.
+//
+// Une proposition n'entre en carte que si elle se LIT en recette complete
+// (parserRecette : null = pas de carte, jamais de fiche inventee).
+
+export type CarteRecette = "entree" | "plat" | "dessert";
+
+interface Proposition {
+  id: string;
+  contenu: string;
+  recette: RecetteChat;
+  carte: CarteRecette;
+  enregistree: boolean;
+}
 
 export function MenuAnalysis({
-  setCartItems,
   setActiveTab,
   t,
   settings,
   showNotification,
+  onOuvrirFiche,
 }: {
-  cartItems?: any[];
-  setCartItems?: any;
   setActiveTab?: any;
   t: any;
   settings: any;
   showNotification: (m: string, type?: any) => void;
+  // Ouvre l'onglet Fiches Techniques avec le formulaire VALIDÉ PAR LE CHEF :
+  // la fiche née du chat y est pré-remplie, le chef corrige texte/quantités
+  // puis enregistre. Absent = le bouton de sauvegarde reste caché.
+  onOuvrirFiche?: (recette: RecetteChat, carte: CarteRecette) => void;
 }) {
   const toast = useToast();
-  const [analysisMode, setAnalysisMode] = useState<
-    "decompose" | "creative" | "gastronomic" | "traditional" | null
-  >(null);
-  const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const [vue, setVue] = useState<"chat" | "analyser">("chat");
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [fichesTechniques, setFichesTechniques] = useState<any[] | null>(null);
-  const [creativeMenu, setCreativeMenu] = useState<any[] | null>(null);
-  const [gastronomicMenu, setGastronomicMenu] = useState<any[] | null>(null);
-  const [traditionalMenu, setTraditionalMenu] = useState<any[] | null>(null);
-  const [guestCount, setGuestCount] = useState<number>(1);
-  const [planningModal, setPlanningModal] = useState<{ recipe: any } | null>(
-    null,
-  );
-  const [planningDate, setPlanningDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [planningMeal, setPlanningMeal] = useState<"LUNCH" | "DINNER">("LUNCH");
+  const [guestCount] = useState<number>(1);
+  const [propositions, setPropositions] = useState<Proposition[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddToPlanning = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!planningModal) return;
-
-    try {
-      const res = await fetch("/api/menu-planning", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: planningDate,
-          meal_type: planningMeal,
-          title:
-            planningModal.recipe.nom ||
-            planningModal.recipe.name ||
-            planningModal.recipe.recette,
-          recipe_details: JSON.stringify(planningModal.recipe),
-        }),
-      });
-
-      if (res.ok) {
-        showNotification(t.planningSaved || "Ajouté au planning", "success");
-        setPlanningModal(null);
-      }
-    } catch (err) {
-      showNotification("Erreur lors de l'ajout au planning", "error");
-    }
+  const carteLabels: Record<CarteRecette, string> = {
+    entree: t.starter || "Entrée",
+    plat: t.mainCourse || "Plat",
+    dessert: t.dessert || "Dessert",
   };
 
-  const translateFood = (food: string) => {
-    const map: Record<string, string> = {
-      Poisson: t.fish,
-      Poulet: t.chicken,
-      "Pâtes de blé": t.wheatPasta,
-      Porc: t.pork,
-      Bœuf: t.beef,
-      Veau: t.veal,
-      Saucisses: t.sausages,
-      "Pâtes fraîches ou plat vegan": t.veganPasta,
-      Dinde: t.turkey,
-      Agneau: t.lamb,
-      "Stock résiduel ou Salade de pâtes": t.residualPasta,
-      "Plat ++": t.premiumDish,
-      "Stock résiduel ou Salade de riz": t.residualRice,
-      "Omelette ou œufs brouillés": t.eggs,
-      Canard: t.duck,
-      Lapin: t.rabbit,
-      Omelette: t.omelette,
-    };
-    return map[food] || food;
+  // A chaque reponse de l'assistant, le chat nous remet son contenu brut :
+  // ici on la LIT (parserRecette) et seule une lecture complete devient une
+  // carte. Le contenu brut est re-luu a l'ouverture de la fiche : une
+  // proposition editee dans le chat par le chef est enregistree dans l'etat
+  // OU elle est, pas dans un copie-colle perime.
+  const handleProposition = (contenu: string) => {
+    const recette = parserRecette(contenu);
+    if (!recette) return;
+    setPropositions((prev) => {
+      if (prev.some((p) => p.contenu === contenu)) return prev;
+      return [
+        ...prev,
+        {
+          id: "prop-" + prev.length + "-" + Date.now(),
+          contenu,
+          recette,
+          carte: "plat" as CarteRecette,
+          enregistree: false,
+        },
+      ];
+    });
+  };
+
+  const ouvrirFormulaire = (p: Proposition) => {
+    const recette = parserRecette(p.contenu);
+    if (!recette) {
+      toast(
+        t.ficheIllisible ||
+          "Cette proposition n'est plus lisible en fiche complète.",
+        "error",
+      );
+      return;
+    }
+    if (onOuvrirFiche) {
+      onOuvrirFiche(recette, p.carte);
+      setPropositions((prev) =>
+        prev.map((x) => (x.id === p.id ? { ...x, enregistree: true } : x)),
+      );
+    } else {
+      toast(
+        t.ongletFichesInjoignable ||
+          "L'onglet Fiches Techniques est injoignable depuis cet écran.",
+        "error",
+      );
+    }
   };
 
   const translateDay = (day: string) => {
@@ -129,7 +146,6 @@ export function MenuAnalysis({
   const saveGeneratedRecipes = async (recipes: any[]) => {
     try {
       for (const recipe of recipes) {
-        // Robust extraction of name and ingredients
         const recipeName =
           recipe.name ||
           recipe.nom ||
@@ -164,127 +180,17 @@ export function MenuAnalysis({
           }),
         });
       }
-      // Notification de synchronisation
-      toast(t.syncFTSuccess ||
-          "✅ Fiches techniques synchronisées instantanément avec l'onglet dédié.", "success");
+      toast(
+        t.syncFTSuccess ||
+          "✅ Fiches techniques synchronisées instantanément avec l'onglet dédié.",
+        "success",
+      );
     } catch (error) {
       console.error(
         "Erreur lors de la sauvegarde des fiches techniques:",
         error,
       );
     }
-  };
-
-  const exportMenuToPDF = (
-    titre: string,
-    menuArray: any[],
-    menuType: "creative" | "gastronomic" | "traditional",
-  ) => {
-    const doc = new jsPDF();
-    doc.setFontSize(22);
-    doc.setTextColor(59, 130, 246); // Blueish
-    doc.text(titre, 20, 20);
-
-    let y = 35;
-
-    menuArray.forEach((jourMenu, idx) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.setFontSize(16);
-      doc.setTextColor(31, 41, 55);
-      const dayText =
-        translateDay(jourMenu.jour) || t.chefMenu || "MENU DU CHEF";
-      doc.text(dayText, 20, y);
-      y += 10;
-
-      doc.setFontSize(12);
-      doc.setTextColor(107, 114, 128);
-
-      if (menuType === "creative") {
-        const renderMeals = (mealObj: any, title: string) => {
-          if (!mealObj) return;
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
-          doc.setFont("helvetica", "bold");
-          doc.text(title, 20, y);
-          y += 6;
-          doc.setFont("helvetica", "normal");
-
-          if (mealObj.plat_creatif || mealObj.description) {
-            const text = doc.splitTextToSize(
-              mealObj.plat_creatif || mealObj.description || "",
-              170,
-            );
-            doc.text(text, 25, y);
-            y += text.length * 6 + 5;
-          } else {
-            ["entree", "plat", "dessert"].forEach((course) => {
-              const dish = mealObj[course];
-              if (dish) {
-                if (y > 270) {
-                  doc.addPage();
-                  y = 20;
-                }
-                doc.setFont("helvetica", "bold");
-                const cTitle =
-                  course === "entree"
-                    ? t.starter || "Entrée"
-                    : course === "plat"
-                      ? t.mainCourse || "Plat"
-                      : t.dessert || "Dessert";
-                doc.text(`- ${cTitle}:`, 25, y);
-                doc.setFont("helvetica", "normal");
-                const text = doc.splitTextToSize(
-                  dish.nom || dish.name || dish.plat_creatif || "",
-                  150,
-                );
-                doc.text(text, 50, y);
-                y += text.length * 6 + 2;
-              }
-            });
-            y += 5;
-          }
-        };
-        renderMeals(jourMenu.dejeuner, t.lunch || "Déjeuner");
-        renderMeals(jourMenu.diner, t.dinner || "Dîner");
-      } else {
-        ["entree", "plat", "dessert"].forEach((type) => {
-          const dish = jourMenu[type];
-          if (dish) {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
-            doc.setFont("helvetica", "bold");
-            doc.text(
-              type === "entree"
-                ? t.entree || "Entrée"
-                : type === "plat"
-                  ? t.plat || "Plat"
-                  : t.dessert || "Dessert",
-              20,
-              y,
-            );
-            y += 6;
-            doc.setFont("helvetica", "normal");
-            const platText = doc.splitTextToSize(
-              dish.nom || dish.name || "",
-              170,
-            );
-            doc.text(platText, 25, y);
-            y += platText.length * 6 + 5;
-          }
-        });
-        y += 5;
-      }
-    });
-
-    doc.save(`${titre.replace(/\s+/g, "_").toLowerCase()}.pdf`);
   };
 
   const exportToPDF = (fiche: any) => {
@@ -300,7 +206,7 @@ export function MenuAnalysis({
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128); // Gray 500
     doc.text(
-      `${t.guests || "Couverts"} : ${typeof guestCount !== "undefined" ? guestCount : 1} | ${t.estimatedLoss || "Perte estimée"} : ${fiche.perte || "10%"}`,
+      `${t.guests || "Couverts"} : ${guestCount} | ${t.estimatedLoss || "Perte estimée"} : ${fiche.perte || "10%"}`,
       20,
       45,
     );
@@ -310,7 +216,6 @@ export function MenuAnalysis({
 
     let y = 60;
 
-    // Allergens
     if (fiche.allergens && fiche.allergens.length > 0) {
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
@@ -326,16 +231,13 @@ export function MenuAnalysis({
     doc.setTextColor(31, 41, 55);
     doc.text(t.requiredIngredients || "Ingrédients requis :", 20, y);
 
-    // Ingredients Table
     const ingredientsList = fiche.ingredients || fiche.fiche_technique || [];
-    const count = typeof guestCount !== "undefined" ? guestCount : 1;
-
     const tableData = ingredientsList.map((ing: any) => {
       const name = ing.name || ing.ingredient;
       const qte = ing.qte || ing.quantite;
       const unit = ing.unit || ing.unite;
 
-      let totalQte = qte * count;
+      let totalQte = qte * guestCount;
       let displayUnit = unit;
 
       if ((unit === "g" || unit === "ml") && totalQte >= 1000) {
@@ -359,7 +261,6 @@ export function MenuAnalysis({
 
     let finalY = (doc as any).lastAutoTable.finalY + 10;
 
-    // Preparation Steps
     if (fiche.preparation_steps || fiche.instructions) {
       if (finalY > 250) {
         doc.addPage();
@@ -393,51 +294,45 @@ export function MenuAnalysis({
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const file = e.dataTransfer.files[0];
     if (!file) return;
-
     await processFile(file);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     await processFile(file);
   };
 
   const processFile = async (file: File) => {
     if (isAnalyzing) return;
     setIsAnalyzing(true);
-
-    // Reset data based on mode
-    if (analysisMode === "decompose") setFichesTechniques(null);
-    else setCreativeMenu(null);
+    setFichesTechniques(null);
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("week", selectedWeek.toString());
+    formData.append("week", "1");
     formData.append(
       "rotation_data",
-      JSON.stringify(MENU_ROTATION[selectedWeek as keyof typeof MENU_ROTATION]),
+      JSON.stringify(MENU_ROTATION[1 as keyof typeof MENU_ROTATION]),
     );
 
     try {
-      if (analysisMode === "decompose") {
-        const response = await fetch("/api/analyze-menu", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await response.json();
-        if (data.status === "success") {
-          setFichesTechniques(data.fiches_techniques);
-          saveGeneratedRecipes(data.fiches_techniques);
-        } else {
-          toast("Erreur lors de l'analyse : " +
-              (data.error || data.message || "Erreur serveur ou IA", "error"),
-          );
-        }
+      const response = await fetch("/api/analyze-menu", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.status === "success") {
+        setFichesTechniques(data.fiches_techniques);
+        saveGeneratedRecipes(data.fiches_techniques);
+      } else {
+        toast(
+          "Erreur lors de l'analyse : " +
+            (data.error || data.message || "Erreur serveur ou IA"),
+          "error",
+        );
       }
     } catch (error) {
       console.error("Erreur backend:", error);
@@ -455,11 +350,13 @@ export function MenuAnalysis({
         ingredients: (fiche.ingredients || []).map((ing: any) => ({
           inventory_name: ing.name || ing.ingredient,
           quantity_per_person: ing.qte || ing.quantite || 0,
-          inventory_id: null
+          inventory_id: null,
         })),
-        preparation_steps: fiche.etapes || [{ step_order: 1, instructions: "À définir" }]
+        preparation_steps: fiche.etapes || [
+          { step_order: 1, instructions: "À définir" },
+        ],
       };
-      
+
       const res = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -467,811 +364,316 @@ export function MenuAnalysis({
       });
 
       if (res.ok) {
-        toast("Fiche technique enregistrée dans le Livre de recettes !", "success");
+        toast(
+          t.ficheEnregistree ||
+            "Fiche technique enregistrée dans le Livre de recettes !",
+          "success",
+        );
       } else {
-        toast("Erreur lors de l'enregistrement de la fiche.", "error");
+        toast(t.erreurEnregistrement || "Erreur lors de l'enregistrement de la fiche.", "error");
       }
     } catch (e) {
       console.error(e);
-      toast("Erreur de connexion.", "error");
+      toast(t.erreurConnexion || "Erreur de connexion.", "error");
     }
   };
 
   return (
-    <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+    <LazyMotion features={domAnimation}>
+      <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-      <div className="flex justify-between items-center mb-10 relative z-10 p-8">
-        <div>
-          <h2 className="text-3xl font-black text-white tracking-tight">
-            {t.menuEngineering || "Ingénierie des Menus"}
-          </h2>
-          <p className="text-slate-500 mt-1">
-            {t.menuAnalysisSubtitle ||
-              "Analyse intelligente et planification stratégique de l'IA"}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {analysisMode && !isAnalyzing && (
+        <div className="flex justify-between items-center mb-6 relative z-10 p-8 pb-4">
+          <div>
+            <h2 className="text-3xl font-black text-white tracking-tight">
+              {t.menuEngineering || "Ingénierie des Menus"}
+            </h2>
+            <p className="text-slate-500 mt-1">
+              {t.menuChatSubtitle ||
+                "Discutez vos recettes avec l'assistant ; les fiches prêtes se rangent en Entrée, Plat, Dessert."}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                setAnalysisMode(null);
-                setFichesTechniques(null);
-                setCreativeMenu(null);
-                setGastronomicMenu(null);
-                setTraditionalMenu(null);
-              }}
-              className="px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-all"
+              onClick={() => setVue(vue === "chat" ? "analyser" : "chat")}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all"
             >
-              {t.backToModes || "Retour aux modes"}
+              {vue === "chat" ? (
+                <>
+                  <UploadCloud className="w-4 h-4 text-brand-500" />
+                  {t.analyzeMenu || "Analyser un menu"}
+                </>
+              ) : (
+                <>
+                  <MessageSquareText className="w-4 h-4 text-emerald-500" />
+                  {t.backToChat || "Retour au chat culinaire"}
+                </>
+              )}
             </button>
-          )}
-        </div>
-      </div>
-
-      {!analysisMode ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl">
-            <motionSlim.div
-                            onClick={() => {
-                setAnalysisMode("decompose");
-                setFichesTechniques(null);
-                setCreativeMenu(null);
-                setGastronomicMenu(null);
-                setTraditionalMenu(null);
-              }}
-              className="glass-panel p-6 relative overflow-hidden group cursor-pointer transition-all duration-150 led-glow-emerald border-brand-500/30 flex flex-col min-h-[280px] max-h-[350px]"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-40 transition-opacity">
-                <UploadCloud className="w-10 h-10 text-brand-500" />
-              </div>
-              <h3 className="text-caption font-bold text-slate-500 uppercase tracking-widest mb-3">
-                {t.mode01 || "Mode 01"}
-              </h3>
-              <h4 className="text-lg font-black text-white tracking-tighter mb-2">
-                {t.modeDecompose || "Décomposition Menu"}
-              </h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                {t.modeDecomposeDesc ||
-                  "Analysez vos menus existants et générez automatiquement les fiches techniques."}
-              </p>
-              <div className="mt-auto pt-4 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></div>
-                <span className="text-caption font-mono text-slate-500 uppercase tracking-widest">
-                  {t.aiAnalysisActive || "IA Analyse Active"}
-                </span>
-              </div>
-            </motionSlim.div>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col overflow-auto custom-scrollbar">
-          {(!fichesTechniques && analysisMode === "decompose") ||
-          (!creativeMenu && analysisMode === "creative") ||
-          (!gastronomicMenu && analysisMode === "gastronomic") ||
-          (!traditionalMenu && analysisMode === "traditional") ? (
-            <div className="flex-1 flex flex-col lg:flex-row gap-8 overflow-hidden">
-              <div
-                onDragOver={
-                  analysisMode === "decompose" ? handleDragOver : undefined
-                }
-                onDragLeave={
-                  analysisMode === "decompose" ? handleDragLeave : undefined
-                }
-                onDrop={analysisMode === "decompose" ? handleDrop : undefined}
-                className={`flex-1 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-150 relative group bg-black ${
-                  isDragging && analysisMode === "decompose"
-                    ? "border-brand-500 bg-brand-500/5 scale-[1.01]"
-                    : "border-white/10 hover:border-white/20"
-                }`}
-              >
-                {isAnalyzing ? (
-                  <div className="text-center">
-                    <div
-                      className={`w-20 h-20 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-8 ${analysisMode === "decompose" ? "border-brand-500" : analysisMode === "creative" ? "border-blue-500" : analysisMode === "gastronomic" ? "border-purple-500" : "border-amber-500"}`}
-                    ></div>
-                    <p
-                      className={`font-black text-2xl tracking-tighter ${analysisMode === "decompose" ? "text-brand-500" : analysisMode === "creative" ? "text-blue-500" : analysisMode === "gastronomic" ? "text-purple-500" : "text-amber-500"}`}
-                    >
-                      {analysisMode === "decompose"
-                        ? t.analysisInProgress || "ANALYSE EN COURS..."
-                        : analysisMode === "creative"
-                          ? t.generatingCreative ||
-                            "L'IA GÉNÈRE VOTRE MENU..."
-                          : analysisMode === "gastronomic"
-                            ? t.creatingGastronomic ||
-                              "CRÉATION GASTRONOMIQUE..."
-                            : t.generatingTraditional ||
-                              "GÉNÉRATION BISTRO CHIC..."}
-                    </p>
-                    <p className="mt-3 text-slate-500 font-medium max-w-xs mx-auto">
-                      {analysisMode === "decompose"
-                        ? t.decomposeAnalysisDesc ||
-                          "Extraction des données et génération des fiches techniques."
-                        : analysisMode === "creative"
-                          ? t.creativeAnalysisDesc ||
-                            "Optimisation nutritionnelle et créative basée sur le cycle de 4 semaines."
-                          : analysisMode === "gastronomic"
-                            ? t.gastronomicAnalysisDesc ||
-                              "Élaboration de recettes complexes et raffinées par l'IA."
-                            : t.traditionalAnalysisDesc ||
-                              "Préparation de menus classiques et conviviaux."}
-                    </p>
-                  </div>
-                ) : analysisMode === "decompose" ? (
-                  <div className="text-center p-10">
-                    <div
-                      className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center transition-all duration-150 shadow-2xl ${isDragging ? "bg-brand-500 text-obsidian rotate-12" : "bg-white/5 text-slate-500 group-hover:text-brand-500 group-hover:scale-110"}`}
-                    >
-                      <UploadCloud className="w-12 h-12" />
-                    </div>
-                    <h3 className="font-black text-2xl text-white tracking-tight mb-3">
-                      {t.importMenu || "Importer un Menu"}
-                    </h3>
-                    <p className="text-slate-500 max-w-xs mx-auto leading-relaxed mb-10">
-                      {t.importMenuDesc ||
-                        "Glissez votre fichier ici ou utilisez le bouton ci-dessous. PDF, Excel, Word ou Images supportés."}
-                    </p>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      accept=".pdf,.xlsx,.docx,image/*"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-10 py-4 bg-white text-obsidian rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-500 transition-all shadow-xl active:scale-95"
-                    >
-                      {t.browseFiles || "Parcourir les fichiers"}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
 
-              {analysisMode === "creative" && !isAnalyzing && (
-                <div className="w-full lg:w-80 bg-white/[0.02] border border-white/5 rounded-3xl p-6 overflow-y-auto custom-scrollbar">
-                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-6 tracking-widest">
-                    {t.basePlan || "Inspirations"}
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="p-6 rounded-3xl bg-blue-500/5 border border-blue-500/10 text-center">
-                      <Sparkles className="w-8 h-8 text-blue-400 mx-auto mb-4" />
-                      <p className="text-sm text-slate-400 leading-relaxed italic">
-                        {settings.language === "fr"
-                          ? "La génération créative ne suit plus de cycle fixe pour garantir une exclusivité totale à chaque service."
-                          : settings.language === "es"
-                            ? "La generación creativa ya no sigue un ciclo fijo para garantizar la exclusividad total de cada servicio."
-                            : settings.language === "de"
-                              ? "Die kreative Generierung folgt keinem festen Zyklus mehr, um für jeden Service absolute Exklusivität zu gewährleisten."
-                              : "Creative generation no longer follows a fixed cycle to ensure total exclusivity for each service."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+        {vue === "chat" ? (
+          <div className="flex-1 flex overflow-hidden px-8 pb-8 gap-6">
+            {/* Le chat culinaire : l'atelier ou le chef affine ses recettes. */}
+            <div className="flex-1 min-w-0 rounded-3xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
+              <CulinaryChat t={t} settings={settings} onProposition={handleProposition} />
             </div>
-          ) : analysisMode === "decompose" && fichesTechniques ? (
-            <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-emerald-700 bg-emerald-50/80 p-5 rounded-2xl ring-1 ring-emerald-500/20">
-                <div className="bg-emerald-500 text-white p-2 rounded-full mr-4 shadow-lg shadow-black/20">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg tracking-tight">
-                    {t.analysisSuccess || "Analyse terminée avec succès"}
-                  </p>
-                  <p className="text-emerald-600/90 mt-0.5">
-                    {(
-                      t.recipesIdentified ||
-                      "{count} recettes identifiées et décomposées."
-                    ).replace("{count}", fichesTechniques.length.toString())}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setFichesTechniques(null)}
-                  className="ml-auto px-4 py-2 bg-black border border-emerald-200 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-50 transition-colors shadow-lg shadow-black/20"
-                >
-                  {t.analyzeAnother || "Analyser un autre menu"}
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {fichesTechniques.map((fiche: any, idx) => (
+            {/* Les TROIS cartes : Entree, Plat, Dessert. Une fiche ne part
+                dans l'onglet Fiches Techniques que par le geste du chef
+                (bouton), et jamais inventee : elle doit se lire complete. */}
+            <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                {t.cartesFichesPretes || "Fiches prêtes à sauvegarder"}
+              </h3>
+              {(["entree", "plat", "dessert"] as CarteRecette[]).map((carte) => {
+                const items = propositions.filter((p) => p.carte === carte);
+                const Icon = carte === "entree" ? Salad : carte === "dessert" ? Bookmark : ChefHat;
+                const accent =
+                  carte === "entree"
+                    ? "text-emerald-400 border-emerald-500/30"
+                    : carte === "dessert"
+                      ? "text-amber-400 border-amber-500/30"
+                      : "text-blue-400 border-blue-500/30";
+                return (
                   <div
-                    key={idx}
-                    className="border border-white/10 rounded-2xl p-6 bg-black shadow-lg shadow-black/20 hover:shadow-md transition-shadow duration-300"
+                    key={carte}
+                    className={`rounded-2xl border bg-black/60 p-4 ${accent.split(" ")[1]}`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center">
-                        <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl mr-4">
-                          <FileText className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-xl text-white tracking-tight">
-                            {fiche.recette}
-                          </h3>
-                          {(fiche.jour || fiche.categorie) && (
-                            <div className="flex gap-2 mt-2">
-                              {fiche.jour && (
-                                <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-[10px] font-bold rounded uppercase tracking-widest">
-                                  {translateDay(fiche.jour)}
-                                </span>
-                              )}
-                              {fiche.categorie && (
-                                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded uppercase tracking-widest">
-                                  {fiche.categorie}
-                                </span>
-                              )}
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white">
+                        {carteLabels[carte]}
+                      </span>
+                      <span className="ml-auto text-[10px] font-mono text-slate-500">
+                        {items.length}
+                      </span>
+                    </div>
+                    {items.length === 0 ? (
+                      <p className="text-[11px] text-slate-600 italic">
+                        {t.carteVide || "Affinez une recette dans le chat : elle apparaîtra ici."}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {items.map((p) => (
+                          <motionSlim.div
+                            key={p.id}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                          >
+                            <p className="text-sm font-bold text-white leading-snug">
+                              {p.recette.nom || t.sansNom || "Sans nom"}
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {p.recette.ingredients.length}{" "}
+                              {t.ingredientsLabel || "ingrédients"} ·{" "}
+                              {p.recette.etapes.length} {t.etapesLabel || "étapes"}
+                            </p>
+                            <div className="flex gap-1 mt-2">
+                              {(["entree", "plat", "dessert"] as CarteRecette[]).map((c) => (
+                                <button
+                                  key={c}
+                                  onClick={() =>
+                                    setPropositions((prev) =>
+                                      prev.map((x) =>
+                                        x.id === p.id ? { ...x, carte: c } : x,
+                                      ),
+                                    )
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all ${
+                                    p.carte === c
+                                      ? "bg-white text-black"
+                                      : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                  }`}
+                                >
+                                  {carteLabels[c].slice(0, 4)}
+                                </button>
+                              ))}
                             </div>
-                          )}
-                        </div>
+                            <button
+                              onClick={() => ouvrirFormulaire(p)}
+                              disabled={p.enregistree}
+                              className={`mt-2 w-full py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                p.enregistree
+                                  ? "bg-emerald-500/10 text-emerald-500 cursor-default"
+                                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                              }`}
+                            >
+                              {p.enregistree
+                                ? t.ficheEnvoyee || "✓ Envoyée à valider"
+                                : t.sauvegarderEnFiche || "Sauvegarder en fiche technique"}
+                            </button>
+                          </motionSlim.div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => exportToPDF(fiche)}
-                          className="p-2.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-emerald-500/30"
-                          title={t.download || "Exporter en PDF"}
-                        >
-                          <Download className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleSaveFicheToBook(fiche)}
-                          className="p-2.5 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-blue-500/30"
-                          title={
-                            t.saveToBook ||
-                            "Enregistrer dans le livre des recettes"
-                          }
-                        >
-                          <Bookmark className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            setFichesTechniques(
-                              fichesTechniques.filter((_, i) => i !== idx),
-                            )
-                          }
-                          className="p-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-red-500/30"
-                          title={t.delete || "Supprimer"}
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setActiveTab && setActiveTab("recipes")}
+                className="py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+              >
+                {t.ouvrirOngletFiches || "Ouvrir l'onglet Fiches Techniques →"}
+              </button>
+            </div>
+          </div>
+        ) : isAnalyzing ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-8 border-brand-500"></div>
+              <p className="font-black text-2xl tracking-tighter text-brand-500">
+                {t.analysisInProgress || "ANALYSE EN COURS..."}
+              </p>
+              <p className="mt-3 text-slate-500 font-medium max-w-xs mx-auto">
+                {t.decomposeAnalysisDesc ||
+                  "Extraction des données et génération des fiches techniques."}
+              </p>
+            </div>
+          </div>
+        ) : fichesTechniques ? (
+          <div className="flex-1 overflow-auto px-8 pb-8">
+            <div className="flex items-center mb-8 text-emerald-700 bg-emerald-50/80 p-5 rounded-2xl ring-1 ring-emerald-500/20">
+              <div className="bg-emerald-500 text-white p-2 rounded-full mr-4 shadow-lg shadow-black/20">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-bold text-lg tracking-tight">
+                  {t.analysisSuccess || "Analyse terminée avec succès"}
+                </p>
+                <p className="text-emerald-600/90 mt-0.5">
+                  {(
+                    t.recipesIdentified ||
+                    "{count} recettes identifiées et décomposées."
+                  ).replace("{count}", fichesTechniques.length.toString())}
+                </p>
+              </div>
+              <button
+                onClick={() => setFichesTechniques(null)}
+                className="ml-auto px-4 py-2 bg-black border border-emerald-200 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-50 transition-colors shadow-lg shadow-black/20"
+              >
+                {t.analyzeAnother || "Analyser un autre menu"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {fichesTechniques.map((fiche: any, idx) => (
+                <div
+                  key={idx}
+                  className="border border-white/10 rounded-2xl p-6 bg-black shadow-lg shadow-black/20 hover:shadow-md transition-shadow duration-300"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center">
+                      <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl mr-4">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-xl text-white tracking-tight">
+                          {fiche.recette}
+                        </h3>
+                        {(fiche.jour || fiche.categorie) && (
+                          <div className="flex gap-2 mt-2">
+                            {fiche.jour && (
+                              <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-[10px] font-bold rounded uppercase tracking-widest">
+                                {translateDay(fiche.jour)}
+                              </span>
+                            )}
+                            {fiche.categorie && (
+                              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded uppercase tracking-widest">
+                                {fiche.categorie}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex justify-between text-sm text-slate-500 mb-2 p-4 bg-[#0A0A0A] rounded-xl border border-white/5">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                          {t.status || "Statut"}
-                        </span>
-                        <span className="font-bold text-emerald-500 text-sm">
-                          {t.readyForFT || "Prêt pour Fiche Technique"}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => exportToPDF(fiche)}
+                        className="p-2.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-emerald-500/30"
+                        title={t.download || "Exporter en PDF"}
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleSaveFicheToBook(fiche)}
+                        className="p-2.5 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-blue-500/30"
+                        title={
+                          t.saveToBook || "Enregistrer dans le livre des recettes"
+                        }
+                      >
+                        <Bookmark className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setFichesTechniques(
+                            fichesTechniques.filter((_, i) => i !== idx),
+                          )
+                        }
+                        className="p-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors ring-1 ring-transparent hover:ring-red-500/30"
+                        title={t.delete || "Supprimer"}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : analysisMode === "creative" && creativeMenu ? (
-            <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-blue-subtle group hover:led-glow-blue transition-all duration-150">
-                <div className="bg-blue-500/20 text-blue-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-blue-500/30">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="font-black text-xl tracking-tight text-white">
-                    {t.creativeMenuGenerated || "Menu Créatif Généré"}
-                  </p>
-                  <p className="text-slate-500 mt-1 text-sm font-medium">
-                    {t.ftDedicatedTab ||
-                      "Les fiches techniques sont disponibles dans l'onglet dédié."}
-                  </p>
-                </div>
-                <div className="ml-auto flex gap-3">
-                  <button
-                    onClick={() => setCreativeMenu(null)}
-                    className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-2xl active:scale-95"
-                  >
-                    {t.generateAnother || "Générer un autre menu"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-8 max-w-5xl mx-auto w-full">
-                {creativeMenu
-                  .filter(
-                    (m) =>
-                      m.entree || m.plat || m.dessert || m.dejeuner || m.diner,
-                  )
-                  .map((jourMenu, idx) => (
-                    <div
-                      key={idx}
-                      className="border border-white/10 rounded-3xl p-8 bg-black shadow-xl shadow-black/40 hover:shadow-2xl transition-shadow duration-300 relative overflow-hidden ring-1 ring-white/5"
-                    >
-                      <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <Sparkles className="w-48 h-48 text-blue-500" />
-                      </div>
-                      <div className="relative z-10">
-                        <h3 className="font-bold text-2xl text-white tracking-tight mb-8 border-b border-white/10 pb-4 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <span className="bg-blue-500/20 text-blue-400 px-4 py-2 rounded-xl mr-3 text-sm font-black uppercase tracking-wider">
-                              {jourMenu.jour
-                                ? translateDay(jourMenu.jour)
-                                : t.creativeMenuGenerated || "MENU CRÉATIF"}
-                            </span>
-                          </div>
-                        </h3>
-
-                        <div className="space-y-6">
-                          {jourMenu.dejeuner && (
-                            <div className="bg-[#0A0A0A] p-4 rounded-xl ring-1 ring-white/5 space-y-3">
-                              <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
-                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                  {t.lunch || "Déjeuner"}
-                                </span>
-                              </div>
-
-                              {/* Backward compatibility for old format */}
-                              {jourMenu.dejeuner.plat_creatif && (
-                                <div>
-                                  <p className="text-slate-300 font-medium leading-relaxed">
-                                    {jourMenu.dejeuner.plat_creatif}
-                                  </p>
-                                  {jourMenu.dejeuner.allergens &&
-                                    !!jourMenu.dejeuner.allergens.length && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {jourMenu.dejeuner.allergens.map(
-                                          (all: string, i: number) => (
-                                            <span
-                                              key={i}
-                                              className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
-                                            >
-                                              {all}
-                                            </span>
-                                          ),
-                                        )}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
-
-                              {/* New format */}
-                              {["entree", "plat", "dessert"].map((course) => {
-                                const item = jourMenu.dejeuner[course];
-                                if (!item)
-                                  return (
-                                    <div
-                                      key={course}
-                                      className="mb-2 opacity-40"
-                                    >
-                                      <span className="text-[10px] text-blue-400/80 uppercase font-black tracking-widest block mb-1">
-                                        {course === "entree"
-                                          ? t.starter || "Entrée"
-                                          : course === "plat"
-                                            ? t.mainCourse || "Plat"
-                                            : t.dessert || "Dessert"}
-                                      </span>
-                                      <p className="text-slate-500 text-xs italic">
-                                        Génération en cours ou indisponible
-                                      </p>
-                                    </div>
-                                  );
-                                return (
-                                  <div key={course} className="mb-2">
-                                    <span className="text-[10px] text-blue-400/80 uppercase font-black tracking-widest block mb-1">
-                                      {course === "entree"
-                                        ? t.starter || "Entrée"
-                                        : course === "plat"
-                                          ? t.mainCourse || "Plat"
-                                          : t.dessert || "Dessert"}
-                                    </span>
-                                    <p className="text-slate-300 font-medium leading-relaxed">
-                                      {item.nom ||
-                                        item.name ||
-                                        item.plat_creatif ||
-                                        "Nom à générer..."}
-                                    </p>
-                                    {item.allergens &&
-                                      !!item.allergens.length && (
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                          {item.allergens.map(
-                                            (all: string, i: number) => (
-                                              <span
-                                                key={i}
-                                                className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
-                                              >
-                                                {all}
-                                              </span>
-                                            ),
-                                          )}
-                                        </div>
-                                      )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {jourMenu.diner && (
-                            <div className="bg-[#0A0A0A] p-4 rounded-xl ring-1 ring-white/5 space-y-3">
-                              <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
-                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                  {t.dinner || "Dîner"}
-                                </span>
-                              </div>
-
-                              {/* Backward compatibility */}
-                              {jourMenu.diner.plat_creatif && (
-                                <div>
-                                  <p className="text-slate-300 font-medium leading-relaxed">
-                                    {jourMenu.diner.plat_creatif}
-                                  </p>
-                                  {jourMenu.diner.allergens &&
-                                    !!jourMenu.diner.allergens.length && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {jourMenu.diner.allergens.map(
-                                          (all: string, i: number) => (
-                                            <span
-                                              key={i}
-                                              className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
-                                            >
-                                              {all}
-                                            </span>
-                                          ),
-                                        )}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
-
-                              {/* New format */}
-                              {["entree", "plat", "dessert"].map((course) => {
-                                const item = jourMenu.diner[course];
-                                if (!item)
-                                  return (
-                                    <div
-                                      key={course}
-                                      className="mb-2 opacity-40"
-                                    >
-                                      <span className="text-[10px] text-blue-400/80 uppercase font-black tracking-widest block mb-1">
-                                        {course === "entree"
-                                          ? t.starter || "Entrée"
-                                          : course === "plat"
-                                            ? t.mainCourse || "Plat"
-                                            : t.dessert || "Dessert"}
-                                      </span>
-                                      <p className="text-slate-500 text-xs italic">
-                                        Génération en cours ou indisponible
-                                      </p>
-                                    </div>
-                                  );
-                                return (
-                                  <div key={course} className="mb-2">
-                                    <span className="text-[10px] text-blue-400/80 uppercase font-black tracking-widest block mb-1">
-                                      {course === "entree"
-                                        ? t.starter || "Entrée"
-                                        : course === "plat"
-                                          ? t.mainCourse || "Plat"
-                                          : t.dessert || "Dessert"}
-                                    </span>
-                                    <p className="text-slate-300 font-medium leading-relaxed">
-                                      {item.nom ||
-                                        item.name ||
-                                        item.plat_creatif ||
-                                        "Nom à générer..."}
-                                    </p>
-                                    {item.allergens &&
-                                      !!item.allergens.length && (
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                          {item.allergens.map(
-                                            (all: string, i: number) => (
-                                              <span
-                                                key={i}
-                                                className="text-caption font-bold uppercase tracking-wider px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded"
-                                              >
-                                                {all}
-                                              </span>
-                                            ),
-                                          )}
-                                        </div>
-                                      )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {!jourMenu.dejeuner &&
-                            !jourMenu.diner &&
-                            (jourMenu.entree ||
-                              jourMenu.plat ||
-                              jourMenu.dessert) && (
-                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {["entree", "plat", "dessert"].map((course) => {
-                                  const item =
-                                    jourMenu[course as keyof typeof jourMenu];
-                                  if (!item)
-                                    return (
-                                      <div
-                                        key={course}
-                                        className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/5 flex flex-col items-center justify-center h-full min-h-[120px] opacity-30"
-                                      >
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                          {course === "entree"
-                                            ? t.entree
-                                            : course === "plat"
-                                              ? t.plat
-                                              : t.dessert}
-                                        </p>
-                                        <p className="text-xs mt-2 italic text-slate-600">
-                                          Génération en cours ou indisponible
-                                        </p>
-                                      </div>
-                                    );
-                                  return (
-                                    <div
-                                      key={course}
-                                      className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/10 flex flex-col h-full hover:ring-blue-500/50 transition-all"
-                                    >
-                                      <p className="text-[11px] font-black text-blue-400 uppercase tracking-widest mb-3 flex-shrink-0">
-                                        {course === "entree"
-                                          ? t.entree
-                                          : course === "plat"
-                                            ? t.plat
-                                            : t.dessert}
-                                      </p>
-                                      <h4 className="text-white font-bold text-lg leading-snug flex-1">
-                                        {item.nom ||
-                                          item.name ||
-                                          item.plat_creatif ||
-                                          "Nom à générer..."}
-                                      </h4>
-                                      {item.allergens &&
-                                        !!item.allergens.length && (
-                                          <div className="mt-6 flex flex-wrap gap-1.5 flex-shrink-0">
-                                            {item.allergens.map(
-                                              (all: string, i: number) => (
-                                                <span
-                                                  key={i}
-                                                  className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
-                                                >
-                                                  {all}
-                                                </span>
-                                              ),
-                                            )}
-                                          </div>
-                                        )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                        </div>
-                      </div>
+                  <div className="flex justify-between text-sm text-slate-500 mb-2 p-4 bg-[#0A0A0A] rounded-xl border border-white/5">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                        {t.status || "Statut"}
+                      </span>
+                      <span className="font-bold text-emerald-500 text-sm">
+                        {t.readyForFT || "Prêt pour Fiche Technique"}
+                      </span>
                     </div>
-                  ))}
-              </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : analysisMode === "gastronomic" && gastronomicMenu ? (
-            <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-purple-subtle group hover:led-glow-purple transition-all duration-150">
-                <div className="bg-purple-500/20 text-purple-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-purple-500/30">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="font-black text-xl tracking-tight text-white">
-                    {t.gastronomicMenusGenerated ||
-                      "Menus Gastronomiques Générés"}
-                  </p>
-                  <p className="text-slate-500 mt-1 text-sm font-medium">
-                    {t.ftDedicatedTab ||
-                      "Les fiches techniques sont disponibles dans l'onglet dédié."}
-                  </p>
-                </div>
-                <div className="ml-auto flex gap-3">
-                  <button
-                    onClick={() => setGastronomicMenu(null)}
-                    className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-2xl active:scale-95"
-                  >
-                    {t.generateAnother || "Générer d'autres menus"}
-                  </button>
-                </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center px-8 pb-8">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`w-full max-w-3xl border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-150 relative group bg-black py-20 ${
+                isDragging
+                  ? "border-brand-500 bg-brand-500/5 scale-[1.01]"
+                  : "border-white/10 hover:border-white/20"
+              }`}
+            >
+              <div
+                className={`w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center transition-all duration-150 shadow-2xl ${isDragging ? "bg-brand-500 text-obsidian rotate-12" : "bg-white/5 text-slate-500 group-hover:text-brand-500 group-hover:scale-110"}`}
+              >
+                <UploadCloud className="w-12 h-12" />
               </div>
-
-              <div className="flex flex-col gap-8 max-w-5xl mx-auto w-full">
-                {gastronomicMenu
-                  .filter((m) => m.entree || m.plat || m.dessert)
-                  .slice(0, 1)
-                  .map((menu, idx) => (
-                    <div
-                      key={idx}
-                      className="border border-white/10 rounded-3xl p-8 bg-black shadow-xl shadow-black/40 hover:shadow-2xl transition-shadow duration-300 relative overflow-hidden ring-1 ring-white/5"
-                    >
-                      <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <Sparkles className="w-48 h-48 text-purple-500" />
-                      </div>
-                      <div className="relative z-10">
-                        <h3 className="font-bold text-2xl text-white tracking-tight mb-8 border-b border-white/10 pb-4 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <span className="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl mr-3 text-sm font-black uppercase tracking-wider">
-                              {menu.jour
-                                ? translateDay(menu.jour)
-                                : t.chefMenu || "MENU DU CHEF"}
-                            </span>
-                          </div>
-                        </h3>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          {["entree", "plat", "dessert"].map((type) => {
-                            const dish = (menu as any)[type];
-                            if (!dish)
-                              return (
-                                <div
-                                  key={type}
-                                  className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/5 flex flex-col items-center justify-center h-full min-h-[120px] opacity-30"
-                                >
-                                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    {type === "entree"
-                                      ? t.entree
-                                      : type === "plat"
-                                        ? t.plat
-                                        : t.dessert}
-                                  </p>
-                                  <p className="text-xs mt-2 italic text-slate-600">
-                                    Génération en cours ou indisponible
-                                  </p>
-                                </div>
-                              );
-                            return (
-                              <div
-                                key={type}
-                                className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/10 flex flex-col h-full hover:ring-purple-500/50 transition-all"
-                              >
-                                <p className="text-[11px] font-black text-purple-400 uppercase tracking-widest mb-3 flex-shrink-0">
-                                  {type === "entree"
-                                    ? t.entree
-                                    : type === "plat"
-                                      ? t.plat
-                                      : t.dessert}
-                                </p>
-                                <h4 className="text-white font-bold text-lg leading-snug flex-1">
-                                  {dish.nom ||
-                                    dish.name ||
-                                    dish.plat_creatif ||
-                                    "Nom à générer..."}
-                                </h4>
-                                {dish.allergens && !!dish.allergens.length && (
-                                  <div className="mt-6 flex flex-wrap gap-1.5 flex-shrink-0">
-                                    {dish.allergens.map(
-                                      (all: string, i: number) => (
-                                        <span
-                                          key={i}
-                                          className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
-                                        >
-                                          {all}
-                                        </span>
-                                      ),
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+              <h3 className="font-black text-2xl text-white tracking-tight mb-3">
+                {t.importMenu || "Importer un Menu"}
+              </h3>
+              <p className="text-slate-500 max-w-xs mx-auto leading-relaxed mb-10 text-center">
+                {t.importMenuDesc ||
+                  "Glissez votre fichier ici ou utilisez le bouton ci-dessous. PDF, Excel, Word ou Images supportés."}
+              </p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                className="hidden"
+                accept=".pdf,.xlsx,.docx,image/*"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-10 py-4 bg-white text-obsidian rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-500 transition-all shadow-xl active:scale-95"
+              >
+                {t.browseFiles || "Parcourir les fichiers"}
+              </button>
             </div>
-          ) : analysisMode === "traditional" && traditionalMenu ? (
-            <div className="flex-1 overflow-auto pr-2">
-              <div className="flex items-center mb-8 text-white bg-black/40 p-6 rounded-3xl ring-1 ring-white/10 led-glow-amber-subtle group hover:led-glow-amber transition-all duration-150">
-                <div className="bg-amber-500/20 text-amber-400 p-3 rounded-2xl mr-5 shadow-inner ring-1 ring-amber-500/30">
-                  <ChefHat className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="font-black text-xl tracking-tight text-white">
-                    {t.traditionalMenusGenerated || "Menus Bistro Chic Générés"}
-                  </p>
-                  <p className="text-slate-500 mt-1 text-sm font-medium">
-                    {t.ftDedicatedTab ||
-                      "Les fiches techniques sont disponibles dans l'onglet dédié."}
-                  </p>
-                </div>
-                <div className="ml-auto flex gap-3">
-                  <button
-                    onClick={() => setTraditionalMenu(null)}
-                    className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all shadow-2xl active:scale-95"
-                  >
-                    {t.generateAnother || "Générer d'autres menus"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-8 max-w-5xl mx-auto w-full">
-                {traditionalMenu
-                  .filter((m) => m.entree || m.plat || m.dessert)
-                  .map((day, idx) => (
-                    <div
-                      key={idx}
-                      className="border border-white/10 rounded-3xl p-8 bg-black shadow-xl shadow-black/40 hover:shadow-2xl transition-shadow duration-300 relative overflow-hidden ring-1 ring-white/5"
-                    >
-                      <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <ChefHat className="w-48 h-48 text-amber-500" />
-                      </div>
-                      <div className="relative z-10">
-                        <h3 className="font-bold text-2xl text-white tracking-tight mb-8 border-b border-white/10 pb-4 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <span className="bg-amber-500/20 text-amber-400 px-4 py-2 rounded-xl mr-3 text-sm font-black uppercase tracking-wider">
-                              {day.jour
-                                ? translateDay(day.jour)
-                                : "MENU BISTRO"}
-                            </span>
-                          </div>
-                        </h3>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          {["entree", "plat", "dessert"].map((type) => {
-                            const dish = (day as any)[type];
-                            if (!dish)
-                              return (
-                                <div
-                                  key={type}
-                                  className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/5 flex flex-col items-center justify-center h-full min-h-[120px] opacity-30"
-                                >
-                                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    {type === "entree"
-                                      ? t.entree
-                                      : type === "plat"
-                                        ? t.plat
-                                        : t.dessert}
-                                  </p>
-                                  <p className="text-xs mt-2 italic text-slate-600">
-                                    Génération en cours ou indisponible
-                                  </p>
-                                </div>
-                              );
-                            return (
-                              <div
-                                key={type}
-                                className="bg-[#0A0A0A] p-6 rounded-2xl ring-1 ring-white/10 flex flex-col h-full hover:ring-amber-500/50 transition-all"
-                              >
-                                <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-3 flex-shrink-0">
-                                  {type === "entree"
-                                    ? t.entree
-                                    : type === "plat"
-                                      ? t.plat
-                                      : t.dessert}
-                                </p>
-                                <h4 className="text-white font-bold text-lg leading-snug flex-1">
-                                  {dish.nom || dish.name || dish.plat_creatif}
-                                </h4>
-                                {dish.allergens && !!dish.allergens.length && (
-                                  <div className="mt-6 flex flex-wrap gap-1.5 flex-shrink-0">
-                                    {dish.allergens.map(
-                                      (all: string, i: number) => (
-                                        <span
-                                          key={i}
-                                          className="text-caption font-bold uppercase tracking-wider px-2 py-1 bg-red-500/10 text-red-500 rounded"
-                                        >
-                                          {all}
-                                        </span>
-                                      ),
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </LazyMotion>
   );
 }

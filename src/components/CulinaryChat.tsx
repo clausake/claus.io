@@ -5,8 +5,35 @@ import {
   MicOff,
   Send,
 } from "lucide-react";
+import { historiqueSur } from "../shared/recette-chat";
 
-export function CulinaryChat({ t, settings }: { t: any; settings: any }) {
+// Le chat culinaire (Sprint 16).
+//
+// La decision du maitre d'ouvrage (consignee au journal, 22/09 ; appliquee au
+// sprint 14.c qui a retire la generation automatique des trois menus) : le
+// chef AFFINE ses recettes EN DISCUTANT avec l'assistant — plus de generation
+// « diversite ». Nees ici, les recettes se rangent en cartes Entree / Plat /
+// Dessert dans l'onglet Ingenierie des Menus et se sauvegardent en fiches
+// techniques apres VALIDATION du chef (le geste, jamais l'automatisme).
+//
+// Deux regles de porte, « le chat ne fabule pas » :
+//  - l'historique de l'echange est PORTE AU SERVEUR (bloque sans lui, « et en
+//    version vegane ? » repond hors sujet et « sauvegarde ca » ne designe
+//    rien) ; le serveur le borne et nettoie les roles.
+//  - chaque reponse est remise BRUTE a `onProposition` : c'est l'onglet qui
+//    la LIT (parserRecette) — une reponse sans gabarit lisible ne produit
+//    AUCUNE carte. Le chat, lui, n'invente rien ni n'ecrit rien en base.
+export function CulinaryChat({
+  t,
+  settings,
+  onProposition,
+}: {
+  t: any;
+  settings: any;
+  // Remet le CONTENU BRUT de chaque reponse de l'assistant. L'interpretation
+  // (lecture en recette) appartient a l'onglet, pas au chat.
+  onProposition?: (contenu: string) => void;
+}) {
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -95,6 +122,10 @@ export function CulinaryChat({ t, settings }: { t: any; settings: any }) {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+    // L'historique PORTE est l'echange tel qu'il est AVANT ce tour : le
+    // message en cours part par `message`, pas par l'historique (sinon le
+    // serveur le lirait deux fois).
+    const historiquePorte = historiqueSur(messages);
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
@@ -103,26 +134,25 @@ export function CulinaryChat({ t, settings }: { t: any; settings: any }) {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, history: historiquePorte }),
       });
 
       const data = await response.json();
+      const contenu = response.ok
+        ? data.response
+        : t.chatError || data.response;
 
-      if (response.ok) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.response },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: t.chatError },
-        ]);
-      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: contenu },
+      ]);
+      // La proposition n'est remise QUE pour une vraie reponse du modele
+      // (pas le texte d'erreur), et BRUTE : l'onglet decide si elle se lit.
+      if (response.ok && onProposition) onProposition(contenu);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: t.chatServerError },
+        { role: "assistant", content: t.chatServerError || t.chatError },
       ]);
     } finally {
       setIsLoading(false);
