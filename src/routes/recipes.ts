@@ -219,6 +219,17 @@ try {
 router.put("/api/recipes/:id", async (req, res) => {
 try {
   const { name, ingredients, preparation_steps } = req.body;
+  // Sprint 16 : le chef peut DEPLACER une fiche d'une carte a l'autre puis
+  // sauvegarder — dish_type est PORTE au PUT. Une valeur hors cartes (entree
+  // / plat / dessert) est REJETEE nommee (la colonne est aussi le range du
+  // dossier UI ; un « steak » ici ferait la fiche invisible des dossiers).
+  let dishTypeCible: string | undefined;
+  if (req.body?.dish_type !== undefined && req.body?.dish_type !== null) {
+    if (!["entree", "plat", "dessert"].includes(String(req.body.dish_type))) {
+      return res.status(400).json({ status: "error", refused: ["dish_type"] });
+    }
+    dishTypeCible = String(req.body.dish_type);
+  }
   const recetteExistante = await db.get(
     "SELECT id FROM recipes WHERE id = ?",
     [req.params.id],
@@ -274,8 +285,12 @@ try {
     return res.status(400).json({ status: "error", rejetees, refused: ["ingredients"] });
   }
   await db.run(
-    "UPDATE recipes SET name = ?, preparation_steps = ? WHERE id = ?",
-    [name, prepSteps, req.params.id],
+    dishTypeCible
+      ? "UPDATE recipes SET name = ?, preparation_steps = ?, dish_type = ? WHERE id = ?"
+      : "UPDATE recipes SET name = ?, preparation_steps = ? WHERE id = ?",
+    dishTypeCible
+      ? [name, prepSteps, dishTypeCible, req.params.id]
+      : [name, prepSteps, req.params.id],
   );
   await db.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [req.params.id]);
   const crees: string[] = [];
@@ -298,6 +313,15 @@ try {
       );
       crees.push(ing.inventory_name);
     }
+    // L'unite du formulaire est PORTEE a la ligne d'inventaire : sans elle,
+    // la correction du chef restait purement locale et le prix calculé
+    // demain resterait dans l'ancienne unité. Un texte vide est INTERDIT
+    // (NOT NULL sur inventory.unit; l'ancien code y écrivait '').
+    const unitCible = ing.unit && String(ing.unit).trim() !== "" ? String(ing.unit) : invItem?.unit ?? "g";
+    await db.run(
+      "UPDATE inventory SET unit = ? WHERE id = ?",
+      [unitCible, invId],
+    );
     await db.run(
       "INSERT INTO recipe_ingredients (id, recipe_id, inventory_id, quantity_per_person) VALUES (?, ?, ?, ?)",
       [
