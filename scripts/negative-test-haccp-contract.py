@@ -34,7 +34,7 @@ Ce qui est prononce et comment:
 """
 import os, sys, re, time, shutil, hashlib, subprocess, importlib.util
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.expanduser("~/cd-morsure-haccp")
 REGISTRE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                         "registre-mutations-haccp.py")

@@ -92,3 +92,11 @@ Le hash consigne du journal bouge uniquement dans le commit qui re-ancre la port
 `--verify` execute **avant** de commiter, jamais l'inverse (une ancre bougee sans sa
 porte = porte rouge pour toujours, ou mensonge fige). Le `.orig` est juge contre le
 **blob git commite**, pas contre un hash ecrit dans le meme dossier que lui.
+
+## 7. Memo audit 2026-10-02 (OpenHands)
+
+- Chemins en dur INTERDITS dans scripts/ : deriver de `os.path.dirname(os.path.abspath(__file__))` ou lire `COOKDRIVE_*`. Restent a corriger : `brancher-journal-sprint9.py:17`, `carte-ports-document-items.py:27`, `falsifier-garde-fixture.py:38`, `figer-reference-prevision.py:47`, `negative-test-forecast-graine.py:39` ; et `test/banc/sonde-11..17` (`/home/clausake/.hermes/...` → `test/banc/`).
+- `verify:forecast` / `verify:labor-cost-zero` ont besoin d'une base client (`var/agent_culinaire.db`) absente des machines d'audit — « sonde sans terrain » est un RC=0 degrade propre.
+- Les gates `-mord` testent la degradation gracieuse : ECONNREFUSED / ollama-absent dans les logs est NORMAL (contrat « jamais 500 nu »), verify:routes 46/46 sans Ollama.
+- Poids OCR absents de git (registre GitLab `ocr-modeles/v2`) : remplir `resources/ocr/modeles/` avant tout test OCR ; juge = `scripts/verif-modeles-ocr.py`.
+- Defaut OCR produit constate : pleine page perd la row « Total HT 419,60 » ; en bandes de ~20 px + pad 13 elle est rendue (sonde-18, 7/7 attendus). Remede : pre-decoupage en bandes cote `src/shared/ocr.ts`. Details : `docs/audit-2026-10-02.md`.

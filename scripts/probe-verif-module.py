@@ -15,7 +15,7 @@ Juge:
     contrat est juge par execution, pas par lecture)."""
 import os, re, shutil, subprocess, sys, json, collections
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BASE)
 MOD = "src/shared/haccp-fields.ts"
 src = open(MOD, encoding="utf-8").read()
@@ -47,14 +47,13 @@ r = subprocess.run(["npx", "tsc", "--noEmit", "--listFiles"], capture_output=Tru
 inprog = any("haccp-fields" in l for l in (r.stdout + r.stderr).splitlines())
 print("V1_DANS_PROGRAM=%s (tsc rc=%d)" % (inprog, r.returncode))
 
-r2 = subprocess.run("npx tsc --noEmit > /home/clausake/cd-tsc2.log 2>&1; echo $?",
-                    shell=True, capture_output=True, text=True)
-taille = os.path.getsize("/home/clausake/cd-tsc2.log")
-print("V4_TSC rc=%s log_octets=%d VERT=%s" % (r2.stdout.strip(), taille,
-                                              r2.stdout.strip() == "0" and taille == 0))
+r2 = subprocess.run(["npx", "tsc", "--noEmit"], capture_output=True, text=True)
+taille = len(r2.stdout) + len(r2.stderr)
+print("V4_TSC rc=%s log_octets=%d VERT=%s" % (r2.returncode, taille,
+                                              r2.returncode == 0 and taille == 0))
 if taille:
     print("   CONTENU DU LOG (c'est le verdict, pas le rendu):")
-    print(open("/home/clausake/cd-tsc2.log", encoding="utf-8", errors="replace").read()[:2500])
+    print((r2.stdout + r2.stderr)[:2500])
 
 # --- V5: le CONTRAT du generateur de token, juge par EXECUTION.
 # ⚠ Angle mort consigne le 24/09: la docstring de ce fichier PROMETVAIT un V5
@@ -109,7 +108,7 @@ if not all(v == 0 for v in v3.values()):
     echecs.append("V3")
 if not inprog:
     echecs.append("V1")
-if not (r2.stdout.strip() == "0" and taille == 0):
+if not (r2.returncode == 0 and taille == 0):
     echecs.append("V4")
 if not ok5:
     echecs.append("V5")

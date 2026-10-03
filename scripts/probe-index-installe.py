@@ -24,7 +24,7 @@ import sqlite3
 import shutil
 import urllib.request
 
-REPO = os.path.expanduser("~/cookdrive-project")
+REPO = os.environ.get("COOKDRIVE_PROBE_REPO") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(REPO)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 import _sondes_serveur as ss

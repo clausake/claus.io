@@ -10,7 +10,7 @@ affiche ici est ce qui a ete compte dans le noyau, pas ce qui est affiche a
 l'ecran."""
 import os, re, json, hashlib
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BLK = os.path.join(BASE, "scripts", "blocks")
 ROUTE = os.path.join(BASE, "src", "routes", "haccp.ts")
 RT = open(ROUTE, encoding="utf-8").read()

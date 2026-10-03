@@ -7,7 +7,7 @@ chef. La regle du depot: un ENUM doit inclure ce que la voie d'ecriture y depose
 produit a lui-même creees."""
 import os, re, json
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def read(p):
     return open(os.path.join(BASE, p), encoding="utf-8", errors="replace").read()

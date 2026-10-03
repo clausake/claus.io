@@ -14,7 +14,7 @@ ecrit ici tel quel et verifie par compte.
 """
 import os
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RT = os.path.join(BASE, "src", "routes", "haccp.ts")
 SH = os.path.join(BASE, "src", "shared", "haccp-fields.ts")
 

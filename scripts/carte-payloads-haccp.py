@@ -2,7 +2,7 @@
 quel) + ce que la route en fait. Regle du depot: juger avec le payload que l'UI
 enverRA, pas un payload invente par la sonde."""
 import os, re, sys
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEMINS = sys.argv[1:] or ["/api/haccp/temperature", "/api/haccp/production",
                            "/api/haccp/batches", "/api/haccp/iot-sensors",
                            "/api/haccp/webhook/iot-report",

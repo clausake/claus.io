@@ -3,7 +3,7 @@ qu'il poste. But: aucun verrou du contrat ne doit faire rougir un harnais
 existant pour une autre raison que la sienne (regle du depot: juger avec le
 payload que l'appelant reel emet)."""
 import os, re, sys
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FICHIERS = ["scripts/audit-perf.mjs", "scripts/ab-indices.py", "scripts/verify-sse.mjs",
             "scripts/verify-http.mjs", "test/e2e/routes.spec.ts"]
 CIBLES = r"(temperature|iot-sensors|batches|production|cleaning|corrective-action|webhook/iot-report)"

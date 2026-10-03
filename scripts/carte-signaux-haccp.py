@@ -2,7 +2,7 @@
 harnais, rend le compte des sous-chaines qui prouvent ce que le payload porte.
 Le poste mute le rendu: on tranche par compteurs d'octets, pas en affichant."""
 import os, re, json
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITES = {
  "test/e2e/routes.spec.ts": [216, 223, 230, 237, 412, 460],
  "scripts/audit-perf.mjs": [67],

@@ -22,7 +22,7 @@ import os
 import re
 import sys
 
-RACINE = "/home/clausake/cookdrive-project"
+RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CIBLE = os.path.join(RACINE, "src", "routes", "dashboard.ts")
 
 src = open(CIBLE, encoding="utf-8").read()

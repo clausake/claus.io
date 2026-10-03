@@ -20,7 +20,7 @@ import time
 import sqlite3
 import statistics
 
-REPO = os.path.expanduser("~/cookdrive-project")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HARNAIS = os.path.join(REPO, "scripts", "ab-indices.py")
 
 with open(HARNAIS, encoding="utf-8") as fh:
