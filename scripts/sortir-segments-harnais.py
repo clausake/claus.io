@@ -7,7 +7,7 @@ payload que l'appelant reel emet). On ecrit dans un fichier, pas dans le rendu
 (qui mute les identifiants sur ce poste)."""
 import os
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CIBLES = [
     ("scripts/audit-perf.mjs", 52, 92, "audit-perf-segment.txt"),
     ("scripts/ab-indices.py", 36, 70, "ab-indices-segment.txt"),

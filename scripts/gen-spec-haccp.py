@@ -12,7 +12,7 @@ ajoute des corps qui ne manient que `request`/`expect` (fixture `request` seul,
 aucun navigateur lance)."""
 import os, re, sys
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(BASE, "test", "e2e", "consume-contract.spec.ts")
 DST = os.path.join(BASE, "test", "e2e", "haccp-contract.spec.ts")
 

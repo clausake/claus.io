@@ -5,7 +5,7 @@ liste des routes, des imports partages, et des restes a contracter.
 Sert aussia de registre pour la morsure: les ancres de mutation y sont relevees
 par compte (une ancre introuvable = ancre morte, la faute du 09/09)."""
 import os, re, hashlib, sys
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BASE)
 RT = open("src/routes/haccp.ts", encoding="utf-8").read()
 SH = open("src/shared/haccp-fields.ts", encoding="utf-8").read()

@@ -5,7 +5,7 @@ server.ts, avec chemin:ligne et le nommage de la porte HTTP la plus proche au-
 dessus (router.<meth>('<chemin>'))."""
 import os, re, sys, json
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TABLES = sys.argv[1:] or ["temperature_logs", "batches", "production_records",
                           "production_batches", "cleaning_records",
                           "corrective_actions", "iot_sensors"]

@@ -13,11 +13,11 @@
    recopies depuis le rendu (la faute consignee des BUDGETS)."""
 import os, re, sys, hashlib, shutil, subprocess
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BLK = os.path.join(BASE, "scripts", "blocks")
 ROUTE = os.path.join(BASE, "src", "routes", "haccp.ts")
 BACKUP = os.path.join(BASE, "scripts", "blocks", "spans", "haccp.ts.orig")
-LOG = "/home/clausake/cd-tsc-s11.log"
+LOG = os.path.join(BASE, "test", "cd-tsc-s11.log")
 
 ENTREES = [
  ("h1", 'router.post("/api/haccp/iot-sensors", async (req, res) => {',

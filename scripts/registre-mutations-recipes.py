@@ -15,7 +15,7 @@ le PUT a la branche ingredients juste avant).
 """
 import os
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RT = os.path.join(BASE, "src", "routes", "recipes.ts")
 
 NL = chr(10)

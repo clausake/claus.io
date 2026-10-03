@@ -29,7 +29,7 @@ import time
 import sqlite3
 import statistics
 
-REPO = os.path.expanduser("~/cookdrive-project")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.expanduser("~/.cookdrive-probe-idx")
 os.makedirs(DATA, exist_ok=True)
 DB = os.path.join(DATA, "probe.db")
