@@ -5,7 +5,7 @@ verif-sprint11-haccp.py, avec numerotation et la ROUTE qui les porte.
 Regle du depot: une presence/absence se tranche par localisation dans les
 octets, pas par un compte qui ne dit pas OU."""
 import os, re
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BASE)
 lines = open("src/routes/haccp.ts", encoding="utf-8").read().splitlines()
 

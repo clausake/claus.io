@@ -47,14 +47,14 @@ import urllib.request
 import urllib.error
 from datetime import date as _d, timedelta as _td
 
-REPO = os.path.expanduser(os.environ.get("COOKDRIVE_PROBE_REPO", "~/cookdrive-project"))
+REPO = os.environ.get("COOKDRIVE_PROBE_REPO") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(REPO)
-sys.path.insert(0, os.path.join(os.path.expanduser("~/cookdrive-project"), "scripts"))
+sys.path.insert(0, os.path.join(REPO, "scripts"))
 import _sondes_serveur as ss
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
 
-REAL_DB = os.path.expanduser("~/promo_resto/udata/agent_culinaire.db")
+REAL_DB = os.environ.get("COOKDRIVE_CLIENT_DB", os.path.join(REPO, "var", "agent_culinaire.db"))
 DATA = os.path.expanduser("~/.cookdrive-labor-proof")
 PORT = os.environ.get("COOKDRIVE_PROBE_PORT", "4487")
 BASE_URL = "http://127.0.0.1:" + str(PORT)

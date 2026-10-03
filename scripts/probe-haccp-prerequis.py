@@ -14,7 +14,7 @@ octets et rendues dans un FICHIER (le rendu du poste mute les identifiants):
 """
 import os, re, time, json
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(BASE, "scripts", "blocks", "haccp-prerequis.txt")
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 L = []

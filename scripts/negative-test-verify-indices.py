@@ -31,7 +31,7 @@ import sys
 import shutil
 import subprocess
 
-SRC = os.path.expanduser("~/cookdrive-project")
+SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.expanduser("~/.cookdrive-mut-abindices")
 SCRIPT = "scripts/ab-indices.py"
 

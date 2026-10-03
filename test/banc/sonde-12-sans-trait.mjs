@@ -7,7 +7,7 @@ import path from "node:path";
 
 const BANC = path.resolve("test/banc");
 const M = path.resolve("resources/ocr/modeles");
-const PIECE = "/home/clausake/.hermes/cache/scratch/facture-sans-trait.png";
+const PIECE = path.join(BANC, "facture-sans-trait.png");
 
 const { ocr } = await import("ppu-paddle-ocr");
 

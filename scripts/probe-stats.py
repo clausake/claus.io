@@ -19,7 +19,7 @@ import time
 import sqlite3
 import statistics
 
-REPO = os.path.expanduser("~/cookdrive-project")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HARNAIS = os.path.join(REPO, "scripts", "ab-indices.py")
 
 # ⚠ Le harnais frere porte `sys.exit(main(sys.argv[1:]))` AU NIVEAU MODULE

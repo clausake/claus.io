@@ -28,7 +28,7 @@ import datetime
 
 HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
 BASE = os.path.dirname(HERE)
-CLIENT_DB = os.path.expanduser("~/promo_resto/udata/agent_culinaire.db")
+CLIENT_DB = os.environ.get("COOKDRIVE_CLIENT_DB", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "var", "agent_culinaire.db"))
 TODAY = time.strftime("%Y-%m-%d")
 HORIZON = 14
 NODE = shutil.which("node")

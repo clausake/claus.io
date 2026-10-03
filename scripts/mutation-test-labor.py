@@ -35,7 +35,7 @@ import sys
 import shutil
 import subprocess
 
-SRC = os.path.expanduser("~/cookdrive-project")
+SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.expanduser("~/.cookdrive-mut-labor")
 PROBE = os.path.join(SRC, "scripts", "probe-labor-cost-zero.py")
 ROUTE = "src/routes/dashboard.ts"

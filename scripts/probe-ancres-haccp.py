@@ -9,7 +9,7 @@ rc seul: la liste des fichiers du program vient de tsc --listFiles et le compte
 d'occurences vient des octets du fichier."""
 import os, re, subprocess, json
 
-BASE = os.path.expanduser("~/cookdrive-project")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BASE)
 
 r = subprocess.run(["npx", "tsc", "--noEmit", "--listFiles"], capture_output=True, text=True)
