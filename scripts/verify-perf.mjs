@@ -30,6 +30,8 @@ const child = spawn(process.execPath, [tsx, "server.ts"], {
     ...process.env,
     PORT: String(PORT),
     USER_DATA_PATH: DATA,
+    // Identite desactivee : sonde de METIER (l'identite a sa porte verify:auth).
+    COOKDRIVE_AUTH_OFF: "1",
     NODE_ENV: "production",
     // Le jeton est FOURNI par l'APPELANT et doit rester DEDANS de
     // l'objet env: place apres la accolade fermante, il seroit un champ

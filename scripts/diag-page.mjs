@@ -19,6 +19,8 @@ const server = spawn(process.execPath,
   [path.join(ROOT, "node_modules", ".bin", "tsx"), "server.ts"], {
   cwd: ROOT,
   env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA,
+ // Identite desactivee : sonde de METIER (l'identite a sa porte verify:auth).
+ COOKDRIVE_AUTH_OFF: "1",
          ...(ENV_PROD ? { NODE_ENV: "production" } : {}) },
   stdio: "pipe",
 });

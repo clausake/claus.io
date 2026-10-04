@@ -49,7 +49,7 @@ TODAY_NOM = JOURS[(time.localtime().tm_wday + 1) % 7]   # JS getDay(): 0 = diman
 def boot():
     ss.bootstrap(PORT)
     ch = ss.Popen_sonde([NODE, "node_modules/.bin/tsx", "server.ts"],
-                        env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                        env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(PORT), USER_DATA_PATH=DATA),
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(200):
         try:

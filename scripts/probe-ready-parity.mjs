@@ -72,6 +72,8 @@ async function lancerServeur({ port, readyFile }) {
   const env = {
     ...process.env,
     USER_DATA_PATH: data,
+    // Identite desactivee : sonde de METIER (l'identite a sa porte verify:auth).
+    COOKDRIVE_AUTH_OFF: "1",
     NODE_ENV: "test",
     PORT: String(port),
     COOKDRIVE_INSTANCE_TOKEN: TOKEN,

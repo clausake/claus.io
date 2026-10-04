@@ -21,7 +21,7 @@ mkdirSync(DATA, { recursive: true });
 const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
 const t0 = process.hrtime.bigint();
 const child = spawn(process.execPath, [tsx, "server.ts"], {
-  env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
+  env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
   stdio: "pipe",
 });
 const logs = [];
