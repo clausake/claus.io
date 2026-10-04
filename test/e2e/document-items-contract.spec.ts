@@ -78,6 +78,7 @@ test.beforeAll(async () => {
       // PROPRE FILS (piege consigne, verifie par octets et non au rendu).
       env: {
         ...process.env,
+            COOKDRIVE_AUTH_OFF: "1",
         PORT: String(PORT),
         USER_DATA_PATH: DATA_DIR,
         COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,

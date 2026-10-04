@@ -38,7 +38,7 @@ test.beforeAll(async () => {
     [path.join(process.cwd(), "node_modules", ".bin", "tsx"), "server.ts"],
     {
       cwd: process.cwd(),
-      env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
+      env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
       stdio: "pipe",
     },
   );

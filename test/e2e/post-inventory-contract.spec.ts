@@ -75,6 +75,7 @@ test.beforeAll(async () => {
     // le jeton DEDANS l'objet env (voir PHASES.md 7.6)
     env: {
       ...process.env,
+          COOKDRIVE_AUTH_OFF: "1",
       PORT: String(PORT),
       USER_DATA_PATH: DATA_DIR,
       COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
