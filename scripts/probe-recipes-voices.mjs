@@ -73,7 +73,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
   cwd: process.cwd(),
-  env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
+  env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
   stdio: "pipe",
 });
 server.on("error", () => process.exit(9));

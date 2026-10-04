@@ -60,7 +60,7 @@ class Server:
         self.proc = subprocess.Popen(
             [NODE, os.path.join(BASE, "node_modules", ".bin", "tsx"), "server.ts"],
             cwd=BASE, stdout=log, stderr=log,
-            env=dict(os.environ, PORT=str(self.port), USER_DATA_PATH=data_dir))
+            env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(self.port), USER_DATA_PATH=data_dir))
         deadline = time.time() + 35
         while time.time() < deadline:
             try:

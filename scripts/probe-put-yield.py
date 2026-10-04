@@ -32,7 +32,7 @@ os.makedirs(DATA, exist_ok=True)
 tsxb = os.path.join(BASE_DIR, "node_modules", ".bin", "tsx")
 log = open(os.path.join(DATA, "server.log"), "w")
 proc = ss.Popen_sonde([NODE, tsxb, "server.ts"], cwd=BASE_DIR,
-                      env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                      env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(PORT), USER_DATA_PATH=DATA),
                       stdout=log, stderr=log)
 
 deadline = time.time() + 30
