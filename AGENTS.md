@@ -100,3 +100,47 @@ porte = porte rouge pour toujours, ou mensonge fige). Le `.orig` est juge contre
 - Les gates `-mord` testent la degradation gracieuse : ECONNREFUSED / ollama-absent dans les logs est NORMAL (contrat « jamais 500 nu »), verify:routes 46/46 sans Ollama.
 - Poids OCR absents de git (registre GitLab `ocr-modeles/v2`) : remplir `resources/ocr/modeles/` avant tout test OCR ; juge = `scripts/verif-modeles-ocr.py`.
 - Defaut OCR produit constate : pleine page perd la row « Total HT 419,60 » ; en bandes de ~20 px + pad 13 elle est rendue (sonde-18, 7/7 attendus). Remede : pre-decoupage en bandes cote `src/shared/ocr.ts`. Details : `docs/audit-2026-10-02.md`.
+- **multer EST utilise** (src/shared/upload.ts, recipes:396, documents:478) — ne PAS le retirer (l'audit initial s'etait trompe ; corrige le 03/10). Le 03/10 : @xenova/transformers RETIRE (aucun import, tirait protobufjs critique), tar ^7.5.22 + node-gyp ^11.3.0 par overrides, multer ^2.4.0. Restantes : 15 high dev-only (electron-builder, sqlite3, pdf-to-img, xlsx sans fix) — zero critical, zero runtime produit.
+
+## 8. Vision produit et feuille de route (03/10 — LA reference avant tout travail)
+
+**Le produit a DEUX modes prevus des l'origine** (§8 de docs/audit-2026-10-02.md) :
+1. **Avec agent Hermes** : cerveau local (Ollama) ou cloud (Gemini, optionnel). Hermes LIT tout, SURVEILLE (anomalies stock, DLC, temperatures), ANALYSE (OCR), CONSEILLE (menus, anti-gaspillage) et **INFORME**.
+2. **Sans agent** : saisie et gestion manuelles completes.
+
+**Regle d'or (durcie, non negociable) : L'AGENT N'ECRIT JAMAIS. L'humain clique et execute.** Toute ecriture des 57 routes mutables porte la signature d'un humain. Le compte agent est refuse (403 AGENT_LECTURE_SEULE) sur TOUTE route mutable — sa seule ecriture future sera sa table `suggestions` (chantier 3).
+
+**Decision tranchee : une installation = un etablissement** (pas de multi-site dans le schema users).
+
+### Etat des chantiers (feuille de route completee, ordre : 1 -> 2 -> 3 -> 6 -> 4 -> 5)
+
+- **Chantier 1 — Auth & identite** : BACKEND FAIT (commit 9313f23) — tables users/sessions (argon2), setup/login/logout/me, gestion comptes maitre-only, gate session (401 AUTH_REQUISE / 403 AGENT_LECTURE_SEULE), porte `verify:auth` (14 regles A/B/C, 14/14 x3). **RESTE : l'UI React** (ecran setup/login, garde de session, page comptes du maitre).
+- **Chantier 2 — Audit trail** (a faire) : table `audit_log` (actor_id, actor_kind humain/agent, route, action, entite) + helper `logAudit()` central sur les 57 routes mutables. HACCP obligatoirement trace. Effort 1-2 j.
+- **Chantier 3 — Boite de reception de suggestions** (a faire) : table `suggestions` {type, priorite, titre, explication, action pre-remplie (route+payload), statut nouveau/applique/rejete}. SEULE ecriture de l'agent. L'humain applique (formulaire pre-rempli a SA signature) ou rejette avec motif. Effort 2-3 j.
+- **Chantier 6 — Portes des deux modes** (a faire) : `verify:mode-manuel` (CRUD complet agent coupe) + `verify:mode-agent` (suggestion de bout en bout avec cerveau factice deterministe — JAMAIS de LLM reel en CI). Effort 1 j.
+- **Chantier 4 — Moteur de surveillance** (a faire) : regles -> suggestions : rupture imminente, stock mort, ecart inventaire, DLC proche, temperatures hors bornes HACCP, menus/anti-gaspillage (brancher epicure + antiwaste existants). Seuils configurables par le maitre. Effort ~1 sem.
+- **Chantier 5 — Hermes cerveau outille** (a faire) : contexte = schema + resume dashboard, interroge par API, produit des suggestions. Ollama local par defaut, Gemini optionnel. ai.ts voice/chat = portes d'entree. Effort 1-2 sem.
+- Fond de liste (non bloquant) : FichesTechniques.tsx 2425 lignes, App.tsx 985, 186 :any, bundle 618 kB.
+
+### Envs de harnais (institution, a reutiliser)
+- `COOKDRIVE_AUTH_OFF=1` : desactive la gate session (routes.spec.ts juge le metier anonyme).
+- `COOKDRIVE_RATELIMIT_OFF=1` : desactive le rate-limit (verify:auth sature sinon le bucket auth 20/15min).
+- La porte `verify:auth` juge SANS ces envs (gate active). Ne jamais les poser en production.
+
+### Pieges verify:auth (03/10, 3 runs 14/14 apres fix)
+- **Fantome** : un fils tsx survive a un run interrompu et tient le port 4171 avec une VIEILLE base (409 SETUP_DEJA_FAIT). fuser/lsof ABSENTS du conteneur et la cmdline du fils est « node --require .../tsx/dist/preflight.cjs ... server.ts » (ni pkill -f « tsx server.ts » ni fuser ne l'attrapent) → la sonde parse /proc/*/cmdline et tue les process server.ts de ce depot.
+- 429 « Trop de requetes (auth) » = bucket auth sature par les runs repetes → env COOKDRIVE_RATELIMIT_OFF ci-dessus.
+
+### Limites de l'agent (signalees par le client, 04/10)
+- Timeout LLM GLM : ~146k tokens de contexte utile — eviter les gros dumps (journal gates, logs e2e) : passer par scripts/lire-gates.py, greps cibles.
+- Limite ~100 iterations/conversation : viser les livrables par petits commits ; l'etat complet vit ICI (AGENTS.md) pour que la conversation suivante reparte.
+
+### Verifier avant de se dire « fini » (le contrat de sortie d'un chantier)
+```
+npx tsc --noEmit                        # types
+npx vitest run                          # 158 tests
+npm run build                           # bundle
+npm run verify:auth                     # 14/14 contrat identite (3x consecutifs)
+npm run verify:routes                   # 46/46 metier (COOKDRIVE_AUTH_OFF pose par le spec)
+python3 scripts/lire-gates.py           # qui est rouge (jamais grepper test/gates.out)
+```
