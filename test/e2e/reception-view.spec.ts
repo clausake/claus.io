@@ -266,15 +266,18 @@ const ouvrirAchats = async (page: any) => {
   // ⚠ Mesure CI (pipeline 2910822108) : sur un runner partage, le bundle met
   // >8 s a s'hydrater — le clic a timeout 8 s avalait son echec (.catch) et le
   // spec restait sur la landing. Donc : attendre le bouton (30 s), puis
-  // re-essayer tant que la landing est rendue (elle se REAFFICHE a chaque
-  // reload : showLanding est un state React initial a true).
+  // re-essayer tant que le PREMIER bouton est celui d'entree (la landing se
+  // REAFFICHE a chaque reload : showLanding est un state React initial a true).
+  // On ne peut pas detecter la landing par le texte du body (« Restauration
+  // IO » est aussi dans l'app, mesures traductions.ts:160..510) — le marqueur
+  // fiable est le premier bouton lui-meme.
   await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
   for (let i = 0; i < 10; i++) {
-    const encoreLanding = await page.evaluate(() =>
-      /Acc[ée]der à la Cuisine|LOGICIEL DE GESTION/i.test(document.body?.textContent || ""));
-    if (!encoreLanding) break;
-    await page.locator("button").first().click({ timeout: 8_000 }).catch(() => {});
-    await page.waitForTimeout(1_000);
+    const premier = page.locator("button").first();
+    const texte = (await premier.textContent().catch(() => "")) || "";
+    if (!/Acc[ée]der/i.test(texte)) break;
+    await premier.click({ timeout: 8_000 }).catch(() => {});
+    await page.waitForTimeout(500);
   }
   // Le panneau se monte apres l'entree (et les vues sont paressees a la demande).
   await page.waitForTimeout(1_200);
