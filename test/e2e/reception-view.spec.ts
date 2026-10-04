@@ -263,9 +263,18 @@ const ouvrirAchats = async (page: any) => {
   // faux negatif qui ferait croire a un panneau manquant. On entre donc comme
   // un utilisateur, en ciblant le premier bouton d'action au lieu d'un libelle
   // dur (qui casserait a la prochaine traduction).
-  const entrer = page.locator("button").first();
-  if (await entrer.count()) {
-    await entrer.click({ timeout: 8_000 }).catch(() => {});
+  // ⚠ Mesure CI (pipeline 2910822108) : sur un runner partage, le bundle met
+  // >8 s a s'hydrater — le clic a timeout 8 s avalait son echec (.catch) et le
+  // spec restait sur la landing. Donc : attendre le bouton (30 s), puis
+  // re-essayer tant que la landing est rendue (elle se REAFFICHE a chaque
+  // reload : showLanding est un state React initial a true).
+  await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+  for (let i = 0; i < 10; i++) {
+    const encoreLanding = await page.evaluate(() =>
+      /Acc[ée]der à la Cuisine|LOGICIEL DE GESTION/i.test(document.body?.textContent || ""));
+    if (!encoreLanding) break;
+    await page.locator("button").first().click({ timeout: 8_000 }).catch(() => {});
+    await page.waitForTimeout(1_000);
   }
   // Le panneau se monte apres l'entree (et les vues sont paressees a la demande).
   await page.waitForTimeout(1_200);
