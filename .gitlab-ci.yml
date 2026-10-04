@@ -1,5 +1,15 @@
-# CI GitLab - verification lint + build + test
+# CI GitLab - verification lint + build + test + securite
 image: node:22
+
+# Les analyseurs de securite sont les TEMPLATES officiels (ils apportent
+# l'image docker et le script) ; on ne fait qu'y re-assigner le stage.
+# Lecon du 04/10 (pipeline 2910697922 failed 0 jobs) : des jobs avec
+# artifacts.reports mais SANS script sont invalides pour GitLab et font
+# echouer la pipeline avant tout job.
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
 
 stages:
   - verify
@@ -119,37 +129,22 @@ verify-test:
     when: always
 
 # --- Securite (signalement des erreurs, comme l'onglet Security de GitHub) ---
-# Dependency Scanning : l'equivalent Dependabot — lit package-lock.json et
-# signale les dependances vulnerables (ex. protobufjs CVSS 9.8, tar, detectes
-# par npm audit le 02/10) dans le widget Security de chaque Merge Request.
-dependency-scanning:
+# Les jobs sast / dependency_scanning / secret_detection viennent des
+# TEMPLATES officiels (include en tete de fichier) ; on ne fait que leur
+# re-assigner le stage et l'allow_failure. Dependency Scanning : l'equivalent
+# Dependabot — signale les dependances vulnerables (ex. protobufjs CVSS 9.8,
+# detecte par npm audit le 02/10) dans le widget Security de chaque MR.
+dependency_scanning:
   stage: security
   allow_failure: true   # signale sans bloquer ; passer a false pour bloquer les MR
-  artifacts:
-    when: always
-    reports:
-      dependency_scanning: gl-dependency-scanning-report.json
-    paths: [gl-dependency-scanning-report.json]
 
-# Analyse statique du code (injections SQL, XSS, chemins...) sur les MR.
 sast:
   stage: security
   allow_failure: true
-  artifacts:
-    when: always
-    reports:
-      sast: gl-sast-report.json
-    paths: [gl-sast-report.json]
 
-# Detection de secrets commits (cle API, mot de passe...) dans le depot.
-secret-detection:
+secret_detection:
   stage: security
   allow_failure: true
-  artifacts:
-    when: always
-    reports:
-      secret_detection: gl-secret-detection-report.json
-    paths: [gl-secret-detection-report.json]
 
 # Barriere dure npm audit : rouge si une vulnerabilite high ou critical est
 # presente. Independant des scanners GitLab, marche sur tout plan (Free inclus).
