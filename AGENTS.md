@@ -144,3 +144,10 @@ npm run verify:auth                     # 14/14 contrat identite (3x consecutifs
 npm run verify:routes                   # 46/46 metier (COOKDRIVE_AUTH_OFF pose par le spec)
 python3 scripts/lire-gates.py           # qui est rouge (jamais grepper test/gates.out)
 ```
+
+### CI (04/10 — pipeline VERTE 2910855321, sha 940b8d4)
+- Le stage security passe par les TEMPLATES officiels (Jobs/SAST, Jobs/Dependency-Scanning, Jobs/Secret-Detection) : un job avec artifacts.reports mais SANS script est invalide pour GitLab (pipeline failed 0 jobs — lecon 2910697922).
+- `ONNXRUNTIME_NODE_INSTALL=skip` en variable globale : le postinstall de onnxruntime-node telecharge les providers CUDA/TensorRT depuis un CDN Microsoft BLOQUE depuis le runner (ETIMEDOUT) ; les binaires CPU linux/x64 sont deja bundles (install-metadata.js : linux/x64 = [cuda12] seulement).
+- Barriere npm-audit au seuil CRITICAL (un rouge high permanent n'est plus un signal) + job npm-audit-report (allow_failure, artefact JSON 1 mois). 3 high dev-only acceptees : pdf-to-img/pdfjs-dist (fix = montee majeure 7), xlsx (pas de fix).
+- TOUTES les sondes metier (18 .mjs + 5 .py) et les 15 specs e2e bootent le serveur avec COOKDRIVE_AUTH_OFF=1 ; verify:auth seul la juge active.
+- test reception-view : ouvrirAchats attend le bouton 30 s et re-essaie tant que le PREMIER bouton est « Acceder » (hydratation lente en CI, 2 lecons 2910822108/2910844482 — ne PAS detecter la landing par le body : « Restauration IO » est aussi dans l'app).
