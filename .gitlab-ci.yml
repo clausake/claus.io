@@ -11,6 +11,14 @@ include:
   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
   - template: Jobs/Secret-Detection.gitlab-ci.yml
 
+# Le postinstall de onnxruntime-node telecharge les providers CUDA/TensorRT
+# (GPU) depuis le CDN Microsoft — le reseau du runner GitLab y est bloque
+# (ETIMEDOUT/ENETUNREACH, job lint du 04/10) et CookDrive n'en a AUCUN usage :
+# l'OCR tourne sur CPU et les binaires CPU linux/x64 sont DEJA dans le paquet
+# (node_modules/onnxruntime-node/bin/napi-v6/linux/x64). Skip = sans perte.
+variables:
+  ONNXRUNTIME_NODE_INSTALL: "skip"
+
 stages:
   - verify
   - test
