@@ -96,7 +96,7 @@ def boot():
     import subprocess
     ss.bootstrap(int(PORT))
     ch = ss.Popen_sonde([NODE, "node_modules/.bin/tsx", "server.ts"],
-                        env=dict(os.environ, PORT=str(PORT), USER_DATA_PATH=DATA),
+                        env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(PORT), USER_DATA_PATH=DATA),
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     stop = threading.Event()
 

@@ -94,6 +94,8 @@ async function main() {
       ...process.env,
       PORT: String(PORT),
       USER_DATA_PATH: OUT,
+      // Identite desactivee : sonde de METIER (l'identite a sa porte verify:auth).
+      COOKDRIVE_AUTH_OFF: "1",
       NODE_ENV: "production",
       COOKDRIVE_INSTANCE_TOKEN: TOKEN,
     },

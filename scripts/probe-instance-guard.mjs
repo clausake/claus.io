@@ -62,7 +62,7 @@ function lancer({ port, token, tag }) {
   rmSync(data, { recursive: true, force: true });
   mkdirSync(data, { recursive: true });
   const logPath = join(OUT, tag + ".log");
-  const env = { ...process.env, USER_DATA_PATH: data, NODE_ENV: "test" };
+  const env = { ...process.env, COOKDRIVE_AUTH_OFF: "1", USER_DATA_PATH: data, NODE_ENV: "test" }; // sonde de METIER
   if (port !== undefined) env.PORT = String(port);
   if (token !== undefined) env.COOKDRIVE_INSTANCE_TOKEN = token;
   const log = { buf: "", path: logPath };
