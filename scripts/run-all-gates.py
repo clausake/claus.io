@@ -84,6 +84,12 @@ DEFAUT = ["verify:split",
           # La spec de routes generales (49 tests, port fige 3999): la spec est
           # jouee par une porte depuis Sprint 12.1.
           "verify:routes",
+          # Chantier 1 (audit 2026-10-02 §8) : l'identite. La sonde juge le
+          # serveur REEL (spawn tsx, USER_DATA_PATH isole) : GET libre, mutation
+          # anonyme 401, setup unique, agent refuse sur toute ecriture (§8 :
+          # Hermes informe, l'humain execute). La retirer rend l'identite
+          # jugeable partiellement sans qu'aucun lot ne le voie.
+          "verify:auth",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
