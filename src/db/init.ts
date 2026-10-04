@@ -460,6 +460,32 @@ export async function initDatabase(): Promise<DbInitResult> {
       value TEXT NOT NULL
     )
   `);
+
+  // Chantier 1 (audit 2026-10-02 §8) — identité. Trois profils : maitre (tout),
+  // staff (lecture + saisies terrain), agent (lecture seule — Hermes n'ecrit
+  // JAMAIS dans le metier, cf. §8 ; sa seule ecriture sera sa table de
+  // suggestions, chantier 3). Le mot de passe vit UNIQUEMENT en hash argon2.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('maitre','staff','agent')),
+      active BOOLEAN NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+  `);
+  // Purge des sessions expirees : la table ne doit pas grossir sans limite
+  // sur une installation qui tourne des mois.
+  await db.run("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);
+
   try {
     await db.exec("ALTER TABLE suppliers ADD COLUMN email TEXT;");
   } catch (e) {}

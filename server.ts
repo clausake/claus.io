@@ -16,6 +16,9 @@ import fs from "fs";
 
 import { initDatabase, LicenseState } from "./src/db/init.js";
 import { licenseMiddleware } from "./src/middleware/license.js";
+import { sessionMiddleware, sessionGate } from "./src/middleware/auth.js";
+import cookieParser from "cookie-parser";
+import authRouter from "./src/routes/auth.js";
 import apiRateLimiter from "./src/middleware/api-rate-limiter.js";
 import httpLogger from "./src/middleware/http-logger.js";
 import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
@@ -128,10 +131,20 @@ async function startServer() {
   ollamaSettingsRef.current = settingsStore.value as OllamaSettings;
   const onSettingsUpdate = () => { ollamaSettingsRef.current = settingsStore.value as OllamaSettings; };
 
+  // Identite (chantier 1) : charge la session depuis le cookie, PUIS la gate
+  // juge. Ordre : session AVANT license — savoir QUI parle avant de decider de
+  // bloquer. La license couvre toujours 100 % des /api/* (elle reste posee
+  // avant tous les routeurs) ; /auth/* lui est exemptee (s'authentifier n'est
+  // pas un acte metier) et les GET restent ouverts des deux cotes.
+  app.use("/api", cookieParser(), sessionMiddleware(db), sessionGate());
+
   // Middleware de licence — posé AVANT toutes les routes pour couvrir 100 % des
   // routes /api/* (in-contournable). Bloque les mutations si trial expiré +
   // non unlocké ; les GET restent autorisés.
   app.use("/api", licenseMiddleware(db, licenseState));
+
+  // Comptes (maitre only) + login/logout/setup/me (exemptes de session).
+  app.use(authRouter(db));
 
   // --- Routeurs ---
   // /api racine : settings, backup, network-info, ollama/status

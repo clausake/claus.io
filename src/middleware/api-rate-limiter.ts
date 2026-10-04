@@ -22,7 +22,7 @@
 // publie le NOM du quota. Le client connait donc son budget restant ET la
 // categorie qui sature, sans interrogater le serveur.
 import rateLimit from "express-rate-limit";
-import type { Request, RequestHandler } from "express";
+import type { Request, RequestHandler, Response, NextFunction } from "express";
 
 export type Bucket = "read" | "mutate" | "delete" | "auth" | "ai";
 
@@ -66,6 +66,9 @@ export function bucketFor(req: Request): Bucket | null {
 
   // L'authentification est verifiee AVANT la methode : c'est la surface sensible.
   if (path === "/api/unlock") return "auth";
+  // Identite (chantier 1) : login/logout/setup sont la surface brute-force
+  // par excellence — le bucket auth (20/15 min) leur convient.
+  if (path.startsWith("/api/auth/")) return "auth";
 
   const method = req.method.toUpperCase();
   if (method === "GET" || method === "HEAD") return "read";
@@ -78,6 +81,14 @@ export function bucketFor(req: Request): Bucket | null {
 }
 
 export default function apiRateLimiter(): RequestHandler {
+  // COOKDRIVE_RATELIMIT_OFF=1 : env de HARNAIS (comme COOKDRIVE_AUTH_OFF).
+  // La sonde d'identite (scripts/verify-auth.mjs) joue ~10 appels /api/auth/*
+  // a la suite : le bucket auth (20/15 min, par IP) est sature au 2e run et le
+  // harnais rougit selon l'historique des runs — un capteur mort. Le contrat
+  // rate-limit a SA porte (verify:ratelimit), qui juge sans cette env.
+  if (process.env.COOKDRIVE_RATELIMIT_OFF === "1") {
+    return (_req: Request, _res: Response, next: NextFunction) => next();
+  }
   const handlers = new Map<Bucket, RequestHandler>();
   for (const [bucket, budget] of Object.entries(BUDGETS)) {
     handlers.set(

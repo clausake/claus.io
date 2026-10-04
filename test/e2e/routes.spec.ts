@@ -34,6 +34,10 @@ test.beforeAll(async () => {
       PORT: String(PORT),
       USER_DATA_PATH: DATA_DIR,
       COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
+      // Identite desactivee pour CE harnais : il juge les contrats METIER sur
+      // des mutations anonymes. L'identite a sa propre porte (verify:auth),
+      // qui juge la gate ACTIVE sur son propre serveur isole.
+      COOKDRIVE_AUTH_OFF: "1",
     },
     stdio: "pipe",
   });
