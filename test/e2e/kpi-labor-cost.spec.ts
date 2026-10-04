@@ -59,7 +59,7 @@ test.beforeAll(async () => {
   const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   server = spawn(process.execPath, [tsxBin, "server.ts"], {
     cwd: process.cwd(),
-    env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
+    env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
     stdio: "pipe",
   });
   server.stdout?.on("data", (d) => process.stdout.write(d));

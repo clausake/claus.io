@@ -112,6 +112,7 @@ test.beforeAll(async () => {
       cwd: process.cwd(),
       env: {
         ...process.env,
+            COOKDRIVE_AUTH_OFF: "1",
         PORT: String(PORT),
         USER_DATA_PATH: DATA_DIR,
       // ⚠ NODE_ENV=production est OBLIGATOIRE pour un test qui juge le RENDU.
