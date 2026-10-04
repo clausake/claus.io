@@ -390,8 +390,12 @@ test("vue Reception : le panneau existe, le bon se receptionne, le stock monte",
   await ouvrirAchats(page);
   // Meme boucle qu'en A : la vue est paressee a la demande, son chunk peut
   // arriver apres l'entree. Une tentative unique jugerait un montage en cours.
+  // Patience x2 (120 essais = 30 s) mesuree en CI (pipeline 2910767143) : le
+  // runner partage met 15 s+ a servir le chunk lazy au premier hit disque —
+  // le contrat reste « l'onglet revient apres rechargement », seul le capteur
+  // est plus patient.
   let revu = false;
-  for (let i = 0; i < 60 && !revu; i++) {
+  for (let i = 0; i < 120 && !revu; i++) {
     revu = await cliquer(page, ONGLET);
     if (!revu) await page.waitForTimeout(250);
   }
