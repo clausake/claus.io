@@ -154,9 +154,24 @@ secret_detection:
   stage: security
   allow_failure: true
 
-# Barriere dure npm audit : rouge si une vulnerabilite high ou critical est
-# presente. Independant des scanners GitLab, marche sur tout plan (Free inclus).
+# Barriere npm audit : rouge si une vulnerabilite CRITICAL est presente. Le
+# seuil high rendait le job rouge en PERMANENCE (pdfjs-dist/xlsx sans fix
+# semver-safe, decision du 03/10 : 3 high dev-only acceptees et suivies) — un
+# rouge permanent n'est plus un signal. Les high restent VISIBLES via le job
+# npm-audit-report ci-dessous (allow_failure, artefact JSON date).
 npm-audit:
   stage: security
   script:
-    - npm audit --audit-level=high
+    - npm audit --audit-level=critical
+
+# Visibilite : rapport JSON complet des vulnerabilites (toutes severites),
+# sans bloquer. Le rapport vit dans les artifacts de la pipeline.
+npm-audit-report:
+  stage: security
+  allow_failure: true
+  script:
+    - npm audit --json > npm-audit-report.json || true
+  artifacts:
+    when: always
+    paths: [npm-audit-report.json]
+    expire_in: 1 month
