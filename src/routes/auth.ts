@@ -93,22 +93,17 @@ export default function createAuthRouter(db: Database) {
 
   router.get("/api/auth/me", (req, res) => {
     const user = currentUser(res);
-    if (!user) return res.status(401).json({ error: "AUTH_REQUISE", message: "Pas de session valide." });
-    res.json({ user });
-  });
-
-  // --- Etat d'identite pour l'UI. L'ecran de boot doit distinguer « installe
-  // ton premier compte » de « reconnecte-toi » SANS deviner sur un 401 cru
-  // (dont le code d'erreur ne dit pas laquelle des deux voies s'ouvre). Une
-  // installation vierge ne doit PAS nommer d'utilisateurs — seulement le
-  // fait qu'il n'en existe aucun.
-  router.get("/api/auth/etat", async (_req, res) => {
-    try {
-      const count = await db.get("SELECT COUNT(*) AS n FROM users") as { n: number };
-      res.json({ setup_requis: count.n === 0 });
-    } catch (e) {
-      res.status(500).json({ error: "ETAT_ERREUR", message: String(e) });
+    if (!user) {
+      // Harnais (COOKDRIVE_AUTH_OFF=1) : l'UI ne doit pas tomber sur l'ecran de
+      // connexion pendant que les spec e2e jugent les contrats metier. On rend
+      // un utilisateur de harnais explicite — JAMAIS en produit (la gate
+      // verify:auth juge la 401 sans l'env posee).
+      if (process.env.COOKDRIVE_AUTH_OFF === "1") {
+        return res.json({ user: { id: "harnais", username: "harnais", role: "maitre", active: 1 } });
+      }
+      return res.status(401).json({ error: "AUTH_REQUISE", message: "Pas de session valide." });
     }
+    res.json({ user });
   });
 
   // --- Etat d'identite pour l'UI. L'ecran de boot doit distinguer « installe
