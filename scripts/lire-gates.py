@@ -41,18 +41,18 @@ def lire(chemin):
     'aucune porte' et 'porte trouvee' en testant la longueur d'une liste.
     """
     if not os.path.isfile(chemin):
-        return (), "ABSENT: %s (les portes n'ont pas encore tourne)" % chemin
+        return (), (), "ABSENT: %s (les portes n'ont pas encore tourne)" % chemin
     with open(chemin, encoding="utf-8", errors="replace") as f:
         lignes = f.read().splitlines()
     if not lignes:
-        return (), "le fichier est vide (%s)" % chemin
+        return (), (), "le fichier est vide (%s)" % chemin
     verds = []
     for ln in lignes:
         m = LIGNE_RC.match(ln) or EN_TETE.match(ln)
         if m:
             verds.append((m.group(1), int(m.group(2))))
     if not verds:
-        return (), ("AUCUN verdict trouv\u00e9 dans %s (%d lignes lues). Le fichier "
+        return (), (), ("AUCUN verdict trouv\u00e9 dans %s (%d lignes lues). Le fichier "
                     "est peut-\u00eatre vide ou d'un autre format." % (chemin, len(lignes)))
     return tuple(verds), tuple(lignes), ()
 

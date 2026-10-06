@@ -44,7 +44,10 @@ async function lancerServeur(port) {
   const child = spawn(process.execPath, [BIN, "server.ts"], {
     cwd: process.cwd(),
     env: { ...process.env, USER_DATA_PATH: data, NODE_ENV: "production",
-           PORT: String(port), COOKDRIVE_INSTANCE_TOKEN: TOKEN },
+           PORT: String(port), COOKDRIVE_INSTANCE_TOKEN: TOKEN,
+           // Sonde metier : la gate session est jugee ACTIVE par verify:auth
+           // seul (convention harnais) — ici on juge le contrat reglage LLM.
+           COOKDRIVE_AUTH_OFF: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const log = { buf: "" };

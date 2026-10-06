@@ -18,6 +18,7 @@ import {
   Settings,
   ShoppingCart,
   Sparkles,
+  ShieldCheck,
   Thermometer,
   Users,
   X,
@@ -33,10 +34,17 @@ import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
 import { LandingPage, NavItem } from "./components/views";
 import { Assistant } from "./components/Assistant";
+import { AuthGate, type Utilisateur } from "./components/AuthGate";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
 
 export default function App() {
+  // L'identite (chantier 1) : AuthGate tient l'ecran tant qu'aucune session
+  // n'est ouverte ; App recoit le user pour masquer ce qui ne lui est pas
+  // destine (Comptes maitre-only) et pour ne rien ecrire tant qu'on n'est pas
+  // connecte (le persist settings part sinon en 401 a chaque boot).
+  const [user, setUser] = useState<Utilisateur | null>(null);
+  const [logoutSignal, setLogoutSignal] = useState(0);
   const [showLanding, setShowLanding] = useState(true);
   // L'assistant de premier demarrage (Tache 10) : il s'ouvre tant que le
   // demarrage n'est PAS consigne (`install_termine_le` absent de settings —
@@ -158,7 +166,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isSettingsLoaded) {
+    // Rien ne s'ecrit tant qu'aucune session n'est ouverte : un POST sans
+    // session serait un 401 garanti (la gate mord) et l'ecran de connexion
+    // recolterait une erreur qui n'appartient a personne.
+    if (isSettingsLoaded && user) {
       // Persist settings to backend
       fetch("/api/settings", {
         method: "POST",
@@ -166,7 +177,7 @@ export default function App() {
         body: JSON.stringify(settings),
       }).catch((err) => console.error("Error saving settings:", err));
     }
-  }, [settings, isSettingsLoaded]);
+  }, [settings, isSettingsLoaded, user]);
 
   useEffect(() => {
     const handleSearch = async () => {
@@ -376,6 +387,7 @@ export default function App() {
   }
 
   return (
+    <AuthGate onUser={setUser} logoutSignal={logoutSignal}>
     <div className="flex h-screen bg-[#0A0A0A] font-sans text-slate-200 selection:bg-emerald-500/30 selection:text-emerald-200 relative overflow-hidden">
       {/* Subtle background glow */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none"></div>
@@ -605,7 +617,19 @@ export default function App() {
             </div>
           )}
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 space-y-1">
+          {user?.role === "maitre" && (
+            <NavItem
+              icon={<ShieldCheck className="w-5 h-5" />}
+              label={t.accounts || "Comptes"}
+              isActive={activeTab === "comptes"}
+              onClick={() => {
+                setActiveTab("comptes");
+                if (window.innerWidth < 768) setIsSidebarOpen(false);
+              }}
+              isOpen={isSidebarOpen}
+            />
+          )}
           <NavItem
             icon={<Settings className="w-5 h-5" />}
             label={t.settings}
@@ -833,9 +857,19 @@ export default function App() {
                           <Settings className="w-4 h-4" />
                           {t.settings}
                         </button>
+                        <button
+                          onClick={() => setActiveTab("comptes")}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors text-left text-sm text-slate-300 hover:text-white"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          {t.accounts || "Comptes"}
+                        </button>
                         <div className="my-2 border-t border-white/5"></div>
                         <button
-                          onClick={() => setShowLanding(true)}
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            setLogoutSignal((n) => n + 1);
+                          }}
                           className="w-full flex items-center gap-3 p-3 hover:bg-red-500/10 rounded-xl transition-colors text-left text-sm text-red-500"
                         >
                           <X className="w-4 h-4" />
@@ -966,6 +1000,16 @@ export default function App() {
               />
             </div>
           )}
+          {activeTab === "comptes" && user?.role === "maitre" && (
+            <div className="animate-in fade-in duration-200">
+              <LazyViews.AccountsView moi={user} />
+            </div>
+          )}
+          {activeTab === "comptes" && user?.role === "maitre" && (
+            <div className="animate-in fade-in duration-200">
+              <LazyViews.AccountsView moi={user} />
+            </div>
+          )}
           {activeTab === "settings" && (
             <div className="animate-in fade-in duration-200">
               <LazyViews.SettingsView
@@ -981,5 +1025,6 @@ export default function App() {
         </div>
       </main>
     </div>
+    </AuthGate>
   );
 }
