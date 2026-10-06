@@ -41,6 +41,29 @@ MODELES = ["det.onnx", "rec.onnx", "dict.txt"]
 TAILLE_TOTAL_ATTENDUE = 12_800_000  # 12,8 Mo, a ~2 % pres
 
 
+class ExtractionAppImageImpossible(RuntimeError):
+    """Verdict NOMME : le livrable n'a pas pu etre ouvert pour jugement."""
+
+
+def trouver_offset_squashfs(chemin: str) -> int:
+    """L'offset du squashfs embarque (magic 'hsqs'), lu SANS executer
+    l'AppImage — le runtime AppImage exige libz.so, lien de dev absent des
+    postes d'audit (seul libz.so.1 y existe)."""
+    with open(chemin, "rb") as fh:
+        chevauchement = b""
+        offset_bloc = 0
+        while True:
+            bloc = fh.read(1_048_576)
+            if not bloc:
+                break
+            i = (chevauchement + bloc).find(b"hsqs")
+            if i != -1:
+                return offset_bloc - len(chevauchement) + i
+            offset_bloc += len(bloc)
+            chevauchement = bloc[-3:]
+    raise RuntimeError("hsqs introuvable — pas une AppImage v2 ?")
+
+
 def sha256_bytes(b: bytes) -> str:
     import hashlib
     return hashlib.sha256(b).hexdigest()
@@ -69,11 +92,31 @@ def iter_entries(chemin: str):
                         p = os.path.join(dirpath, f)
                         yield (os.path.relpath(p, tmp), open(p, "rb").read())
             else:
-                r = subprocess.run([chemin, "--appimage-extract"], cwd=tmp,
-                                   capture_output=True, text=True, timeout=180)
-                if r.returncode != 0:
-                    raise RuntimeError(f"extraction AppImage: {(r.stderr or r.stdout)[:200]}")
                 racine = os.path.join(tmp, "squashfs-root")
+                extraite = False
+                unsquashfs = shutil.which("unsquashfs")
+                if unsquashfs:
+                    # Voie 1 : extraction par OFFSET, l'AppImage n'est jamais
+                    # executee (le runtime AppImage exige libz.so, absent des
+                    # postes d'audit — defaut de poste, pas du produit).
+                    try:
+                        offset = trouver_offset_squashfs(chemin)
+                        r = subprocess.run(
+                            [unsquashfs, "-no-progress", "-o", str(offset),
+                             "-d", racine, chemin],
+                            capture_output=True, text=True, timeout=180)
+                        extraite = r.returncode == 0
+                    except (RuntimeError, subprocess.TimeoutExpired):
+                        extraite = False
+                if not extraite:
+                    # Voie 2 (derniere) : le runtime AppImage, si le poste a
+                    # libz.so. Sinon verdict NOMME, jamais d'exception nue
+                    # (contrat de la docstring : un juge rend un defaut NOMME).
+                    r = subprocess.run([chemin, "--appimage-extract"], cwd=tmp,
+                                       capture_output=True, text=True, timeout=180)
+                    if r.returncode != 0:
+                        raise ExtractionAppImageImpossible(
+                            f"extraction AppImage: {(r.stderr or r.stdout)[:200]}")
                 for dirpath, _, files in os.walk(racine):
                     for f in files:
                         p = os.path.join(dirpath, f)
@@ -135,16 +178,20 @@ def juger(echantillons):
             continue
         trouve = {"modeles": {}, "onnxruntime": 0, "canvas": 0}
         poids_total = 0
-        for nom_f, octets in iter_entries(chemin):
-            for m in MODELES:
-                if nom_f.endswith("ocr/modeles/" + m):
-                    trouve["modeles"][m] = octets
-                    if octets:
-                        poids_total += len(octets)
-            if "onnxruntime-node" in nom_f and nom_f.endswith(".node"):
-                trouve["onnxruntime"] += 1
-            if "@napi-rs/canvas" in nom_f and nom_f.endswith(".node"):
-                trouve["canvas"] += 1
+        try:
+            for nom_f, octets in iter_entries(chemin):
+                for m in MODELES:
+                    if nom_f.endswith("ocr/modeles/" + m):
+                        trouve["modeles"][m] = octets
+                        if octets:
+                            poids_total += len(octets)
+                if "onnxruntime-node" in nom_f and nom_f.endswith(".node"):
+                    trouve["onnxruntime"] += 1
+                if "@napi-rs/canvas" in nom_f and nom_f.endswith(".node"):
+                    trouve["canvas"] += 1
+        except ExtractionAppImageImpossible as e:
+            print(f"  FAUTE EXTRACTION: {e} — livrable non juge"); fail += 1
+            continue
         # Le contrat est LITERAL : le nom du modele, pas un nom qui lui
         # ressemble. dict.txt rendu `dir.txt` = FAUTE (le nom d'une clef
         # absente n'est jamais le nom d'une clef presente).

@@ -111,7 +111,7 @@ def sante(port, max_s=45.0):
     return False
 
 
-def lancer_intrus(port, tag):
+def lancer_intrus(port, tag, env_surcroit=None):
     """UN SERVEUR HONNETE, lance par un AUTRE dossier, avec un AUTRE jeton.
 
     Il n'est pas « cassee » : c'est un serveur de l'etat du disque, parfaitement
@@ -127,6 +127,11 @@ def lancer_intrus(port, tag):
                PORT=str(port),
                USER_DATA_PATH=data,
                COOKDRIVE_INSTANCE_TOKEN="INTRUS-%d" % random.randrange(10 ** 9))
+    # Le harnais du spec pose AUTH_OFF dans l'env de SON serveur ; un intrus qui
+    # l'ignore jugerait le metier sous auth active -- defaut du harnais, pas de
+    # la garde. L'intrus recoit donc le MEME contrat de harnais.
+    if env_surcroit:
+        env.update(env_surcroit)
     log = open(os.path.join(WORK, "intrus-%s.log" % tag), "w", encoding="utf-8")
     proc = subprocess.Popen([os.path.realpath(shutil.which("node") or "node"),
                              tsx, "server.ts"],
@@ -195,7 +200,7 @@ def main():
 
         # --- B. garde armee : l'intrus tient le port -> le spec DOIT rougir ----
         port = port_libre()
-        intrus, _ = lancer_intrus(port, "b")
+        intrus, _ = lancer_intrus(port, "b", {"COOKDRIVE_AUTH_OFF": "1"})
         if not sante(port):
             verdicts.append(("B  garde armee : l'intrus repond sur le port", False,
                             "intrus pas pret: experience nulle"))
@@ -214,7 +219,7 @@ def main():
         # --- C. garde desarmee : le MEME scenario doit passer VERT ------------
         # C'est la direction qui discrimine B d'un simple « le setup est casse ».
         port2 = port_libre()
-        intrus, _ = lancer_intrus(port2, "c")
+        intrus, _ = lancer_intrus(port2, "c", {"COOKDRIVE_AUTH_OFF": "1"})
         if not sante(port2):
             verdicts.append(("C  garde desarmee : l'intrus repond sur le port", False,
                             "intrus pas pret: experience nulle"))
