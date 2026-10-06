@@ -46,6 +46,10 @@ export default defineConfig(({mode}) => {
             "vendor-pdf": ["jspdf", "jspdf-autotable"],
             "vendor-csv": ["papaparse"],
             "vendor-qrcode": ["qrcode.react"],
+            // Les traductions (5 langues, ~147 Ko source) ne sont pas nécessaires
+            // au premier rendu : le module est importé par les vues, donc un chunk
+            // dédié part en async et sort du plafond du chunk d'entrée.
+            "i18n": ["./src/data/translations.ts"],
           },
         },
       },
