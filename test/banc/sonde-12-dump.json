@@ -1,0 +1,574 @@
+{
+ "text": "FOURNITURES GASTRONOMIQUES DU SUD-EST\nSIRET 412 857 339 00066 - TVA FR 78 412857339\nTelephone : 04 78 92 41 06\nFACTURE N F-2026-000847\nDate d'emission : 12/09/2026\nReglement : virement 30 jours\nDesignation Qte U P.U. HT Montant H\nPommes de terre Agria 25 kg 2 sa 34,90 69,80\nBeurre doux de laite AOP 5 kg 3 col 21,50 64,50\nSel deguer gris de Guerande 100 g 0,08 8,00\nEau de vie de la Mer 75 cl 12 bt 2,40 28,80\nHoublon vert d'Ornon 500 g 4 sac 9,95 39,80\nEdelweiss du Chasseur 1 kg 5 po 14,20 71,00\nRue des Martyrs - Epices 250 g 8 bt 3,15 25,20\nTVA 10,0 % 41,96\nTOTAL TTC 461,56\nCompte 30002 12345 67890 100 - Banque de France\nArrete la presente facture a la somme de quatre cent\nsoixante-un euros et cinquante-six centimes.",
+ "lines": [
+  [
+   {
+    "text": "FOURNITURES GASTRONOMIQUES DU SUD-EST",
+    "box": {
+     "x": 54,
+     "y": 52,
+     "width": 839,
+     "height": 23
+    },
+    "confidence": 0.9845486057771219
+   }
+  ],
+  [
+   {
+    "text": "SIRET 412 857 339 00066 - TVA FR 78 412857339",
+    "box": {
+     "x": 54,
+     "y": 124,
+     "width": 571,
+     "height": 22
+    },
+    "confidence": 0.9383638501167297
+   }
+  ],
+  [
+   {
+    "text": "Telephone : 04 78 92 41 06",
+    "box": {
+     "x": 54,
+     "y": 155,
+     "width": 281,
+     "height": 22
+    },
+    "confidence": 0.9574062778399541
+   }
+  ],
+  [
+   {
+    "text": "FACTURE N F-2026-000847",
+    "box": {
+     "x": 54,
+     "y": 211,
+     "width": 414,
+     "height": 22
+    },
+    "confidence": 0.9871780224468397
+   }
+  ],
+  [
+   {
+    "text": "Date d'emission : 12/09/2026",
+    "box": {
+     "x": 54,
+     "y": 251,
+     "width": 300,
+     "height": 22
+    },
+    "confidence": 0.9914099467652184
+   }
+  ],
+  [
+   {
+    "text": "Reglement : virement 30 jours",
+    "box": {
+     "x": 53,
+     "y": 311,
+     "width": 315,
+     "height": 24
+    },
+    "confidence": 0.9903943209812559
+   }
+  ],
+  [
+   {
+    "text": "Designation",
+    "box": {
+     "x": 52,
+     "y": 368,
+     "width": 150,
+     "height": 23
+    },
+    "confidence": 0.9702713881220136
+   },
+   {
+    "text": "Qte",
+    "box": {
+     "x": 477,
+     "y": 363,
+     "width": 60,
+     "height": 35
+    },
+    "confidence": 0.9702713881220136
+   },
+   {
+    "text": "U",
+    "box": {
+     "x": 575,
+     "y": 362,
+     "width": 41,
+     "height": 35
+    },
+    "confidence": 0.9702713881220136
+   },
+   {
+    "text": "P.U. HT",
+    "box": {
+     "x": 710,
+     "y": 367,
+     "width": 99,
+     "height": 23
+    },
+    "confidence": 0.9702713881220136
+   },
+   {
+    "text": "Montant H",
+    "box": {
+     "x": 872,
+     "y": 367,
+     "width": 128,
+     "height": 23
+    },
+    "confidence": 0.9702713881220136
+   }
+  ],
+  [
+   {
+    "text": "Pommes de terre Agria 25 kg",
+    "box": {
+     "x": 52,
+     "y": 417,
+     "width": 306,
+     "height": 25
+    },
+    "confidence": 0.973967591469938
+   },
+   {
+    "text": "2",
+    "box": {
+     "x": 473,
+     "y": 411,
+     "width": 39,
+     "height": 36
+    },
+    "confidence": 0.973967591469938
+   },
+   {
+    "text": "sa",
+    "box": {
+     "x": 576,
+     "y": 416,
+     "width": 43,
+     "height": 30
+    },
+    "confidence": 0.973967591469938
+   },
+   {
+    "text": "34,90",
+    "box": {
+     "x": 709,
+     "y": 416,
+     "width": 78,
+     "height": 24
+    },
+    "confidence": 0.973967591469938
+   },
+   {
+    "text": "69,80",
+    "box": {
+     "x": 871,
+     "y": 416,
+     "width": 76,
+     "height": 24
+    },
+    "confidence": 0.973967591469938
+   }
+  ],
+  [
+   {
+    "text": "Beurre doux de laite AOP 5 kg",
+    "box": {
+     "x": 52,
+     "y": 450,
+     "width": 317,
+     "height": 24
+    },
+    "confidence": 0.9763749000873971
+   },
+   {
+    "text": "3",
+    "box": {
+     "x": 474,
+     "y": 443,
+     "width": 36,
+     "height": 35
+    },
+    "confidence": 0.9763749000873971
+   },
+   {
+    "text": "col",
+    "box": {
+     "x": 575,
+     "y": 446,
+     "width": 51,
+     "height": 35
+    },
+    "confidence": 0.9763749000873971
+   },
+   {
+    "text": "21,50",
+    "box": {
+     "x": 709,
+     "y": 447,
+     "width": 78,
+     "height": 28
+    },
+    "confidence": 0.9763749000873971
+   },
+   {
+    "text": "64,50",
+    "box": {
+     "x": 871,
+     "y": 448,
+     "width": 76,
+     "height": 25
+    },
+    "confidence": 0.9763749000873971
+   }
+  ],
+  [
+   {
+    "text": "Sel deguer gris de Guerande",
+    "box": {
+     "x": 53,
+     "y": 513,
+     "width": 300,
+     "height": 23
+    },
+    "confidence": 0.9882038235664368
+   },
+   {
+    "text": "100",
+    "box": {
+     "x": 477,
+     "y": 510,
+     "width": 54,
+     "height": 30
+    },
+    "confidence": 0.9882038235664368
+   },
+   {
+    "text": "g",
+    "box": {
+     "x": 575,
+     "y": 512,
+     "width": 36,
+     "height": 33
+    },
+    "confidence": 0.9882038235664368
+   },
+   {
+    "text": "0,08",
+    "box": {
+     "x": 717,
+     "y": 510,
+     "width": 71,
+     "height": 30
+    },
+    "confidence": 0.9882038235664368
+   },
+   {
+    "text": "8,00",
+    "box": {
+     "x": 876,
+     "y": 512,
+     "width": 72,
+     "height": 28
+    },
+    "confidence": 0.9882038235664368
+   }
+  ],
+  [
+   {
+    "text": "Eau de vie de la Mer 75 cl",
+    "box": {
+     "x": 53,
+     "y": 545,
+     "width": 274,
+     "height": 22
+    },
+    "confidence": 0.9610366627227428
+   },
+   {
+    "text": "12",
+    "box": {
+     "x": 475,
+     "y": 543,
+     "width": 46,
+     "height": 29
+    },
+    "confidence": 0.9610366627227428
+   },
+   {
+    "text": "bt",
+    "box": {
+     "x": 574,
+     "y": 541,
+     "width": 46,
+     "height": 35
+    },
+    "confidence": 0.9610366627227428
+   },
+   {
+    "text": "2,40",
+    "box": {
+     "x": 718,
+     "y": 543,
+     "width": 70,
+     "height": 29
+    },
+    "confidence": 0.9610366627227428
+   },
+   {
+    "text": "28,80",
+    "box": {
+     "x": 869,
+     "y": 545,
+     "width": 78,
+     "height": 25
+    },
+    "confidence": 0.9610366627227428
+   }
+  ],
+  [
+   {
+    "text": "Houblon vert d'Ornon 500 g",
+    "box": {
+     "x": 52,
+     "y": 575,
+     "width": 295,
+     "height": 28
+    },
+    "confidence": 0.9846250595048417
+   },
+   {
+    "text": "4",
+    "box": {
+     "x": 473,
+     "y": 572,
+     "width": 41,
+     "height": 35
+    },
+    "confidence": 0.9846250595048417
+   },
+   {
+    "text": "sac",
+    "box": {
+     "x": 576,
+     "y": 577,
+     "width": 52,
+     "height": 30
+    },
+    "confidence": 0.9846250595048417
+   },
+   {
+    "text": "9,95",
+    "box": {
+     "x": 721,
+     "y": 575,
+     "width": 66,
+     "height": 28
+    },
+    "confidence": 0.9846250595048417
+   },
+   {
+    "text": "39,80",
+    "box": {
+     "x": 869,
+     "y": 575,
+     "width": 78,
+     "height": 28
+    },
+    "confidence": 0.9846250595048417
+   }
+  ],
+  [
+   {
+    "text": "Edelweiss du Chasseur 1 kg",
+    "box": {
+     "x": 52,
+     "y": 608,
+     "width": 294,
+     "height": 25
+    },
+    "confidence": 0.9710775627646335
+   },
+   {
+    "text": "5",
+    "box": {
+     "x": 473,
+     "y": 603,
+     "width": 39,
+     "height": 35
+    },
+    "confidence": 0.9710775627646335
+   },
+   {
+    "text": "po",
+    "box": {
+     "x": 575,
+     "y": 610,
+     "width": 46,
+     "height": 29
+    },
+    "confidence": 0.9710775627646335
+   },
+   {
+    "text": "14,20",
+    "box": {
+     "x": 709,
+     "y": 607,
+     "width": 78,
+     "height": 29
+    },
+    "confidence": 0.9710775627646335
+   },
+   {
+    "text": "71,00",
+    "box": {
+     "x": 868,
+     "y": 607,
+     "width": 79,
+     "height": 29
+    },
+    "confidence": 0.9710775627646335
+   }
+  ],
+  [
+   {
+    "text": "Rue des Martyrs - Epices 250 g",
+    "box": {
+     "x": 53,
+     "y": 642,
+     "width": 325,
+     "height": 23
+    },
+    "confidence": 0.9393433358358301
+   },
+   {
+    "text": "8",
+    "box": {
+     "x": 474,
+     "y": 636,
+     "width": 38,
+     "height": 34
+    },
+    "confidence": 0.9393433358358301
+   },
+   {
+    "text": "bt",
+    "box": {
+     "x": 575,
+     "y": 637,
+     "width": 44,
+     "height": 33
+    },
+    "confidence": 0.9393433358358301
+   },
+   {
+    "text": "3,15",
+    "box": {
+     "x": 721,
+     "y": 639,
+     "width": 66,
+     "height": 29
+    },
+    "confidence": 0.9393433358358301
+   },
+   {
+    "text": "25,20",
+    "box": {
+     "x": 869,
+     "y": 639,
+     "width": 78,
+     "height": 29
+    },
+    "confidence": 0.9393433358358301
+   }
+  ],
+  [
+   {
+    "text": "TVA 10,0 %",
+    "box": {
+     "x": 53,
+     "y": 753,
+     "width": 152,
+     "height": 23
+    },
+    "confidence": 0.8977552354335785
+   },
+   {
+    "text": "41,96",
+    "box": {
+     "x": 869,
+     "y": 750,
+     "width": 87,
+     "height": 30
+    },
+    "confidence": 0.8977552354335785
+   }
+  ],
+  [
+   {
+    "text": "TOTAL TTC",
+    "box": {
+     "x": 50,
+     "y": 793,
+     "width": 157,
+     "height": 25
+    },
+    "confidence": 0.8590521852175395
+   },
+   {
+    "text": "461,56",
+    "box": {
+     "x": 869,
+     "y": 791,
+     "width": 100,
+     "height": 33
+    },
+    "confidence": 0.8590521852175395
+   }
+  ],
+  [
+   {
+    "text": "Compte 30002 12345 67890 100 - Banque de France",
+    "box": {
+     "x": 54,
+     "y": 837,
+     "width": 517,
+     "height": 18
+    },
+    "confidence": 0.7172498937616957
+   }
+  ],
+  [
+   {
+    "text": "Arrete la presente facture a la somme de quatre cent",
+    "box": {
+     "x": 53,
+     "y": 871,
+     "width": 519,
+     "height": 18
+    },
+    "confidence": 0.9513817418080109
+   }
+  ],
+  [
+   {
+    "text": "soixante-un euros et cinquante-six centimes.",
+    "box": {
+     "x": 53,
+     "y": 902,
+     "width": 434,
+     "height": 18
+    },
+    "confidence": 0.998678601600907
+   }
+  ]
+ ],
+ "confidence": 0.9595231645805499
+}
