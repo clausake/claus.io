@@ -37,3 +37,7 @@ export const Haccp = lazy(() =>
   import("./Haccp").then(m => ({ default: m.Haccp })));
 export const EpicureStudio = lazy(() =>
   import("./EpicureStudio").then(m => ({ default: m.EpicureStudio })));
+// Chantier 1 : la page comptes du maitre vit dans son propre chunk (elle est
+// la seule vue a parler a /api/users, maitre-only).
+export const AccountsView = lazy(() =>
+  import("./AccountsView").then(m => ({ default: m.AccountsView })));

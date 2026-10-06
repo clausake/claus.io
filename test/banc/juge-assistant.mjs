@@ -63,7 +63,10 @@ async function lancerServeur(port) {
     env: { ...process.env, USER_DATA_PATH: data, NODE_ENV: "production",
            PORT: String(port), COOKDRIVE_INSTANCE_TOKEN: TOKEN,
            COOKDRIVE_EPREUVE_LECTEUR: LECTEUR,
-           COOKDRIVE_EPREUVE_FICHIER: FICHIER_CONSIGNE },
+           COOKDRIVE_EPREUVE_FICHIER: FICHIER_CONSIGNE,
+           // Sonde metier : la gate session est jugee ACTIVE par verify:auth
+           // seul (convention harnais) — ici on juge le contrat assistant.
+           COOKDRIVE_AUTH_OFF: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const log = { buf: "" };

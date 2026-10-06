@@ -97,6 +97,34 @@ export default function createAuthRouter(db: Database) {
     res.json({ user });
   });
 
+  // --- Etat d'identite pour l'UI. L'ecran de boot doit distinguer « installe
+  // ton premier compte » de « reconnecte-toi » SANS deviner sur un 401 cru
+  // (dont le code d'erreur ne dit pas laquelle des deux voies s'ouvre). Une
+  // installation vierge ne doit PAS nommer d'utilisateurs — seulement le
+  // fait qu'il n'en existe aucun.
+  router.get("/api/auth/etat", async (_req, res) => {
+    try {
+      const count = await db.get("SELECT COUNT(*) AS n FROM users") as { n: number };
+      res.json({ setup_requis: count.n === 0 });
+    } catch (e) {
+      res.status(500).json({ error: "ETAT_ERREUR", message: String(e) });
+    }
+  });
+
+  // --- Etat d'identite pour l'UI. L'ecran de boot doit distinguer « installe
+  // ton premier compte » de « reconnecte-toi » SANS deviner sur un 401 cru
+  // (dont le code d'erreur ne dit pas laquelle des deux voies s'ouvre). Une
+  // installation vierge ne doit PAS nommer d'utilisateurs — seulement le
+  // fait qu'il n'en existe aucun.
+  router.get("/api/auth/etat", async (_req, res) => {
+    try {
+      const count = await db.get("SELECT COUNT(*) AS n FROM users") as { n: number };
+      res.json({ setup_requis: count.n === 0 });
+    } catch (e) {
+      res.status(500).json({ error: "ETAT_ERREUR", message: String(e) });
+    }
+  });
+
   // --- Gestion des comptes (maitre only). Le staff/agent est cree par le
   // maitre ; la reinitialisation et la desactivation aussi.
   router.get("/api/users", (req, res) => {
