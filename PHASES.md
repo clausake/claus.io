@@ -327,3 +327,58 @@ La decision « generation annulee, c'est l'echange qui produit » est DOUBLement
 materialisee : plus de route cote serveur (14.c) et plus de chemin dans l'UI
 (ce sprint). La voie papier (analyser un menu) survit — c'est une lecture, pas
 une generation, et le maitre d'ouvrage l'a conservee.
+
+## Chantier 1 — Auth & identite : l'UI React, la garde de session et la page comptes du maitre (04/10)
+
+### La decision jouee
+
+Le chantier 1 s'ouvre sur le backend seul (9313f23) : 14 regles A/B/C jugees
+par `verify:auth`, mais l'app rendait encore TOUT son metier a quiconque
+chargeait index.html — l'API etait gardee, l'UI pas. Ce sprint ferme la
+boucle : plus AUCUNE vue ne monte sans session, et la page comptes n'existe
+que pour le maitre.
+
+### Ce qui a ete ecrit
+
+- `AuthGate.tsx` (141 l.) : la garde. Au boot, fetch `/api/auth/me` ; 401 ->
+  fetch `/api/auth/etat` pour distinguer SETUP (0 user : ecran creation du
+  compte maitre) de LOGIN (users existants : ecran connexion). Session
+  expiree en cours de route -> retour login (session revoquee -> 401).
+- `EcranIdentite.tsx` (138 l.) : setup/login en un ecran, lazy chunk dedie
+  (c000e92 : index 492.7 ko < plafond 620 ko).
+- `AccountsView.tsx` (306 l.) : la page comptes du MAITRE SEUL — liste,
+  creation, reset mot de passe, desactivation, via `lib/cdFetch.ts` (le
+  wrapper qui porte le signal de logout).
+- `App.tsx:390` : `<AuthGate onUser={setUser}>` enveloppe l'app entiere ;
+  LazyViews.AccountsView branche sur les entrees maitre (1005/1010).
+- `routes/auth.ts` (f1a4f7d) : `/api/auth/me` rend un user de HARNAIS
+  ({id: harnais, role: maitre}) sous `COOKDRIVE_AUTH_OFF=1` UNIQUEMENT — sans
+  l'env, 401 AUTH_REQUISE conservee. Debloque les 15 specs e2e metier (qui
+  bootent avec l'env) SANS affaiblir la porte verify:auth (qui juge SANS
+  l'env, 14/14 rejoue). Au passage : `/api/auth/etat` etait DECLAREE DEUX
+  FOIS par la recuperation du sandbox — la seconde etait morte, dedoublonnee.
+
+### Les portes (toutes mesurees le 04/10)
+
+- `verify:auth` 14/14 (3 runs) — la gate juge ACTIVE.
+- `verify:routes` 46/46, `verify:reception` vert (voir piege ci-dessous),
+  tsc 0 erreur, vitest 158/158, build 492.7 ko.
+- CI VERTE pipeline 2916804006 sur e6c4482, poussee.
+
+### Piege a retenir (2 h perdues)
+
+`verify:reception` rouge avec « onglet Reception absent — boutons : [Creer
+le compte maitre] » : on a soupconne la gate d'auth. Cause REELLE : le
+conteneur n'avait PAS le chromium de playwright (executable absent, erreur
+lancee avant meme le boot du serveur) — et l'ecran capture etait celui du
+BUNDLE STALE d'avant c000e92. Remede : `npx playwright install chromium`.
+Lecon : quand un spec e2e rend « le mauvais ecran », verifier d'abord que le
+navigateur et le bundle dist/ sont du JOUR avant d'incriminer la logique.
+
+### Nettoyage du 04/10
+
+Supprimes du workspace (jamais versionnes, verifies par git log -- <chemin> :
+aucun commit ne les a jamais portes) : le fichier `1` (un eval JS casse de la
+veille du 26/09) et 50 probes .txt mortes (test/14e-*, test/14f-*,
+test/gates-*, test/routes-*, etc.) — des journaux perissables qui n'avaient
+rien a faire hors .gitignore. `git status` est PROPRE.

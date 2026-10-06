@@ -36,7 +36,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib_morsure_forecast_table import CAUSES_MORTS, RAISONS, TABLE
 
-RACINE = os.path.join(os.path.expanduser("~"), "cookdrive-project")
+RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(RACINE, "src", "routes", "suppliers.ts")
 SONDE = os.path.join(RACINE, "scripts", "probe-forecast-real.py")
 
