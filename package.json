@@ -99,7 +99,9 @@
     "verify:langues-formats": "python3 scripts/mesurer-langues-formats.py",
     "verify:etiquettes-dlc": "python3 scripts/juge-etiquettes-dlc.py",
     "verify:audit": "node scripts/verify-audit.mjs",
-    "verify:audit-mord": "python3 scripts/negative-test-audit.py"
+    "verify:audit-mord": "python3 scripts/negative-test-audit.py",
+    "verify:suggestions": "node scripts/verify-suggestions.mjs",
+    "verify:suggestions-mord": "python3 scripts/negative-test-suggestions.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

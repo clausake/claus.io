@@ -54,8 +54,12 @@ export async function loadSession(
 // juge la gate ACTIVE (elle ne la pose pas). Une installation qui mettrait
 // cette env dans son lancement n'aurait plus d'auth — c'est un defaut
 // d'exploitation, pas du produit.
+// ATTENTION : cette gate est montee sous /api (server.ts), donc req.path est
+// RELATIF — c'est "/suggestions", pas "/api/suggestions". Le piege de la
+// premiere version : comparer au chemin absolu n'a JAMAIS matche, l'exemption
+// etait morte et l'agent etait refuse sur sa propre boite.
 const ECRITURES_AGENT = new Set([
-  "/api/suggestions", // chantier 3 : la seule ecriture de l'agent
+  "/suggestions", // chantier 3 : la seule ecriture de l'agent
 ]);
 
 export function sessionGate(): RequestHandler {

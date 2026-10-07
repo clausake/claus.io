@@ -395,3 +395,76 @@ tsc 0 erreur, vitest 158/158, build 492.7 ko (< plafond 620), verify:audit
 rougir A12 (`ECHEC A12 audit_log create staff`), la restauration git checkout
 ramene l'arbre propre. La porte ne peut pas rester verte par hasard. Branchee
 au DEFAUT du lot.
+## Chantier 3 — Boîte de réception de suggestions : l'agent propose, l'humain exécute (07/10)
+
+### La decision jouee
+
+Le chantier 3 ferme la boucle §8 : l'agent (Hermes) a maintenant SA voie
+d'ecriture — la table `suggestions` et rien d'autre. Il PROPOSE avec une
+action PRE-REMPLIE (route + payload) ; le maitre APPLIQUE a SA signature
+(la route cible est rejouee EN INTERNE par le serveur, le payload passe par
+le contrat complet de SA route : validation, transactions, audit trail du
+chantier 2) ou REJETE avec motif OBLIGATOIRE. Une suggestion ne touche
+JAMAIS le metier elle-meme.
+
+### Ce qui a ete ecrit
+
+- `src/db/init.ts` : table `suggestions` (id, type, priorite basse/normale/
+  haute, titre, explication, action_route, action_payload JSON, statut
+  nouveau/applique/rejete, motif_rejet, applique_par, created_at, decided_at)
+  + index statut.
+- `src/routes/suggestions.ts` : POST /api/suggestions (agent ou maitre ; le
+  staff est refuse STAFF_LECTURE_SEULE), GET libre + GET :id, POST
+  :id/appliquer (MAITRE SEUL), POST :id/rejeter (MAITRE SEUL, motif requis).
+- **Liste blanche ROUTES_CIBLES** : l'agent ne peut pas pre-remplir une
+  action vers /api/unlock ou /api/users — la boite n'est pas une voie de
+  contournement de la gate §8. Refuse a la CREATION (400 ROUTE_INCONNUE) ET
+  a l'application (409 si la liste a bouge).
+- `src/middleware/auth.ts` : l'exemption §8 `ECRITURES_AGENT` est ACTIVE
+  (postait morte depuis le chantier 2, voir piege ci-dessous) — l'agent
+  passe la gate sur /suggestions et NULLE PART ailleurs.
+- L'application s'appelle LUI-MEME (fetch 127.0.0.1:PORT + le cookie du
+  maitre) : la mutation reelle porte SA signature, journalisee dans
+  audit_log par la route cible elle-meme. Une cible qui refuse laisse la
+  suggestion 'nouveau' et NOMME le refus (CIBLE_REFUSEE + cible_corps) —
+  pas de demi-succes.
+
+### La porte
+
+- `verify:suggestions` (scripts/verify-suggestions.mjs) : 25 regles sur le
+  serveur REEL AVEC identite active (setup maitre, comptes agent/staff
+  crees par le spec). A1 l'agent propose (201) ; A2/A3 anonyme et staff
+  refuses ; A4 les payloads invalides et les routes hors liste blanche
+  sont refuses NOMMES ; A5 la suggestion est relue en base ; B1 l'agent ne
+  tranche pas (403) ; B2 l'application rejoue VRAIMENT la cible (DELTA
+  temperature_logs avant/apres) + applique_par pose ; B3/B4 rejet avec
+  motif obligatoire relu en base ; B5 deja decidee = 409 ; B6 une cible
+  qui refuse laisse 'nouveau' ; C1 lecture libre ; D1 l'application est
+  tracee dans audit_log.
+- `verify:suggestions-mord` (scripts/negative-test-suggestions.py) : la
+  morsure — vide la liste blanche ROUTES_CIBLES, rejoue la porte, exige
+  ECHEC sur A4c, puis RESTAURE (garde ARBRE_SALE).
+- `run-all-gates.py` DEFAUT : verify:suggestions ajoute APRES verify:audit-mord.
+
+### Verifie le 07/10
+
+tsc 0 erreur, vitest 158/158, build 492.7 ko, verify:suggestions 25/25
+x2, verify:auth 14/14, verify:split vert (ancre recalculee).
+
+### Pieges a retenir
+
+- **La gate sessionGate est montee sous /api** : req.path y est RELATIF
+  ("/suggestions"), pas absolu. La premiere version de ECRITURES_AGENT
+  comparait a "/api/suggestions" — l'exemption n'a JAMAIS matche et
+  l'agent etait refuse sur sa propre boite (403 AGENT_LECTURE_SEULE sur
+  A1). Lecon : une exemption se PROUVE par la porte qui la juge, pas par
+  sa lecture.
+- Le harnais manipule les sessions via le jar de cookies : APRES un test
+  avec session staff, la creation du compte agent doit SE RECONNECTER
+  maitre, sinon POST /api/users rend 403 MAITRE_REQUIS et toute la suite
+  du contrat tombe en cascade. Un echec en cascade sur un spec = chercher
+  LA session qui fuit avant d'incriminer le produit.
+- La DELTA B2 se juge sur la route cible REELLEMENT rejouee
+  (/api/haccp/temperature -> temperature_logs), pas sur un compteur de la
+  table suggestions : une application qui marquerait 'applique' sans
+  rejouer la cible resterait un PASS creux.
