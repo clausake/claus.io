@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "8c3c13ccafbb561b7a767b7708c2d763fc767efc6caa6030283deaaeab846ccf",
-  "chaud_octets": 24311,
+  "original_sha256": "33987be034a166c83595cd6b5f09a5122cadadae6eeb2e0d9bb9dd1ff0f34664",
+  "chaud_octets": 28285,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 397,
-  "tokens_approx_chaud": 5909,
+  "lignes_chaud": 470,
+  "tokens_approx_chaud": 6879,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee + morsure jouee apres commit (A12 rougit, restauration OK)",
-    "date": "2026-10-07T15:03:11.070544",
-    "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre."
+    "motif": "chantier 3 (boite de suggestions) ajoute au chaud : table + routes + liste blanche + porte verify:suggestions ; exemption ECRITURES_AGENT activee (le chemin relatif de la gate, piege consigne) ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-07T16:56:30.079068",
+    "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-07T15:00:17.258412",
+    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee + morsure jouee apres commit (A12 rougit, restauration OK)",
+    "date": "2026-10-07T15:03:11.070544",
     "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre."
   }
 }

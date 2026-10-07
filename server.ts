@@ -48,6 +48,7 @@ import robotsRouter from "./src/routes/robots.js";
 import supplierpricesRouter from "./src/routes/supplierprices.js";
 import antiwasteRouter from "./src/routes/antiwaste.js";
 import aiRouter from "./src/routes/ai.js";
+import suggestionsRouter from "./src/routes/suggestions.js";
 import healthRouter from "./src/routes/health.js";
 
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -176,6 +177,8 @@ async function startServer() {
   app.use(supplierpricesRouter(db, logAudit));
   app.use(antiwasteRouter(db, logAudit));
   app.use(aiRouter(db, logAudit));
+  // Boite de suggestions (chantier 3) : la SEULE ecriture de l'agent (§8).
+  app.use(suggestionsRouter(db, logAudit));
   // /health est à la racine (pas sous /api)
   app.use(healthRouter);
 

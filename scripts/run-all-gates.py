@@ -106,6 +106,17 @@ DEFAUT = ["verify:split",
           # Elle exige un arbre propre (git checkout), donc elle n'est
           # JAMAS jouee sur un workspace sale.
           "verify:audit-mord",
+          # Chantier 3 (feuille de route §8) : la boîte de suggestions. La
+          # sonde juge le serveur REEL AVEC identite active : l'agent propose
+          # (A1 — sa SEULE ecriture), le staff est refuse (A3), les payloads
+          # invalides et les routes hors liste blanche sont refuses NOMMES
+          # (A4), l'agent ne tranche pas (B1), le maitre applique (la route
+          # cible est VRAIMENT rejouee, DELTA en base B2) ou rejette avec
+          # motif obligatoire (B3/B4), deja decidee = 409 (B5), une action
+          # que la cible refuse reste 'nouveau' (B6), l'application est
+          # tracee dans audit_log (D1). La retirer rend la boite jugeable
+          # partiellement sans qu'aucun lot ne le voie.
+          "verify:suggestions",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
