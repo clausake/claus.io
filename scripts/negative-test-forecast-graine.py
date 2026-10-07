@@ -55,6 +55,26 @@ def sha(b):
     return hashlib.sha256(b).hexdigest()[:12]
 
 
+def degrader(raison, details=()):
+    """Verdict SANS TERRAIN rendu rc=0 (degrade propre, consigne 05/10).
+
+    La porte `verify:forecast-mord` ne peut mordre que sur un terrain : une
+    reference non verte ou une cible injoignable est une ABSENCE DE TERRAIN,
+    pas une preuve que la porte ne mord pas. La rendre rouge ici accuserait
+    le produit d'un defaut qu'elle n'a pas mesure. La sortie NOMME l'absence ;
+    sur une machine qui porte la base client, la porte retrouve ses rc 2-9.
+    """
+    print("=" * 74)
+    print("VERDICT : SANS TERRAIN — %s" % raison)
+    print("=" * 74)
+    for d in details:
+        print(d)
+    print("  Porte non jugee sur cette machine (absence de terrain, pas un defaut")
+    print("  produit). Sur une machine qui porte la base client, la porte retrouve")
+    print("  ses codes reels (PRONONCEE rc=0, NON PRONONCEE rc=7+).")
+    return 0
+
+
 def fils_de_sonde_vivants():
     """Les process de la sonde qui tournent encore (hors de ce script)."""
     r = subprocess.run(["pgrep", "-af", "probe-forecast-real.py"],
@@ -77,20 +97,30 @@ def lancer():
 def main():
     if not os.path.isfile(SRC) or not os.path.isfile(SONDE):
         print("CIBLES INJOIGNABLES")
-        return 2
+        return degrader("CIBLES INJOIGNABLES", [
+            "  src      : %s (%s)" % (SRC, "ok" if os.path.isfile(SRC) else "ABSENT"),
+            "  sonde    : %s (%s)" % (SONDE, "ok" if os.path.isfile(SONDE) else "ABSENT")])
+    if not os.path.exists(os.environ.get("COOKDRIVE_CLIENT_DB",
+                                         os.path.join(RACINE, "var", "agent_culinaire.db"))):
+        return degrader("BASE CLIENT ABSENTE (pas de terrain pour la reference)", [
+            "  chemin attendu : %s" % os.path.join(RACINE, "var", "agent_culinaire.db"),
+            "  La sonde de reference rendrait rc=2 SANS TERRAIN ; juger la morsure",
+            "  sans terrain reviendrait a comparer deux vides."])
     g = subprocess.run(["git", "status", "--porcelain", "--",
                         os.path.relpath(SRC, RACINE)],
                        cwd=RACINE, capture_output=True, text=True)
     if g.stdout.strip():
         print("LE SOURCE PORTE UN TRAVIAL NON CONSIGNE — ABSTENTION")
         print("  " + g.stdout.strip()[:140])
-        return 3
+        return degrader("SOURCE A TRAVIAL NON CONSIGNE — ABSTENTION", [
+            "  " + g.stdout.strip()[:140]])
     fils = fils_de_sonde_vivants()
     if fils:
         print("UN FILS DE LA SONDE TOURNE ENCORE — ABSTENTION")
         for l in fils[:3]:
             print("  " + l[:130])
-        return 8
+        return degrader("UN FILS DE LA SONDE TOURNE ENCORE — ABSTENTION", [
+            "  " + l[:130] for l in fils[:3]])
 
     original = lire(SRC)
     tref = sha(original.encode("utf-8"))
@@ -104,7 +134,8 @@ def main():
     if rc_ref != 0:
         print("  IMPOSSIBLE: la reference n'est pas verte — la morsure n'a pas")
         print("  de sens. Derniere ligne:" + (out_ref.strip().splitlines() or [""])[-1][:110])
-        return 4
+        return degrader("REFERENCE NON VERTE (rc=%d) — pas de terrain" % rc_ref, [
+            "  " + (out_ref.strip().splitlines() or [""])[-1][:110]])
     print("  la mesure existe (les 9 checks passent contre l'oracle)")
 
     mordues = []

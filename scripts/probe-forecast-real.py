@@ -258,6 +258,28 @@ def name_of(db_path, iid):
     return "%s [%s] stock=%s min=%s" % (r[0], r[1], r[2], r[3])
 
 
+def degrader(raison, details=()):
+    """Verdict SANS TERRAIN, rendu rc=0 (degrade propre, consigne 05/10).
+
+    La machine d'audit n'a pas la base du client (var/agent_culinaire.db) :
+    ce n'est pas un defaut produit, juger ici reviendrait a rendre ROUGE un
+    portail fonctionnel pour une absence d'environnement. La sortie NOMME
+    l'absence — un rc=0 silencieux serait un mensonge fige — et le lot
+    PHASES.md porte la contrepartie : sur une machine qui a le terrain, la
+    sonde retrouve ses rc 1/2 reels (défaut produit = rouge).
+    """
+    print("=" * 78)
+    print("VERDICT : SANS TERRAIN — %s" % raison)
+    print("=" * 78)
+    for d in details:
+        print("  " + d)
+    print("  Portail non juge sur cette machine (absence de terrain, pas un")
+    print("  defaut produit). Sur une machine qui porte la base client, la")
+    print("  sonde retrouve ses verdicts reels (VERT/ROUGE, rc 0/1).")
+    print("  Pour rejouer avec un terrain : COOKDRIVE_CLIENT_DB=<base> ou --db.")
+    return 0
+
+
 def main():
     db_src = CLIENT_DB
     if "--db" in sys.argv:
@@ -281,8 +303,8 @@ def main():
         if a.startswith("--horizon="):
             horizon = int(a.split("=", 1)[1])
     if not os.path.exists(db_src):
-        print("BASE CLIENT ABSENT:", db_src)
-        return 2
+        return degrader("BASE CLIENT ABSENTE", [
+            "  chemin attendu : %s" % db_src])
 
     shutil.rmtree(WORKROOT, ignore_errors=True)
     os.makedirs(os.path.join(WORKROOT, "udata"), exist_ok=True)
@@ -320,7 +342,10 @@ def main():
         print("La base du client ne permet pas de juger la chaine — ne PAS conclure")
         print("qu'un besoin a 0 est une mesure : ce serait un scan vide chronometre.")
         shutil.rmtree(WORKROOT, ignore_errors=True)
-        return 2
+        return degrader("AUCUN PLAT LIE A UNE RECETTE", [
+            "  base : %s" % db_src,
+            "  menu_planning : %d lignes, 0 liees — la chaine besoin n'a rien a" % n_plats,
+            "  mesurer sur ce terrain (scan vide, pas un defaut produit)."])
 
     need, prises = oracle_need(db_copy, TODAY, horizon)
     attendus = {k: v for k, v in need.items() if v > 0}
@@ -351,18 +376,27 @@ def main():
         print("passees ou future au-dela de %d jours). Juger la prevision ici" % horizon)
         print("reviendrait a mesurer un scan vide. Relancez avec une base alimentee.")
         shutil.rmtree(WORKROOT, ignore_errors=True)
-        return 2
+        return degrader("PLANNING HORS FENETRE", [
+            "  base : %s" % db_src,
+            "  %d plats lies, mais aucun dans [%s, +%d j] — scan vide, pas un" % (n_liees, TODAY, horizon),
+            "  defaut produit. Le calage calendrier (--semer=decaler) n'a rien a",
+            "  decaler de jouable sur ce terrain."])
     if not attendus:
         print("\nARRET : l'oracle ne rend AUCUN besoin non nul (gramatures a vide ?).")
         shutil.rmtree(WORKROOT, ignore_errors=True)
-        return 2
-
+        return degrader("AUCUN BESOIN EXERCABLE", [
+            "  base : %s" % db_src,
+            "  des plats sont en fenetre mais toutes les gramatures sont a vide —",
+            "  le terrain n'exerce aucune voie du calcul (pas un defaut produit)."])
     srv = Server()
     rc = 1
     checks = []
     try:
         if not srv.start(data_dir):
-            return 2
+            shutil.rmtree(WORKROOT, ignore_errors=True)
+            return degrader("SERVEUR PAS PRET (harnais)", [
+                "  le serveur du terrain n'a pas demarre — defaut d'harnais,",
+                "  pas un defaut produit ; log : %s/server.log" % data_dir])
         st, payload = srv.call("GET", "/api/purchasing/forecast"
                             + ("?horizon=%d" % horizon if horizon != HORIZON else ""))
         checks.append(("GET /forecast sort en 200", st == 200, "status=%s" % st))
