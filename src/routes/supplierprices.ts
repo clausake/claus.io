@@ -7,6 +7,7 @@ import {
   lireBooleen,
   REJETE_BOOLEAN,
 } from "../shared/util.js";
+import type { AuditLogger } from "../services/audit.js";
 
 interface InvItem {
   id: string;
@@ -29,7 +30,7 @@ interface SupplierPriceRow {
   inventory_unit_price?: number | null;
 }
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 // Supplier Prices API
@@ -163,6 +164,7 @@ try {
   const relu = await db.get(
     "SELECT id, supplier_id, inventory_id, raw_unit_price, unit, calculated_price_per_ref, valid_until, is_verified_from_invoice FROM supplier_prices WHERE id = ?",
     [priceId]);
+  await logAudit(req, res, { route: "/api/supplier-prices", action: resultat ? "update" : "create", entite: priceId, payload: { apres: { raw_unit_price: prix, unit: uniteFournisseur, calculated_price_per_ref: calculated_price_per_ref ?? null } } });
   res.json({
     status: "success",
     id: priceId,
@@ -180,6 +182,7 @@ try {
 router.delete("/api/supplier-prices/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM supplier_prices WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/supplier-prices/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
 } catch (error) {
   console.error("Error deleting supplier price:", error);
@@ -428,6 +431,7 @@ try {
     // Le compte-rendu NE RECITE pas le client: `ecrites` vient du SQL
     // (changes) et les lignes ignorees sont NOMMEES. Un import partiel
     // muet etait le defaut juge I1/I6.
+    await logAudit(req, res, { route: "/api/supplier-prices/import-confirm", action: "create", payload: { importees: ecrites, ignorees: rejetees.length } });
     res.json({
       status: "success",
       importees: ecrites,

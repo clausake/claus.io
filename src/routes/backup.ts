@@ -6,12 +6,15 @@ import fs from "fs";
 import path from "path";
 import archiver from "archiver";
 import { resolveStorageDir } from "../db/init.js";
+import { logAuditRacine } from "../services/audit.js";
 
 const router = Router();
 
 const storageDir = resolveStorageDir();
 
-router.post("/api/backup", async (_req, res) => {
+const logAudit = logAuditRacine;
+
+router.post("/api/backup", async (req, res) => {
   try {
     const output = fs.createWriteStream(path.join(storageDir, "backup.zip"));
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -21,6 +24,7 @@ router.post("/api/backup", async (_req, res) => {
     archive.pipe(output);
     archive.directory(storageDir, false, { date: new Date() });
     archive.finalize();
+    logAudit(req, res, { route: "/api/backup", action: "backup" }).catch(() => {});
   } catch (error) {
     console.error("[BACKUP] Erreur :", error);
     res.status(500).json({ error: "Backup failed" });

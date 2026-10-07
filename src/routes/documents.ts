@@ -15,8 +15,9 @@ import {
   lireTexteDeLigne,
   totalOuNul,
 } from "../shared/document-items.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/documents", async (req, res) => {
@@ -237,6 +238,7 @@ try {
       // que la relecture dement.
       throw new Error("document_non_relie");
     }
+    await logAudit(req, res, { route: "/api/documents", action: "create", entite: relu.id, payload: { type: typeDoc, total_amount: total, lignes: posees, ignorees: rejetees.length } });
     res.json({
       status: "success",
       id: relu.id,
@@ -469,6 +471,8 @@ try {
   // et jamais rendue est un PASS creux: le harnais croit juger un refus notifié
   // alors que la route le tait (verifie par
   // test/e2e/documents-validate-contract.spec.ts, check V2_LA_LIGNE_REJETEE_EST_NOMMEE_ET_NON_TUEE).
+  // La validation est un MOUVEMENT DE STOCK + une ecriture de prix : tracee.
+  await logAudit(req, res, { route: "/api/documents/:id/validate", action: "validate", entite: id, payload: { apres: { status: "VALIDATED" }, prix_non_exploitables: prixNonExploitables.length } });
   res.json({ status: "success", prix_non_exploitables: prixNonExploitables });
 } catch (error) {
   console.error(error);
@@ -520,6 +524,7 @@ try {
       "INSERT INTO documents (id, type, supplier, date, total_amount, source_image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [id, "A DEFINIR", "", "", 0, `/uploads/${filename}`, "DRAFT"]
     );
+    await logAudit(req, res, { route: "/api/documents/upload", action: "create", entite: id, payload: { type: "DRAFT" } });
     return res.json({ status: "success", type: "draft", id, source_image_url: `/uploads/${filename}` });
   }
 
@@ -696,6 +701,8 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDO
         JSON.stringify(data.allergens || []),
       ],
     );
+    // HACCP obligatoirement trace : l'upload extrait un lot + une etiquette.
+    await logAudit(req, res, { route: "/api/documents/upload", action: "create", entite: batchId, payload: { product: productName, lot: lotNumber, dlc: dlcStr } });
     res.json(data);
   } catch (parseError) {
     console.error('[OLLAMA/DB/JSON] Processing failed. Error:', parseError, '\nRaw response:', cleanResponse);
@@ -878,7 +885,7 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
       data.total_amount || 0,
       docId
     ]);
-    
+    await logAudit(req, res, { route: "/api/documents/:id/extract", action: "update", entite: docId, payload: { apres: { status: "PENDING", type: data.type || "A DEFINIR" } } });
     res.json({ data, source_image_url: data.source_image_url });
   } catch (parseError) {
     console.error("[OLLAMA] Erreur de parsing JSON :", cleanResponse);

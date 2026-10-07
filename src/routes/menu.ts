@@ -9,8 +9,9 @@ import { upload } from "../shared/upload.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import { uploadsDir } from "../services/paths.js";
 import { STANDARD_QUANTITIES_PROMPT, STANDARD_QUANTITIES_ES_PROMPT, STANDARD_QUANTITIES_DE_PROMPT, STANDARD_QUANTITIES_IT_PROMPT, STANDARD_QUANTITIES_ENG_PROMPT } from "../prompts/menuPrompts.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 // Sprint 16 : normaliser la catégorie lue par l'IA en une carte du produit
@@ -196,6 +197,7 @@ recette: "Recipe Name", categorie: "Kategorie", ingredients: [{name: "Name", qua
       }),
     );
   }
+  await logAudit(req, res, { route: "/api/analyze-menu", action: "analyze" });
   res.json(parsedData);
 } catch (error) {
   console.error(error);

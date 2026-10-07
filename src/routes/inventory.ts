@@ -15,8 +15,9 @@ import {
 } from "../shared/inventory-fields.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/inventory", async (req, res) => {
@@ -144,6 +145,7 @@ try {
     "INSERT INTO inventory (id, name, quantity, minStock, unit, status, category, unit_price, yield_percent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [itemId, nom, quantite as number, minimum as number, unite as string, statut, categorie as string, prix as number, rendement as number],
   );
+  await logAudit(req, res, { route: "/api/inventory", action: "create", entite: itemId, payload: { apres: { name: nom, quantity: quantite, unit: unite, status: statut, category: categorie, unit_price: prix, yield_percent: rendement } } });
   // La reponse relit la BASE (meme contrat que le PUT, S4_RELECTURE) : sans
   // cette relecture la route rendoit un objet recite du corps de la requisette,
   // et un client qui se fie a sa reponseaffiche ce que la base ne contient pas.
@@ -335,6 +337,7 @@ router.post("/api/inventory/bulk", async (req, res) => {
       }
       relues.push(relu);
     }
+    await logAudit(req, res, { route: "/api/inventory/bulk", action: "create", payload: { importes: relues.length, ids: relues.map((r: any) => r.id) } });
     res.json({ status: "success", importes: relues.length, ids: relues.map((r: any) => r.id), items: relues });
   } catch (error) {
     if (en_transaction) {
@@ -351,6 +354,7 @@ router.post("/api/inventory/bulk", async (req, res) => {
 router.delete("/api/inventory/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM inventory WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/inventory/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
 } catch (error) {
   console.error("Error deleting inventory item:", error);
@@ -495,6 +499,7 @@ try {
     "SELECT id, name, quantity, minStock, unit, status, category, unit_price, yield_percent, lot_number, dlc FROM inventory WHERE id = ?",
     [id],
   );
+  await logAudit(req, res, { route: "/api/inventory/:id", action: "update", entite: id, payload: { colonnes: ecrites } });
   res.json({ status: "success", item: relu, updated: ecrites });
 } catch (error) {
   console.error("Error updating inventory item:", error);
@@ -608,6 +613,7 @@ try {
       );
       if (relu) relues.push(relu);
     }
+    await logAudit(req, res, { route: "/api/inventory/consume", action: "consume", payload: { consomme: touches, items: relues.map((r) => r.id) } });
     res.json({ success: true, consumed: touches, items: relues });
   } catch (e) {
     if (en_transaction) {

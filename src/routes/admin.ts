@@ -2,9 +2,10 @@
 import { Router } from "express";
 import fs from "fs";
 import path from "path";
+import type { AuditLogger } from "../services/audit.js";
 
 // Factory : les routes admin ont besoin du dossier de données utilisateur.
-export default function adminRouter(storageDir: string) {
+export default function adminRouter(storageDir: string, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/admin/guide-download", (req, res) => {
@@ -27,6 +28,7 @@ if (fs.existsSync(dbFile)) {
 router.post("/api/backup", (req, res) => {
 const dbFile = path.join(storageDir, "agent_culinaire.db");
 if (fs.existsSync(dbFile)) {
+  logAudit(req, res, { route: "/api/backup", action: "backup" });
   res.json({
     status: "success",
     message: "Database is healthy and persisted.",
@@ -77,6 +79,7 @@ router.post("/api/agent/command", async (req, res) => {
       found_supplier: cartItem?.supplier ?? null,
     });
   }
+  await logAudit(req, res, { route: "/api/agent/command", action: "agent_command", payload: { lignes: rpaResults.length, mode: "SIMULATION" } });
   res.json({
     status: "success",
     // Le contrat est dans le NOM: ce qui est rendu est une simulation

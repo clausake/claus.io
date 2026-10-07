@@ -12,6 +12,7 @@ import { uploadsDir } from "../services/paths.js";
 import { settingsPath } from "../services/settings.js";
 import { requireString, optionalString } from "../middleware/validate.js";
 import { sensorHub } from "../services/sensor-hub.js";
+import type { AuditLogger } from "../services/audit.js";
 import {
   TEMPERATURE_MIN, TEMPERATURE_MAX, RECEPTION_TEMP_MIN, RECEPTION_TEMP_MAX,
   QUANTITE_LOT_MAX, TYPES_CAPTEUR, TYPES_EQUIPEMENT, TYPES_ENTREE, MODES_CAPTEUR,
@@ -26,7 +27,7 @@ import {
 // locale ne empecherait pas l'accumulation de timers.
 let sensorStreamTimer: NodeJS.Timeout | undefined;
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
   // Maintenance du flux SSE : heartbeat (traverse les proxies sans devenir un
@@ -192,6 +193,9 @@ Verlassen Sie die Menge NIEMALS bei 0, wenn das Gewicht sichtbar ist.`
         JSON.stringify(data.allergens || []),
       ],
     );
+    // HACCP obligatoirement trace (regl. (CE) n°852/2004 art. 5) : le scan
+    // cree un lot et une etiquette de tracabilite.
+    await logAudit(req, res, { route: "/api/haccp/scan", action: "create", entite: batchId, payload: { product: productName, lot: lotNumber, dlc: dlcStr, inventory_id: inventoryId } });
     res.json(data);
   } catch (parseError) {
     console.error("[OLLAMA] Parsing failed. Raw response:", responseText, parseError);
@@ -267,6 +271,7 @@ router.post("/api/haccp/iot-sensors", async (req, res) => {
       "INSERT INTO iot_sensors (id, name, type, equipment_type, battery, last_reading, last_reading_at, webhook_token) VALUES (?, ?, ?, ?, 100, 20.0, ?, ?)",
       [capteurId, nom, typ, eqt, maintenantISO(), token]
     );
+    await logAudit(req, res, { route: "/api/haccp/iot-sensors", action: "create", entite: capteurId, payload: { apres: { name: nom, type: typ, equipment_type: eqt } } });
     res.json({ status: "success", token });
     // Un onglet HACCP deja ouvert doit voir le capteur sans rafraichissement.
     try {
@@ -287,6 +292,7 @@ router.post("/api/haccp/iot-sensors", async (req, res) => {
 router.delete("/api/haccp/iot-sensors/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM iot_sensors WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/haccp/iot-sensors/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
   // Le tableau de bord doit retirer la ligne sans attendre un rafraichissement.
   try {
@@ -359,6 +365,8 @@ router.post("/api/haccp/webhook/iot-report", async (req, res) => {
     } catch (pushErr) {
       console.error("[SSE] diffusion capteur ignoree:", pushErr);
     }
+    // HACCP obligatoirement trace : la releve de temperature machine.
+    await logAudit(req, res, { route: "/api/haccp/webhook/iot-report", action: "create", entite: logId, payload: { sensor_id: capteurId, temperature: tempVal } });
     res.json({ status: "success", message: `Data compiled for ${sensor.name}.`, temperature: tempVal });
   } catch (err) {
     console.error("Webhook ingestion error:", err);
@@ -406,6 +414,8 @@ router.post("/api/haccp/temperature", async (req, res) => {
       "INSERT INTO temperature_logs (id, equipment_name, temperature, user, recorded_at, entry_type, sensor_mode) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [id, equipement, releve, operateur, instant, entree, mode],
     );
+    // HACCP obligatoirement trace : le releve de temperature saisi a la main.
+    await logAudit(req, res, { route: "/api/haccp/temperature", action: "create", entite: id, payload: { equipment: equipement, temperature: releve, user: operateur } });
     res.json({ status: "success", id });
   } catch (error) {
     res.status(500).json({ status: "error", message: "Failed to log temperature" });
@@ -444,6 +454,7 @@ async (req, res) => {
       "INSERT INTO haccp_documents (id, type, name, file_url) VALUES (?, ?, ?, ?)",
       [id, type, name, fileUrl],
     );
+    await logAudit(req, res, { route: "/api/haccp/documents/upload", action: "create", entite: id, payload: { type, name } });
     res.json({ id, type, name, fileUrl, date: new Date().toISOString() });
   } catch (error) {
     console.error(error);
@@ -462,6 +473,7 @@ try {
     "INSERT INTO haccp_documents (id, type, name, file_url) VALUES (?, ?, ?, ?)",
     [id, type, name, fileUrl],
   );
+  await logAudit(req, res, { route: "/api/haccp/documents", action: "create", entite: id, payload: { type, name } });
   res.json({ status: "success", id });
 } catch (error) {
   console.error(error);
@@ -471,6 +483,7 @@ try {
 router.delete("/api/haccp/documents/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM haccp_documents WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/haccp/documents/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
 } catch (e) {
   res.status(500).json({ error: "DB error" });
@@ -489,6 +502,8 @@ router.post("/api/haccp/cleaning", async (req, res) => {
       "INSERT INTO cleaning_records (id, zone_name, completed_by) VALUES (?, ?, ?)",
       [id, zone, lireTexte(completed_by, 100) ?? "SYSTÈME"],
     );
+    // HACCP obligatoirement trace : le registre de nettoyage.
+    await logAudit(req, res, { route: "/api/haccp/cleaning", action: "create", entite: id, payload: { zone: zone } });
     res.json({ status: "success", id });
   } catch (error) {
     res.status(500).json({ error: "Failed to save record" });
@@ -561,6 +576,8 @@ router.post("/api/haccp/production", async (req, res) => {
       await db.run("ROLLBACK");
       throw e;
     }
+    // HACCP obligatoirement trace : la production rattachee a une recette.
+    await logAudit(req, res, { route: "/api/haccp/production", action: "create", entite: productionId, payload: { recipe_id: recette, batch_ids: lots } });
     res.json({ status: "success", productionId });
   } catch (error) {
     res.status(500).json({ error: "Failed to record production" });
@@ -627,6 +644,8 @@ router.post("/api/haccp/batches", async (req, res) => {
       [id, article, lot, echeance, lireTexte(source_image_url, COLONNE_TEXTE_MAX) ?? null,
        poids, mesure, reception, packaging_ok ? 1 : 0],
     );
+    // HACCP obligatoirement trace : le lot de tracabilite (dlc, lot, reception).
+    await logAudit(req, res, { route: "/api/haccp/batches", action: "create", entite: id, payload: { inventory_id: article, lot_number: lot, expiration_date: echeance, quantity: poids } });
     res.json({ status: "success", id });
   } catch (error) {
     console.error("Save batch error:", error);
@@ -670,6 +689,8 @@ router.post("/api/haccp/corrective-action", async (req, res) => {
       "INSERT INTO corrective_actions (id, log_id, action_taken) VALUES (?, ?, ?)",
       [id, reliquat, action],
     );
+    // HACCP obligatoirement trace : l'action corrective rattachee a sa releve.
+    await logAudit(req, res, { route: "/api/haccp/corrective-action", action: "create", entite: id, payload: { log_id: reliquat } });
     res.json({ status: "success", id });
   } catch (error) {
     res.status(500).json({ error: "Failed to save corrective action" });
