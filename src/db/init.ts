@@ -502,6 +502,31 @@ export async function initDatabase(): Promise<DbInitResult> {
     CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(timestamp);
     CREATE INDEX IF NOT EXISTS idx_audit_log_entite ON audit_log(entite);
   `);
+
+  // Chantier 3 — boîte de réception de suggestions. La SEULE ecriture de
+  // l'agent (§8 : Hermes informe, l'humain execute). `action_route` +
+  // `action_payload` portent l'action PRE-REMPLIE que l'humain appliquera a
+  // SA signature via la route cible — la suggestion ne touche JAMAIS le
+  // metier elle-meme. statut: nouveau | applique | rejete (+ motif_rejet et
+  // applique_par pour la trace). L'application REJOUANT la route cible, elle
+  // est journalisee dans audit_log par le helper du chantier 2.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS suggestions (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      priorite TEXT NOT NULL DEFAULT 'normale' CHECK(priorite IN ('basse','normale','haute')),
+      titre TEXT NOT NULL,
+      explication TEXT,
+      action_route TEXT NOT NULL,
+      action_payload TEXT,
+      statut TEXT NOT NULL DEFAULT 'nouveau' CHECK(statut IN ('nouveau','applique','rejete')),
+      motif_rejet TEXT,
+      applique_par TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      decided_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_suggestions_statut ON suggestions(statut);
+  `);
   // Purge des sessions expirees : la table ne doit pas grossir sans limite
   // sur une installation qui tourne des mois.
   await db.run("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);
