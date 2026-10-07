@@ -46,12 +46,25 @@ function currentUser(res: { locals: Record<string, unknown> }): SessionUser | un
 export default function createSuggestionsRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
+  // MODE SANS AGENT (§8) : COOKDRIVE_AGENT_OFF=1 ferme la boite ENTIEREMENT —
+  // l'agent n'existe pas dans ce mode, il ne peut rien proposer. Env de
+  // LANCEMENT (pas de harnais) : une installation qui la pose n'a plus
+  // d'agent, la saisie manuelle reste complete. Le maitre peut la poser pour
+  // desactiver Hermes sans supprimer ses comptes.
+  const agentCoupe = process.env.COOKDRIVE_AGENT_OFF === "1";
+
   // --- Creation : la SEULE ecriture de l'agent. Validee au niveau du FORMULAIRE,
   // pas du contenu de la proposition (l'agent peut se tromper, l'humain jugera) :
   // type/priorite de l'enum, titre non blanc, action_route dans la liste blanche,
   // action_payload du JSON serialisable.
   router.post("/api/suggestions", async (req, res) => {
     try {
+      // Mode sans agent : la boite est fermee. 404 — la route n'existe pas
+      // dans ce mode (pas un 403 qui suggererait qu'il suffirait d'etre
+      // maitre pour la rouvrir, et pas un 503 qui dirait "reessayez").
+      if (agentCoupe) {
+        return res.status(404).json({ error: "MODE_SANS_AGENT", message: "Ce poste tourne sans agent : la boite de suggestions est fermee." });
+      }
       const actor = currentUser(res);
       // §8 : l'agent propose. Le maitre peut aussi saisir une suggestion a la
       // main (mode sans agent). Le staff non : la boite n'est pas son ecran.

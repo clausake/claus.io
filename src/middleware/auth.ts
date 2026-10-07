@@ -60,6 +60,9 @@ export async function loadSession(
 // etait morte et l'agent etait refuse sur sa propre boite.
 const ECRITURES_AGENT = new Set([
   "/suggestions", // chantier 3 : la seule ecriture de l'agent
+  // MODE SANS AGENT (§8) : quand COOKDRIVE_AGENT_OFF=1, cette exemption est
+  // FERMEE (voir plus bas) — l'agent ne propose plus rien, la boite lui rend
+  // 404 MODE_SANS_AGENT et la gate lui rend 403 sur TOUTE ecriture.
 ]);
 
 export function sessionGate(): RequestHandler {
@@ -74,7 +77,13 @@ export function sessionGate(): RequestHandler {
         message: "Connectez-vous pour effectuer cette action.",
       });
     }
-    if (user.role === "agent" && ![...ECRITURES_AGENT].some((p) => req.path.startsWith(p))) {
+    // L'agent ecrit SEULEMENT via son exemption §8, et SEULEMENT si l'agent
+    // est active (COOKDRIVE_AGENT_OFF=1 ferme l'exemption : il ne propose
+    // plus rien, la boite lui rend 404 et la gate 403 sur toute ecriture).
+    const agentAutorise =
+      user.role === "agent" && process.env.COOKDRIVE_AGENT_OFF !== "1" &&
+      [...ECRITURES_AGENT].some((p) => req.path.startsWith(p));
+    if (user.role === "agent" && !agentAutorise) {
       return res.status(403).json({
         error: "AGENT_LECTURE_SEULE",
         message: "L'agent ne peut pas ecrire dans le metier. L'humain execute.",
