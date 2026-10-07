@@ -468,3 +468,10 @@ x2, verify:auth 14/14, verify:split vert (ancre recalculee).
   (/api/haccp/temperature -> temperature_logs), pas sur un compteur de la
   table suggestions : une application qui marquerait 'applique' sans
   rejouer la cible resterait un PASS creux.
+
+### Morsure jouee (07/10, apres commit 5fad2b4)
+
+`verify:suggestions-mord` VERTE : le check de la liste blanche neutralise
+(`if (false)`) fait rougir A4c (`ECHEC A4c ... status=201`), restauration OK.
+La boite ne peut pas redevenir une voie de contournement sans rougir.
+Branchee au DEFAUT du lot.

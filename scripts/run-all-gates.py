@@ -117,6 +117,12 @@ DEFAUT = ["verify:split",
           # tracee dans audit_log (D1). La retirer rend la boite jugeable
           # partiellement sans qu'aucun lot ne le voie.
           "verify:suggestions",
+          # La morsure du contrat suggestions : elle neutralise le CHECK de
+          # la liste blanche (if (false)), rejoue verify:suggestions, exige
+          # ECHEC sur A4c puis RESTAURE. Elle prouve que la boite ne peut
+          # pas redevenir une voie de contournement de la gate §8 sans
+          # qu'aucun lot ne le voie.
+          "verify:suggestions-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
