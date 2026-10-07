@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "ab868e90622c4453ef827e26595779581a29da96442224f686fe9af4a468d5d6",
-  "chaud_octets": 24010,
+  "original_sha256": "8c3c13ccafbb561b7a767b7708c2d763fc767efc6caa6030283deaaeab846ccf",
+  "chaud_octets": 24311,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 390,
-  "tokens_approx_chaud": 5836,
+  "lignes_chaud": 397,
+  "tokens_approx_chaud": 5909,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-07T15:00:17.258412",
+    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee + morsure jouee apres commit (A12 rougit, restauration OK)",
+    "date": "2026-10-07T15:03:11.070544",
     "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "sprint 16.a (chat plein ecran dans Ingenierie des Menus, fiches en TROIS CARTES pretes a sauvegarder pre-remplies, fiches editables 100 %, normaliserCarte cote serveur) ajoute au chaud (stub) + archive phases/sprint-16-sprint-16-a-l-onglet-ingenierie-des-menus-de.md ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-    "date": "2026-09-28T16:13:57.886792",
+    "motif": "chantier 2 (audit trail) ajoute au chaud + le stub 16.a POSE (il avait ete promis par 2d1b3c1 sans jamais etre ecrit: le disque portait le segment chaud et verify:split rougissait avec raison) ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-07T15:00:17.258412",
     "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre."
   }
 }

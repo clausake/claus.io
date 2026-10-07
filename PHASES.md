@@ -388,3 +388,10 @@ tsc 0 erreur, vitest 158/158, build 492.7 ko (< plafond 620), verify:audit
   avec raison). Repare ici : stub pose + nouvelle ancre calculee par la boucle
   du juge. Leçon : une consigne « pose le stub » se VERIFIE par grep du stub
   avant le commit, pas par le sha du manifest seul.
+
+### Morsure jouee (07/10, apres commit 2a13d09)
+
+`verify:audit-mord` VERTE : la mutation (logAudit retire de /api/staff) fait
+rougir A12 (`ECHEC A12 audit_log create staff`), la restauration git checkout
+ramene l'arbre propre. La porte ne peut pas rester verte par hasard. Branchee
+au DEFAUT du lot.

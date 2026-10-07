@@ -99,6 +99,13 @@ DEFAUT = ["verify:split",
           # nettoyage, A10 actions correctives). La retirer rend la
           # tracabilite jugeable partiellement sans qu'aucun lot ne le voie.
           "verify:audit",
+          # La morsure du contrat d'audit : elle retire le logAudit de
+          # POST /api/staff, rejoue verify:audit, exige ECHEC sur A12 puis
+          # RESTAURE (garde ARBRE_SALE). Elle prouve que la porte peut ROUGIR
+          # — un PASS qui ne peut pas devenir FAIL n'est pas une mesure.
+          # Elle exige un arbre propre (git checkout), donc elle n'est
+          # JAMAS jouee sur un workspace sale.
+          "verify:audit-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
