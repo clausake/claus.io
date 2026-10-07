@@ -3,8 +3,9 @@ import { Router } from "express";
 import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/anti-waste/critical", async (req, res) => {
@@ -158,6 +159,7 @@ R\xE9ponds UNIQUEMENT en JSON avec ce format en ${langName} :
     prompt,
     format: "json",
   });
+  await logAudit(req, res, { route: "/api/anti-waste/generate", action: "generate" });
   res.json(safeJsonParse(response.response));
 } catch (error) {
   console.error("Anti-waste generation error:", error);

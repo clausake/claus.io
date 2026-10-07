@@ -1,8 +1,9 @@
 // Routes : Recherche + alertes
 import { Router } from "express";
 import type { Database } from "sqlite";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/search", async (req, res) => {
@@ -64,6 +65,7 @@ try {
   await db.run('UPDATE alerts SET status = "resolved" WHERE id = ?', [
     req.params.id,
   ]);
+  await logAudit(req, res, { route: "/api/alerts/:id/resolve", action: "update", entite: req.params.id, payload: { apres: { status: "resolved" } } });
   res.json({ success: true });
 } catch (error) {
   res
@@ -76,6 +78,7 @@ try {
   await db.run('UPDATE alerts SET status = "ignored" WHERE id = ?', [
     req.params.id,
   ]);
+  await logAudit(req, res, { route: "/api/alerts/:id/ignore", action: "update", entite: req.params.id, payload: { apres: { status: "ignored" } } });
   res.json({ success: true });
 } catch (error) {
   res

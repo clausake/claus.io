@@ -97,7 +97,9 @@
     "verify:livrable": "python3 scripts/probe-livrable-14.py",
     "verify:extraction": "python3 scripts/negative-test-extraction.py",
     "verify:langues-formats": "python3 scripts/mesurer-langues-formats.py",
-    "verify:etiquettes-dlc": "python3 scripts/juge-etiquettes-dlc.py"
+    "verify:etiquettes-dlc": "python3 scripts/juge-etiquettes-dlc.py",
+    "verify:audit": "node scripts/verify-audit.mjs",
+    "verify:audit-mord": "python3 scripts/negative-test-audit.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

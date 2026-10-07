@@ -2,8 +2,9 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { requireString, optionalString } from "../middleware/validate.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/staff", async (req, res) => {
@@ -82,6 +83,7 @@ try {
       }
     }
   }
+  await logAudit(req, res, { route: "/api/staff", action: "create", entite: staffId, payload: { apres: { name: name, role: roleVal, hourly_rate: rateVal } } });
   res.json({ status: "success", id: staffId });
 } catch (error) {
   console.error(error);
@@ -93,6 +95,7 @@ try {
 router.delete("/api/staff/:id", async (req, res) => {
 try {
   await db.run("UPDATE staff SET active = 0 WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/staff/:id", action: "delete", entite: req.params.id, payload: { apres: { active: 0 } } });
   res.json({ status: "success" });
 } catch (error) {
   res
@@ -133,6 +136,7 @@ try {
           ]
       );
   }
+  await logAudit(req, res, { route: "/api/staff/duplicate-week", action: "create", payload: { semaine_source: prevWeekStart, semaine_cible: currentWeekStart, lignes: prevEntries.length } });
   res.json({ status: "success" });
 } catch (error) {
   console.error(error);

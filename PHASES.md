@@ -260,74 +260,7 @@ sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
 > Archive verbatim. Ne pas relire sauf si un test, un verdict ou une consigne cite nommement ce sprint.
 
 
-## Sprint 16.a - l'onglet Ingenierie des Menus devient le chat, les fiches se rangent en trois cartes (27 sept.)
-
-### La decision jouee
-
-Le maitre d'ouvrage (journal 22/09, appliquee au sprint 14.c) : la generation
-automatique « diversite » (les trois menus creatif/gastronomique/traditionnel)
-est ANNULEE — le chef AFFINE ses recettes EN DISCUTANT, puis les sauvegarde en
-fiches techniques. Suite du 27/09 : le chat culinaire prend la place de la
-grille de modes dans l'onglet Ingenierie des Menus ; les fiches nees de
-l'echange se rangent en TROIS CARTES (Entree / Plat / Dessert) pretes a etre
-sauvegardees dans l'onglet Fiches Techniques, par ordre alphabetique ; les
-fiches sont editables a 100 % (texte et quantites).
-
-### Ce qui a ete ecrit
-
-- `src/shared/recette-chat.ts` : le parseur du gabarit (NOM / INGREDIENTS /
-  ETAPES). Une reponse qui ne se lit pas entiere rend null — le formulaire
-  s'ouvre VIDE, jamais une fiche inventee. La quantite absente est null
-  NOMMEE, pas 0. Faute trouvee a la 1re course : le pre-strip de puce mangeait
-  les chiffres de tete (« 300 g de farine » lu en « g de farine ») — corrige
-  dans le parseur, la puce (« - », « 1. ») se retire SANS toucher la quantite.
-- `CulinaryChat.tsx` : porte l'HISTORIQUE au serveur (bloque sans lui, « et en
-  version vegane ? » repondait hors sujet) ; remet chaque reponse BRUTE a
-  l'onglet via `onProposition` — c'est l'onglet qui la lit, pas le chat.
-- `routes/ai.ts` : `/api/ai/chat` recoit `history` (nettoye et BORNE cote
-  serveur, `historiqueSur` — on ne fait pas confiance au client) et porte la
-  CONSIGNE_GABARIT au system prompt (sinon le modele repond en prose et le
-  bouton Sauvegarder n'aurait rien a pre-remplir).
-- `MenuAnalysis.tsx` : chat plein ecran + bouton « Analyser un menu » (la
-  voie papier conservee) ; colonne des TROIS CARTES — un bouton par carte
-  deplace une proposition, « Sauvegarder en fiche technique » ouvre le VRAI
-  formulaire de l'onglet Fiches Techniques PRE-REMPLI (le chef valide/modifie,
-  jamais d'ecriture directe en base). Les etats morts des generations annulees
-  (creativeMenu/gastronomicMenu/traditionalMenu et leurs spinners) sont retirés.
-- `FichesTechniques.tsx` : les dossiers sont les TROIS CARTES + « Fiches
-  Importees » (les dossiers creative/gastronomic/traditional des generations
-  annulees ne sont plus proposes) ; tri alphabetique conserve ; la fiche du
-  chat arrive en modal editable — nom, ingredients, unite, prix, quantites,
-  etapes : tout input est edite et sauve. Le POST porte `dish_type` (la carte)
-  et le PUT porte `dish_type` + `unit` (sans eux le deplacement de carte et la
-  correction d'unite restaient purement locaux).
-- `routes/menu.ts` : la categorie lue par l'IA sur le menu papier est
-  normalisee en carte (`normaliserCarte`, liste ecrite d'avance, 5 langues ;
-  inconnue = telle quelle, rangee en Fiches Importees — jamais de devinette).
-- `App.tsx` : l'entree « Chat Culinaire » de la sidebar mene desormais a
-  l'onglet menus (le chat n'a plus d'onglet autonome) ; le relais
-  `ficheDepuisChat` depose la fiche du chat dans FichesTechniques.
-
-### Les portes
-
-- `test/unit/recette-chat.test.ts` : 13 tests (gabarit exact, quantite absente
-  = null nommee, prose libre = null, puce vs quantite, fenetre d'historique).
-- `test/e2e/recipes-contract.spec.ts` : R5b — PUT `dish_type` PORTE + morsure
-  (`dish_type:"steak"` → 400 refused nomme) + unite relue sur l'inventaire.
-  24/24 verts.
-- ANCRE_MORTE repointee : la mutation M11 du registre des recettes (le bloc
-  PUT du dish_type s'etait glisse dans son ancre) — rejouee via
-  `python3 scripts/registre-mutations-recipes.py` → ANCRE_ES_ALL_VERT 14.
-- Course complete : `GATES=68 ROUGES=0` (2 courses, dont la finale apres les
-  derniers patchs ; log test/gates-run-all-gates.py-185356.out).
-
-### Consigne
-
-La decision « generation annulee, c'est l'echange qui produit » est DOUBLement
-materialisee : plus de route cote serveur (14.c) et plus de chemin dans l'UI
-(ce sprint). La voie papier (analyser un menu) survit — c'est une lecture, pas
-une generation, et le maitre d'ouvrage l'a conservee.
-
+## Sprint 16.a - l'onglet Ingenierie des Menus devient le chat, les fiches se rangent en trois cartes (27 sept.) -> `phases/sprint-16-sprint-16-a-l-onglet-ingenierie-des-menus-de.md` (4166 octets, 68 lignes)
 ## Chantier 1 — Auth & identite : l'UI React, la garde de session et la page comptes du maitre (04/10)
 
 ### La decision jouee
@@ -382,3 +315,76 @@ aucun commit ne les a jamais portes) : le fichier `1` (un eval JS casse de la
 veille du 26/09) et 50 probes .txt mortes (test/14e-*, test/14f-*,
 test/gates-*, test/routes-*, etc.) — des journaux perissables qui n'avaient
 rien a faire hors .gitignore. `git status` est PROPRE.
+## Chantier 2 — Audit trail : la table audit_log, le helper logAudit et la porte verify:audit (07/10)
+
+### La decision jouee
+
+Le chantier 2 suit la feuille de route §8 : une table `audit_log` (actor_id,
+actor_kind humain/agent, route, action, entite, timestamp, payload avant/apres),
+UN SEUL point d'entree `logAudit()` et une porte `verify:audit` qui juge par
+DELTA en base — pas par un rendu de route. La tracabilite HACCP (regl. (CE)
+n°852/2004 art. 5) est obligatoirement tracee : temperature (A1), lots (A8),
+nettoyage (A9), actions correctives (A10).
+
+### Ce qui a ete ecrit
+
+- `src/services/audit.ts` : `createAuditLogger(db)` ->
+  `logAudit(req, res, {route, action, entite, payload})`. L'ecriture audit NE
+  FAIT JAMAIS echouer la route metier (try/catch + console.error).
+  `actorDe(res)` distingue humain/agent/harnais/anonyme — sous
+  `COOKDRIVE_AUTH_OFF=1` (harnais e2e), actor=harnais pour que les contrats
+  juges sous harnais ecrivent quand meme. `logAuditRacine()` + `setAuditDb()`
+  pour les deux routeurs racine non factorises (settings/backup).
+- `src/db/init.ts` : table `audit_log` (CHECK actor_kind IN
+  humain/agent/harnais/anonyme, payload TEXT JSON, timestamp datetime('now'))
+  + 2 index (ts, entite). Pas de purge automatique — la tracabilite sanitaire
+  doit survivre aux mois d'exploitation.
+- Les 20 routeurs branchements : 60 mutations couvertes (compte verifie :
+  logAudit=60 sur 62 routes mutables ; les restantes, `POST
+  /api/inventory/analyze`, `POST /api/recipes/scan` et `POST
+  /api/supplier-prices/import-analyze`, sont des analyses IA SANS ecriture en
+  base — une lecture n'est pas journalisee, sinon la table explose et l'audit
+  ne dit rien). server.ts fabrique UN logger et le passe aux factories ;
+  signature des factories mise a jour.
+- `src/middleware/auth.ts` : la gate §8 pose le fondement chantier 3 —
+  `ECRITURES_AGENT` (Set : /api/suggestions). L'agent reste refuse
+  (403 AGENT_LECTURE_SEULE) sur TOUTE mutation hors ses futures ecritures.
+- Les clefs secretes ne passent JAMAIS dans le journal : /api/clef journalise
+  le FAIT du rangement (fournisseur seul), /api/settings journalise les NOMS
+  de colonnes, pas les valeurs.
+
+### La porte
+
+- `verify:audit` (scripts/verify-audit.mjs) : juge le serveur REEL (spawn tsx,
+  USER_DATA_PATH isole, port OS alloue, garde fantomes /proc). C1 les
+  LECTURES n'ecrivent pas ; A1..A12 chaque mutation testee doit poser sa
+  ligne audit (route+action+entite juges) : HACCP
+  temperature/inventaire CRUD/recettes CRUD/fournisseurs/lot HACCP/nettoyage
+  HACCP/action corrective HACCP/menu-planning/staff ; B1 actor_kind du jeu
+  ferme ; B2 route posee sur chaque ligne. 27 checks, 3 runs verts
+  consecutifs.
+- `verify:audit-mord` (scripts/negative-test-audit.py) : la morsure — retire
+  le logAudit de POST /api/staff, rejoue la porte, exige ECHEC sur A12, puis
+  RESTAURE par git checkout (garde ARBRE_SALE : refuse de muter un arbre non
+  propre). Branchable au lot apres le commit de ce chantier (elle exige un
+  arbre propre par construction).
+- `run-all-gates.py` DEFAUT : verify:audit ajoute APRES verify:auth.
+
+### Verifie le 07/10
+
+tsc 0 erreur, vitest 158/158, build 492.7 ko (< plafond 620), verify:audit
+27/27 x3, verify:auth 14/14, verify:routes 46/46.
+
+### Pieges a retenir
+
+- `logAudit` journalise `req.path` : la valeur en base est le chemin REEL de
+  la requette (`/api/inventory/1791377225272`), pas le gabarit de la route
+  (`/api/inventory/:id`). La premiere version de verify:audit cherchait le
+  GABARIT et rougissait a tort. La porte juge desormais par chemin reel — un
+  journal qui porte le gabarit serait une reponse recitee, pas une trace.
+- Le re-ancrage du 2d1b3c1 avait PROMIS le stub 16.a sans jamais l'ecrire :
+  PHASES.md sur disque portait le segment chaud, l'ancre b68eac56 jugeait le
+  recolle AVEC stub. Le disque etait dechire (la porte verify:split rougissait
+  avec raison). Repare ici : stub pose + nouvelle ancre calculee par la boucle
+  du juge. Leçon : une consigne « pose le stub » se VERIFIE par grep du stub
+  avant le commit, pas par le sha du manifest seul.

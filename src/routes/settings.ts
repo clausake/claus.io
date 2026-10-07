@@ -16,6 +16,9 @@ import {
   consignerDemarrage, reinitialiserEpreuve,
 } from "../services/assistant.js";
 import { rangerClef, lireClef, etatClef } from "../services/coffre.js";
+import { logAuditRacine } from "../services/audit.js";
+
+const logAudit = logAuditRacine;
 
 const router = Router();
 
@@ -111,6 +114,7 @@ router.post("/api/assistant/consigner", (req, res) => {
   if (String(req.query["test"] ?? "") === "forget") reinitialiserEpreuve();
   const fournisseur = typeof req.body?.fournisseur === "string" ? req.body.fournisseur : "";
   const r = consignerDemarrage(fournisseur);
+  if (r.ok) logAudit(req, res, { route: "/api/assistant/consigner", action: "consigner", payload: { fournisseur: fournisseur } });
   res.status(r.ok ? 200 : 412).json(r);
 });
 
@@ -129,6 +133,10 @@ router.post("/api/clef", (req, res) => {
   const clef = typeof req.body?.clef === "string" ? req.body.clef : "";
   const r = rangerClef(fournisseur, clef);
   // La reponse ne porte JAMAIS la clef — seulement l'etat du rangement.
+  // L'audit non plus : on journalise le FAIT du rangement, jamais la valeur.
+  if (!("ok" in r) || r.ok !== false) {
+    logAudit(req, res, { route: "/api/clef", action: "ranger_clef", payload: { fournisseur: fournisseur } });
+  }
   res.status("ok" in r && r.ok === false ? 400 : 200).json(r);
 });
 
@@ -163,7 +171,7 @@ function estNomSecret(clef: string): boolean {
   return CLEFS_SECRETES.has(clef.trim().toLowerCase().replace(/[-_]/g, ""));
 }
 
-router.post("/api/settings", (req, res) => {
+router.post("/api/settings", async (req, res) => {
   // Le corps est le reglage complet (App.tsx poste l'objet entier). On le
   // persiste TEL QUEL — sauf les champs secrets, qui n'entrent pas ici, et
   // les champs `llm_*` qui passent par le type du contrat (Tache 9).
@@ -173,6 +181,9 @@ router.post("/api/settings", (req, res) => {
     corps[k] = v;
   }
   const settings = updateSettings(corps as Partial<typeof settingsStore.value>);
+  // Les clefs secretes sont FILTREEES du journal aussi : l'audit ne fuit pas
+  // ce que le POST ne persiste deja pas.
+  await logAudit(req, res, { route: "/api/settings", action: "update", payload: { colonnes: Object.keys(corps) } });
   res.json({ status: "success", settings });
 });
 router.get("/api/network-info", (_req, res) => {
