@@ -142,8 +142,18 @@ def cout_du_jour():
 
 print("### 0. copie de la base du CLIENT (WAL absorbe) ###", flush=True)
 if not os.path.exists(REAL_DB):
-    print("   ABSENT: pas de base client sur cette machine -> sonde sans terrain")
-    sys.exit(3)
+    # Degrade propre (consigne 05/10) : la machine d'audit n'a pas la base du
+    # client. Un rc!=0 accuserait le produit d'un defaut qui n'a PAS ete
+    # mesure. La sortie NOMME l'absence ; sur une machine qui porte la base,
+    # la sonde retrouve ses verdicts reels (VERT/ROUGE).
+    print("=" * 74)
+    print("VERDICT : SANS TERRAIN — BASE CLIENT ABSENTE")
+    print("=" * 74)
+    print("   chemin attendu : %s" % REAL_DB)
+    print("   Le portail non juge sur cette machine (absence de terrain, pas un")
+    print("   defaut produit). Pour rejouer avec un terrain :")
+    print("   COOKDRIVE_CLIENT_DB=<base> python3 scripts/probe-labor-cost-zero.py")
+    sys.exit(0)
 shutil.rmtree(DATA, ignore_errors=True)
 os.makedirs(DATA, exist_ok=True)
 # ⚠ Copier le seul .db est un PIEGE: la base du client tourne en WAL, son fichier
