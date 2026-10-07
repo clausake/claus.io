@@ -18,7 +18,7 @@ import sys
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SUG = os.path.join(BASE, "src", "routes", "suggestions.ts")
 
-ANCRE = "const ROUTES_CIBLES = new Set(["
+ANCRE = 'if (typeof action_route !== "string" || !ROUTES_CIBLES.has(action_route)) {'
 
 
 def main():
@@ -35,18 +35,23 @@ def main():
               statut)
         return 1
 
-    # Mutation : la liste blanche vide -> une route inventee n'est plus refusee.
-    # Le sed par lignes : on retire TOUTES les routes (lignes suivantes jusqu'a ]).
+    # Mutation : le CHECK de la liste blanche est NEUTRALISE a la creation —
+    # une action_route inventee (/api/unlock...) n'est plus refusee et la
+    # boite redevient une voie de contournement de la gate §8. A4c doit
+    # rougir (la creation passe en 201 au lieu de 400 ROUTE_INCONNUE).
+    # `if (false)` : syntaxiquement valide, sémantiquement mort.
     lignes = src.splitlines(True)
-    i = lignes.index(ANCRE + "\n") if (ANCRE + "\n") in lignes else -1
-    if i < 0:
-        # la declaration tient sur la ligne seule
-        print("ANCRE_ABSENTE: forme inattendue de ROUTES_CIBLES.")
+    idx = None
+    for n, l in enumerate(lignes):
+        # .strip() : la ligne brute porte l'indentation du bloc (6 espaces),
+        # startswith sur la brute ne matcherait JAMAIS (mesure du premier run).
+        if l.strip().startswith(ANCRE):
+            idx = n
+            break
+    if idx is None:
+        print("ANCRE_ABSENTE: le check ROUTES_CIBLES n'est plus la.")
         return 1
-    j = i
-    while j < len(lignes) and "]" not in lignes[j]:
-        j += 1
-    mute = "".join(lignes[:i + 1]) + "]);\n" + "".join(lignes[j + 1:])
+    mute = "".join(lignes[:idx]) + "      if (false) {\n" + "".join(lignes[idx + 1:])
     if mute == src:
         print("MUTATION_INOPERANTE")
         return 1
