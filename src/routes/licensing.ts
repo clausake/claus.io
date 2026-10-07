@@ -2,10 +2,11 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { verifyLicenseKey, LicenseState } from "../db/init.js";
+import type { AuditLogger } from "../services/audit.js";
 
 // Factory : les routes ont besoin de la base de données et de l'état licence
 // initialisés au démarrage du serveur.
-export default function licensingRouter(db: Database, licenseState: LicenseState) {
+export default function licensingRouter(db: Database, licenseState: LicenseState, logAudit: AuditLogger) {
   const router = Router();
 
   router.get("/api/trial-status", async (_req, res) => {
@@ -31,6 +32,8 @@ export default function licensingRouter(db: Database, licenseState: LicenseState
       await db.run(
         "INSERT OR REPLACE INTO app_license (key, value) VALUES ('is_unlocked', 'true')",
       );
+      // L'audit journalise le DEBLOCAGE, jamais la clef elle-meme.
+      await logAudit(req, res, { route: "/api/unlock", action: "unlock" });
       return res.json({ success: true });
     }
     return res.status(401).json({ error: "Invalid key" });

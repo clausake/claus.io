@@ -2,10 +2,11 @@
 import { Router } from "express";
 import { EpicureModel } from "../../epicure.js";
 import { ollamaSettingsRef } from "../shared/ollama.js";
+import type { AuditLogger } from "../services/audit.js";
 
 const epicureModel = new EpicureModel();
 
-export default function createRouter() {
+export default function createRouter(logAudit: AuditLogger) {
   const router = Router();
 
   router.post("/api/epicure/analyze", async (req, res) => {
@@ -16,6 +17,7 @@ export default function createRouter() {
       }
       const lang = language || ollamaSettingsRef.current.language || "fr";
       const result = epicureModel.analyzeRecipe(ingredients, lang);
+      await logAudit(req, res, { route: "/api/epicure/analyze", action: "analyze" });
       res.json(result);
     } catch (error) {
       console.error("[Epicure Analysis Error]:", error);

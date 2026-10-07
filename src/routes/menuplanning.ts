@@ -3,6 +3,7 @@ import { Router } from "express";
 import { ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
 import { requireString, optionalString } from "../middleware/validate.js";
+import type { AuditLogger } from "../services/audit.js";
 
 // Un champ de detail de plat doit rester du JSON LISIBLE. Les DEUX noms de
 // champ sont acceptes (recipe_json cote API, recipe_details cote vue Menu, que
@@ -24,7 +25,7 @@ function normalizeRecipeJson(value: unknown): string | null {
   return null;
 }
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/menu-planning", async (req, res) => {
@@ -75,6 +76,7 @@ try {
       planningLang
     ],
   );
+  await logAudit(req, res, { route: "/api/menu-planning", action: "create", entite: id, payload: { apres: { date: date, meal_type: mealType, title: titleVal } } });
   res.json({ status: "success", id });
 } catch (error) {
   console.error(error);
@@ -86,6 +88,7 @@ try {
 router.delete("/api/menu-planning/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM menu_planning WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/menu-planning/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
 } catch (error) {
   console.error(error);

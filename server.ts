@@ -17,6 +17,7 @@ import fs from "fs";
 import { initDatabase, LicenseState } from "./src/db/init.js";
 import { licenseMiddleware } from "./src/middleware/license.js";
 import { sessionMiddleware, sessionGate } from "./src/middleware/auth.js";
+import { createAuditLogger, setAuditDb } from "./src/services/audit.js";
 import cookieParser from "cookie-parser";
 import authRouter from "./src/routes/auth.js";
 import apiRateLimiter from "./src/middleware/api-rate-limiter.js";
@@ -143,31 +144,38 @@ async function startServer() {
   // non unlocké ; les GET restent autorisés.
   app.use("/api", licenseMiddleware(db, licenseState));
 
+  // Audit trail (chantier 2) : un SEUL logger, fabrique une fois, passe aux
+  // routeurs. Toute mutation appelle logAudit(req, res, ...) — la tracabilite
+  // HACCP (regl. (CE) n°852/2004 art. 5) vit dans cette table.
+  const logAudit = createAuditLogger(db);
+  // Les deux routeurs racine (settings/backup, non factorises) partagent la db.
+  setAuditDb(db);
+
   // Comptes (maitre only) + login/logout/setup/me (exemptes de session).
-  app.use(authRouter(db));
+  app.use(authRouter(db, logAudit));
 
   // --- Routeurs ---
   // /api racine : settings, backup, network-info, ollama/status
   app.use(settingsRouter);
   app.use(backupRouter);
   // Routeurs montés à la racine (leurs chemins commencent par /api/...)
-  app.use(inventoryRouter(db));
-  app.use(suppliersRouter(db));
-  app.use(documentsRouter(db));
-  app.use(menuRouter(db));
-  app.use(licensingRouterFactory(db, licenseState));
-  app.use(haccpRouter(db));
-  app.use(staffRouter(db));
-  app.use(searchRouter(db));
+  app.use(inventoryRouter(db, logAudit));
+  app.use(suppliersRouter(db, logAudit));
+  app.use(documentsRouter(db, logAudit));
+  app.use(menuRouter(db, logAudit));
+  app.use(licensingRouterFactory(db, licenseState, logAudit));
+  app.use(haccpRouter(db, logAudit));
+  app.use(staffRouter(db, logAudit));
+  app.use(searchRouter(db, logAudit));
   app.use(dashboardRouter(db));
-  app.use(recipesRouter(db));
-  app.use(menuplanningRouter(db));
-  app.use(adminRouter(storageDir));
-  app.use(epicureRouter());
-  app.use(robotsRouter(db));
-  app.use(supplierpricesRouter(db));
-  app.use(antiwasteRouter(db));
-  app.use(aiRouter(db));
+  app.use(recipesRouter(db, logAudit));
+  app.use(menuplanningRouter(db, logAudit));
+  app.use(adminRouter(storageDir, logAudit));
+  app.use(epicureRouter(logAudit));
+  app.use(robotsRouter(db, logAudit));
+  app.use(supplierpricesRouter(db, logAudit));
+  app.use(antiwasteRouter(db, logAudit));
+  app.use(aiRouter(db, logAudit));
   // /health est à la racine (pas sous /api)
   app.use(healthRouter);
 

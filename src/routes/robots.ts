@@ -1,8 +1,9 @@
 // Routes : Robots de cuisine (liste + assignation de tâches)
 import { Router } from "express";
 import type { Database } from "sqlite";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
   router.get("/api/robots", async (_req, res) => {
@@ -34,6 +35,7 @@ export default function createRouter(db: Database) {
         return;
       }
       const relue = await db.get("SELECT id, name, task, status, progress FROM robots WHERE id = ?", robotId);
+      await logAudit(req, res, { route: "/api/robots/assign", action: "update", entite: robotId, payload: { apres: { task: task, status: "active" } } });
       res.json({ status: "success", item: relue });
     } catch (error) {
       res

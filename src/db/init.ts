@@ -482,6 +482,26 @@ export async function initDatabase(): Promise<DbInitResult> {
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   `);
+
+  // Chantier 2 — audit trail. Toute mutation des 20 routeurs passe par
+  // logAudit() (src/services/audit.ts). HACCP obligatoirement trace
+  // (regl. (CE) n°852/2004 art. 5) : scan, lots, temperatures. payload porte
+  // l'avant/après quand la route en a un. Pas de purge automatique : la
+  // tracabilite sanitaire doit survivre aux mois d'exploitation.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor_id TEXT NOT NULL,
+      actor_kind TEXT NOT NULL CHECK(actor_kind IN ('humain','agent','harnais','anonyme')),
+      route TEXT NOT NULL,
+      action TEXT NOT NULL,
+      entite TEXT,
+      payload TEXT,
+      timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_entite ON audit_log(entite);
+  `);
   // Purge des sessions expirees : la table ne doit pas grossir sans limite
   // sur une installation qui tourne des mois.
   await db.run("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);

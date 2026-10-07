@@ -45,7 +45,8 @@ export async function loadSession(
 
 // La gate : GET libre (contrat license), /api/auth/* libre, sinon session
 // requise. Le role agent est refuse sur toute mutation — Hermes informe,
-// l'humain execute (§8).
+// l'humain execute (§8). SEULES exceptions d'ecriture agent, posees par §8 :
+// sa table `suggestions` (chantier 3) et la lecture de son propre audit.
 // COOKDRIVE_AUTH_OFF=1 est une env de HARNAIS (comme USER_DATA_PATH /
 // COOKDRIVE_INSTANCE_TOKEN) : le spec e2e du METIER (routes.spec.ts) boote le
 // serveur avec, pour juger les contrats metier sans identite. Le produit ne
@@ -53,6 +54,10 @@ export async function loadSession(
 // juge la gate ACTIVE (elle ne la pose pas). Une installation qui mettrait
 // cette env dans son lancement n'aurait plus d'auth — c'est un defaut
 // d'exploitation, pas du produit.
+const ECRITURES_AGENT = new Set([
+  "/api/suggestions", // chantier 3 : la seule ecriture de l'agent
+]);
+
 export function sessionGate(): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     if (process.env.COOKDRIVE_AUTH_OFF === "1") return next();
@@ -65,7 +70,7 @@ export function sessionGate(): RequestHandler {
         message: "Connectez-vous pour effectuer cette action.",
       });
     }
-    if (user.role === "agent") {
+    if (user.role === "agent" && ![...ECRITURES_AGENT].some((p) => req.path.startsWith(p))) {
       return res.status(403).json({
         error: "AGENT_LECTURE_SEULE",
         message: "L'agent ne peut pas ecrire dans le metier. L'humain execute.",

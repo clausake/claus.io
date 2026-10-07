@@ -90,6 +90,15 @@ DEFAUT = ["verify:split",
           # Hermes informe, l'humain execute). La retirer rend l'identite
           # jugeable partiellement sans qu'aucun lot ne le voie.
           "verify:auth",
+          # Chantier 2 (feuille de route §8) : l'audit trail. La sonde juge le
+          # serveur REEL (spawn tsx, USER_DATA_PATH isole) : chaque route
+          # mutable testee doit ecrire UNE LIGNE dans audit_log, lue PAR DELTA
+          # en base SQLite (le contrat "cite ≠ juge" : une route qui logge
+          # mais jamais JUGEE n'est pas couverte). HACCP obligatoirement trace
+          # (regl. (CE) n°852/2004 art. 5 : A1 temperature, A8 lots, A9
+          # nettoyage, A10 actions correctives). La retirer rend la
+          # tracabilite jugeable partiellement sans qu'aucun lot ne le voie.
+          "verify:audit",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

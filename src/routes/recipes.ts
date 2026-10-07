@@ -30,8 +30,9 @@ import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import { requireString, optionalString } from "../middleware/validate.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/recipes", async (req, res) => {
@@ -204,6 +205,7 @@ try {
     "SELECT id, name, category, dish_type, preparation_steps, allergens, language FROM recipes WHERE id = ?",
     [recipeId],
   );
+  await logAudit(req, res, { route: "/api/recipes", action: "create", entite: recipeId, payload: { apres: { name: name, category: categoryVal, dish_type: dishTypeVal } } });
   res.json({
     status: "success",
     id: recipeId,
@@ -336,6 +338,7 @@ try {
     "SELECT id, name, category, dish_type, preparation_steps, allergens, language FROM recipes WHERE id = ?",
     [req.params.id],
   );
+  await logAudit(req, res, { route: "/api/recipes/:id", action: "update", entite: req.params.id, payload: { apres: { name: name, dish_type: dishTypeCible } } });
   res.json({
     status: "success",
     recipe: recetteRelue,
@@ -386,6 +389,7 @@ try {
       }
     }
   }
+  await logAudit(req, res, { route: "/api/recipes/:id", action: "delete", entite: req.params.id, payload: { inventory_enlevees: enlevees } });
   res.json({ status: "success", removed_inventory: enlevees });
 } catch (error) {
   console.error(error);
@@ -484,6 +488,7 @@ try {
   const relue = await db.get("SELECT id, is_saved FROM recipes WHERE id = ?", [
     req.params.id,
   ]);
+  await logAudit(req, res, { route: "/api/recipes/:id/save", action: "update", entite: req.params.id, payload: { apres: { is_saved: 1 } } });
   res.json({ status: "success", recipe: relue });
 } catch (error) {
   console.error(error);
@@ -540,6 +545,7 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
     prepSteps,
     req.params.id,
   ]);
+  await logAudit(req, res, { route: "/api/recipes/:id/generate-steps", action: "update", entite: req.params.id, payload: { apres: { preparation_steps: "<genere>" } } });
   res.json({ preparation_steps: prepSteps });
 } catch (error) {
   console.error(error);

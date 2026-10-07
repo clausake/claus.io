@@ -3,8 +3,9 @@ import { Router } from "express";
 import type { Database } from "sqlite";
 import { requireString, optionalString, requireArray } from "../middleware/validate.js";
 import { jugerLignesDeDocument } from "../shared/document-items.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/suppliers", async (req, res) => {
@@ -193,6 +194,7 @@ try {
       ],
     );
   }
+  await logAudit(req, res, { route: "/api/purchasing/order", action: "create", entite: documentId, payload: { total_amount: totalAmount, lines: cleaned.length } });
   res.json({
     status: "success",
     documentId,
@@ -390,6 +392,7 @@ try {
     req.params.id,
   ]);
 
+  await logAudit(req, res, { route: "/api/purchasing/orders/:id/receive", action: "receive", entite: req.params.id, payload: { apres: { order_status: nextStatus }, received_lines: receivedLines } });
   res.json({ status: "success", order_status: nextStatus, received_lines: receivedLines });
 } catch (error) {
   console.error("Error receiving order:", error);
@@ -410,6 +413,7 @@ try {
     "INSERT INTO suppliers (id, name, email, phone) VALUES (?, ?, ?, ?)",
     [id, name, email, phone],
   );
+  await logAudit(req, res, { route: "/api/suppliers", action: "create", entite: id, payload: { apres: { name: name, email: email, phone: phone } } });
   res.json({
     id,
     name,
@@ -427,6 +431,7 @@ try {
 router.delete("/api/suppliers/:id", async (req, res) => {
 try {
   await db.run("DELETE FROM suppliers WHERE id = ?", [req.params.id]);
+  await logAudit(req, res, { route: "/api/suppliers/:id", action: "delete", entite: req.params.id });
   res.json({ status: "success" });
 } catch (error) {
   console.error("Error deleting supplier:", error);
@@ -442,6 +447,7 @@ try {
     "UPDATE suppliers SET name = ?, email = ?, phone = ? WHERE id = ?",
     [name, email || "", phone || "", req.params.id],
   );
+  await logAudit(req, res, { route: "/api/suppliers/:id", action: "update", entite: req.params.id, payload: { apres: { name: name, email: email || "", phone: phone || "" } } });
   res.json({
     id: req.params.id,
     name,

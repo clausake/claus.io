@@ -16,6 +16,7 @@ import {
   type Role,
   type SessionUser,
 } from "../middleware/auth.js";
+import type { AuditLogger } from "../services/audit.js";
 
 const ROLES: Role[] = ["maitre", "staff", "agent"];
 
@@ -23,7 +24,7 @@ function currentUser(res: Response): SessionUser | undefined {
   return (res.locals as Record<string, unknown>).user as SessionUser | undefined;
 }
 
-export default function createAuthRouter(db: Database) {
+export default function createAuthRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
   // --- Setup : le premier compte de l'installation. Refuse s'il en existe
@@ -52,6 +53,7 @@ export default function createAuthRouter(db: Database) {
       );
       const token = await createSession(db, id);
       setSessionCookie(res, token);
+      await logAudit(req, res, { route: "/api/auth/setup", action: "create", entite: id, payload: { username: username.trim(), role: "maitre" } });
       res.status(201).json({ ok: true, user: { id, username: username.trim(), role: "maitre" } });
     } catch (e) {
       res.status(500).json({ error: "SETUP_ERREUR", message: String(e) });
@@ -77,6 +79,7 @@ export default function createAuthRouter(db: Database) {
       if (!ok) return res.status(bad.status).json(bad.body);
       const token = await createSession(db, row.id);
       setSessionCookie(res, token);
+      await logAudit(req, res, { route: "/api/auth/login", action: "login", entite: row.id });
       res.json({ ok: true, user: { id: row.id, username: row.username, role: row.role } });
     } catch (e) {
       res.status(500).json({ error: "LOGIN_ERREUR", message: String(e) });
@@ -88,6 +91,7 @@ export default function createAuthRouter(db: Database) {
       await destroySession(db, (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE]);
     } catch { /* la deconnexion ne doit jamais echouer cote client */ }
     clearSessionCookie(res);
+    await logAudit(req, res, { route: "/api/auth/logout", action: "logout" });
     res.json({ ok: true });
   });
 
@@ -151,6 +155,7 @@ export default function createAuthRouter(db: Database) {
         "INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)",
         [id, username.trim(), passwordHash, role],
       );
+      await logAudit(req, res, { route: "/api/users", action: "create", entite: id, payload: { username: username.trim(), role: role } });
       res.status(201).json({ ok: true, user: { id, username: username.trim(), role } });
     } catch (e: unknown) {
       const msg = String(e);
@@ -189,6 +194,7 @@ export default function createAuthRouter(db: Database) {
         await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, target.id]);
         await db.run("DELETE FROM sessions WHERE user_id = ?", [target.id]);
       }
+      await logAudit(req, res, { route: "/api/users/:id", action: "update", entite: target.id, payload: { active: active, reset_password: typeof password === "string" } });
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ error: "USER_ERREUR", message: String(e) });

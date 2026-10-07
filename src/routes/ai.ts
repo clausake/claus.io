@@ -4,8 +4,9 @@ import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
 import { blocHistorique, CONSIGNE_GABARIT } from "../shared/recette-chat.js";
+import type { AuditLogger } from "../services/audit.js";
 
-export default function createRouter(db: Database) {
+export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
 router.post("/api/voice", async (req, res) => {
@@ -78,6 +79,7 @@ NUR JSON.`
     format: "json",
   });
   const result = safeJsonParse(response.response);
+  await logAudit(req, res, { route: "/api/voice", action: "voice" });
   res.json(result);
 } catch (error) {
   console.error("Voice API Error:", error);
@@ -135,6 +137,7 @@ try {
       "\n" + CONSIGNE_GABARIT,
     options: { temperature: 0.7 },
   });
+  await logAudit(req, res, { route: "/api/ai/chat", action: "chat" });
   res.json({ response: response.response });
 } catch (error) {
   console.error("Chat API Error:", error);
