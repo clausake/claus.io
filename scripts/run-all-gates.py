@@ -123,6 +123,19 @@ DEFAUT = ["verify:split",
           # pas redevenir une voie de contournement de la gate §8 sans
           # qu'aucun lot ne le voie.
           "verify:suggestions-mord",
+          # Chantier 6 (feuille de route §8) : les portes des DEUX MODES.
+          # verify:mode-manuel juge le serveur avec COOKDRIVE_AGENT_OFF=1 et
+          # identite active : la boite de suggestions est FERMEE (404), le
+          # CRUD HUMAIN reste COMPLET (inventory CRUD + recipes + suppliers +
+          # haccp), l'audit trail fonctionne toujours, l'agent ne peut RIEN
+          # ecrire (l'exemption §8 fermee). verify:mode-agent juge la boucle
+          # de bout en bout avec un cerveau FACTICE DETERMINISTE (le spec
+          # joue l'agent par sa voie API reelle — JAMAIS de LLM en CI) :
+          # l'agent lit tout, n'ecrit que ses suggestions, le maitre tranche
+          # (applique -> DELTA cible / rejette -> motif), le staff garde son
+          # CRUD terrain. Les retirer rend les deux modes jugeables
+          # partiellement sans qu'aucun lot ne le voie.
+          "verify:mode-manuel", "verify:mode-agent",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

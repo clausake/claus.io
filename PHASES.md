@@ -475,3 +475,57 @@ x2, verify:auth 14/14, verify:split vert (ancre recalculee).
 (`if (false)`) fait rougir A4c (`ECHEC A4c ... status=201`), restauration OK.
 La boite ne peut pas redevenir une voie de contournement sans rougir.
 Branchee au DEFAUT du lot.
+
+## Chantier 6 — Portes des deux modes : COOKDRIVE_AGENT_OFF, la boucle §8 de bout en bout (07/10)
+
+### La decision jouee
+
+Le produit a DEUX modes depuis l'origine (§8). Le chantier 6 les rend JUGES :
+- **Sans agent** : `COOKDRIVE_AGENT_OFF=1` (env de lancement, pas de harnais)
+  ferme la boite de suggestions (404 MODE_SANS_AGENT — pas un 403, le mode
+  n'a pas d'agent du tout) ET l'exemption §8 de la gate (un compte agent
+  residuel ne peut RIEN ecrire, 403 partout). Le CRUD humain reste COMPLET :
+  rien n'est degrade.
+- **Avec agent** : la boucle §8 jugee de bout en bout avec un CERVEAU FACTICE
+  DETERMINISTE — le spec joue l'agent par SA VOIE API reelle (login + POST
+  suggestions), exactement ce qu'Hermes empruntera. JAMAIS de LLM reel en
+  CI : le contenu de la suggestion est fixe, ce qui est juge est la BOUCLE
+  (proposer -> trancher -> la cible rejouee), pas l'intelligence.
+
+### Ce qui a ete ecrit
+
+- `src/routes/suggestions.ts` : garde MODE_SANS_AGENT en tete de POST (404).
+- `src/middleware/auth.ts` : l'exemption §8 est FERMEE quand AGENT_OFF=1
+  (la condition s'inverse proprement : `agentAutorise = role === agent &&
+  AGENT_OFF !== 1 && exempt`).
+- `scripts/verify-mode-manuel.mjs` : 20 regles — M1 boite fermee, M2 le CRUD
+  humain complet (inventory CRUD + recipes + suppliers + haccp temperature),
+  M3 lectures libres, M4 l'audit trail ne depend pas du mode, M5 l'agent
+  residuel refuse partout, M6 l'historique de la boite reste lisible.
+- `scripts/verify-mode-agent.mjs` : 20 regles — A1 l'agent propose x3, A2
+  il n'ecrit pas le metier (4 routes x 403), A3 il lit tout, B1 le maitre
+  applique (DELTA temperature_logs), B2 rejette avec motif, B3 le staff ne
+  tranche pas, C1 le staff garde son CRUD terrain, D1 propose/applique/
+  rejete traces dans audit_log.
+- `scripts/negative-test-modes.py` : les DEUX morsures — garde mode
+  neutralise -> M1 rougit ; exemption morte -> A1a rougit. Restauration
+  git checkout apres chaque (garde ARBRE_SALE).
+- `run-all-gates.py` DEFAUT : verify:mode-manuel + verify:mode-agent
+  (les morsures restent hors lot, jouees a la main comme les autres).
+
+### Verifie le 07/10
+
+tsc 0, verify:mode-manuel 20/20 x2, verify:mode-agent 20/20 x2, morsures
+M1 + A1a rougissent, verify:all 0 rouge.
+
+### Piege a retenir
+
+- La premiere condition de la gate etait `agent && AGENT_OFF !== 1 &&
+  !exempt` : avec AGENT_OFF pose, `false && ...` = JAMAIS 403 — l'agent
+  passait le CRUD METIER en 200. La negation etait a l'envers : fermer
+  l'exemption doit FERMER la voie, pas OUVRIR les autres. La forme correcte
+  calcule `agentAutorise` (l'agent a le droit) et refuse quand il est faux.
+- Une morsure qui retire une ligne `if (...) { return ...; }` casse la
+  SYNTAXE (le bloc d'apres se retrouve dans le try/catch) — esbuild rougit
+  AVANT le produit. La mutation doit rester syntaxiquement valide :
+  `if (false) {` neutralise la SEMANTIQUE sans casser l'arbre.
