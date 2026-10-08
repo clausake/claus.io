@@ -101,7 +101,10 @@
     "verify:audit": "node scripts/verify-audit.mjs",
     "verify:audit-mord": "python3 scripts/negative-test-audit.py",
     "verify:suggestions": "node scripts/verify-suggestions.mjs",
-    "verify:suggestions-mord": "python3 scripts/negative-test-suggestions.py"
+    "verify:suggestions-mord": "python3 scripts/negative-test-suggestions.py",
+    "verify:mode-manuel": "node scripts/verify-mode-manuel.mjs",
+    "verify:mode-agent": "node scripts/verify-mode-agent.mjs",
+    "verify:mode-mord": "python3 scripts/negative-test-modes.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
