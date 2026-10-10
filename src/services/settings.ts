@@ -15,6 +15,13 @@ export interface AppSettings extends ReglageFournisseur {
   copilot_mode?: boolean;
   auto_pause?: boolean;
   language?: string;
+  // Seuils du moteur de surveillance (chantier 4) — configurables par le
+  // maitre via POST /api/settings. Un seuil absent reprend son defaut
+  // (src/services/surveillance.ts SEUILS_DEFAUT).
+  marge_rupture?: number;
+  jours_dlc?: number;
+  temp_min?: number;
+  temp_max?: number;
   [key: string]: unknown;
 }
 

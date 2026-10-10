@@ -60,9 +60,12 @@ export async function loadSession(
 // etait morte et l'agent etait refuse sur sa propre boite.
 const ECRITURES_AGENT = new Set([
   "/suggestions", // chantier 3 : la seule ecriture de l'agent
-  // MODE SANS AGENT (§8) : quand COOKDRIVE_AGENT_OFF=1, cette exemption est
-  // FERMEE (voir plus bas) — l'agent ne propose plus rien, la boite lui rend
-  // 404 MODE_SANS_AGENT et la gate lui rend 403 sur TOUTE ecriture.
+  // Chantier 4 : le scan de surveillance n'ecrit que dans SA table
+  // (regles -> suggestions), c'est son role §8 "SURVEILLE et INFORME".
+  "/surveillance/scan",
+  // MODE SANS AGENT (§8) : quand COOKDRIVE_AGENT_OFF=1, ces exemptions sont
+  // FERMEES (voir plus bas) — l'agent ne propose plus rien, la boite lui rend
+  // 404 et la gate 403 sur toute ecriture.
 ]);
 
 export function sessionGate(): RequestHandler {

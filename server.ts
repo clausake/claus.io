@@ -49,6 +49,7 @@ import supplierpricesRouter from "./src/routes/supplierprices.js";
 import antiwasteRouter from "./src/routes/antiwaste.js";
 import aiRouter from "./src/routes/ai.js";
 import suggestionsRouter from "./src/routes/suggestions.js";
+import surveillanceRouter from "./src/routes/surveillance.js";
 import healthRouter from "./src/routes/health.js";
 
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -179,6 +180,9 @@ async function startServer() {
   app.use(aiRouter(db, logAudit));
   // Boite de suggestions (chantier 3) : la SEULE ecriture de l'agent (§8).
   app.use(suggestionsRouter(db, logAudit));
+  // Moteur de surveillance (chantier 4) : regles -> suggestions. N'ecrit
+  // JAMAIS le metier (§8), depose dans la boite du chantier 3.
+  app.use(surveillanceRouter(db, logAudit));
   // /health est à la racine (pas sous /api)
   app.use(healthRouter);
 
