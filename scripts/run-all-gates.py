@@ -142,6 +142,22 @@ DEFAUT = ["verify:split",
           # citee par package.json sans etre au lot est une DEMI-PORTEE (le
           # capteur-orphelines rougit sinon — mesure du 08/10).
           "verify:mode-mord",
+          # Chantier 4 (feuille de route §8) : le moteur de surveillance.
+          # La sonde juge le serveur REEL : les regles deterministes (pas de
+          # LLM) produisent des SUGGESTIONS et rien d'autre — chaque regle
+          # est jouee sur un terrain semé par le spec puis jugee par DELTA
+          # sur la table suggestions relue EN BASE. R1 rupture, R2 stock
+          # mort, R3 DLC, R4 temperatures HACCP, R5 anti-gaspillage, S7
+          # deduplication, S8 le moteur n'a JAMAIS ecrit le metier (§8),
+          # S9 seuils configurables du maitre. La retirer rend la
+          # surveillance jugeable partiellement sans qu'aucun lot ne le voie.
+          "verify:surveillance",
+          # La morsure du moteur : elle neutralise le filtre de dedup de la
+          # route (les memes cles se repostent a chaque scan), rejoue
+          # verify:surveillance, exige ECHEC sur S7a puis RESTAURE. Au lot
+          # par la regle 6 (une sonde package.json sans DEFAUT est une
+          # DEMI-PORTEE — le capteur-orphelines rougit sinon, mesure 08/10).
+          "verify:surveillance-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

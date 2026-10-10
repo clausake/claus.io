@@ -14,9 +14,14 @@ import subprocess
 import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SURV = os.path.join(BASE, "src", "services", "surveillance.ts")
+SURV = os.path.join(BASE, "src", "routes", "surveillance.ts")
 
-ANCRE = "  const vues = new Set<string>();"
+# La deduplication vit DEUX fois : le filtre de la ROUTE (cles deja deposees
+# aujourd'hui, lues en base) et le filtre du SERVICE (doublons intra-scan).
+# La morsure neutralise CELLE DE LA ROUTE : c'est elle qui fait passer
+# deposees a 0 au second scan (S7a). Une mutation sur le service seul est
+# masquee par la couche route (mesure du premier run).
+ANCRE = 'if (clesExistantes.has(p.cle)) { ignorees.push(p.cle); continue; }'
 
 
 def main():
@@ -24,15 +29,16 @@ def main():
     if src.count(ANCRE) != 1:
         print("ANCRE_AMBIGUE: le filtre de dedup est vu", src.count(ANCRE), "fois.")
         return 1
-    statut = subprocess.run(["git", "status", "--porcelain", "src/services/surveillance.ts"],
+    statut = subprocess.run(["git", "status", "--porcelain", "src/routes/surveillance.ts"],
                             capture_output=True, text=True, cwd=BASE).stdout.strip()
     if statut:
-        print("ARBRE_SALE: src/services/surveillance.ts a des changements non committes:", statut)
+        print("ARBRE_SALE: src/routes/surveillance.ts a des changements non committes:", statut)
         return 1
 
-    # Mutation : la deduplication est NEUTRALISEE — le scan reposte les
-    # memes cles a chaque fois (le Set n'est plus rempli). S7a doit rougir
-    # (deposees > 0 au deuxieme scan). Syntaxiquement valide.
+    # Mutation : le filtre de la route est NEUTRALISE — le scan reposte les
+    # memes cles a chaque fois. S7a doit rougir (deposees > 0 au deuxieme
+    # scan). Syntaxiquement valide : on remplace le corps du if par un
+    # commentaire (le if devient vide mais reste correct).
     lignes = src.splitlines(True)
     idx = None
     for n, l in enumerate(lignes):
@@ -40,9 +46,9 @@ def main():
             idx = n
             break
     if idx is None:
-        print("ANCRE_ABSENTE: le Set de dedup n'est plus la.")
+        print("ANCRE_ABSENTE: le filtre de dedup de la route n'est plus la.")
         return 1
-    mute = "".join(lignes[:idx]) + "  const vues = new Set<string>(); // morsure: jamais rempli\n  void vues;\n" + "".join(lignes[idx + 1:])
+    mute = "".join(lignes[:idx]) + "        if (false) { ignorees.push(p.cle); continue; } // morsure: dedup route morte\n" + "".join(lignes[idx + 1:])
     if mute == src:
         print("MUTATION_INOPERANTE")
         return 1
@@ -67,7 +73,25 @@ def main():
                 print("   " + l)
         return 0
     finally:
-        subprocess.run(["git", "checkout", "--", "src/services/surveillance.ts"], cwd=BASE)
+        # RESTAURATION + PREUVE : un checkout silencieux sur un fichier non
+        # suivi ne restaure RIEN (le fichier restait mute dans l'arbre et le
+        # lot verify:surveillance rougissait APRES la morsure — mesure du
+        # 08/10). La restauration est VERIFIEE : si le fichier differe encore
+        # de HEAD, on restaure depuis le blob et on EXIGE l'egalite.
+        subprocess.run(["git", "checkout", "--", "src/routes/surveillance.ts"], cwd=BASE)
+        reste = subprocess.run(["git", "status", "--porcelain", "src/routes/surveillance.ts"],
+                               capture_output=True, text=True, cwd=BASE).stdout.strip()
+        if reste:
+            # Fichier non suivi ou differe encore : re-ecrire depuis HEAD.
+            blob = subprocess.run(["git", "show", "HEAD:src/routes/surveillance.ts"],
+                                  capture_output=True, text=True, cwd=BASE).stdout
+            with open(SURV, "w", encoding="utf-8") as f:
+                f.write(blob)
+            reste2 = subprocess.run(["git", "status", "--porcelain", "src/routes/surveillance.ts"],
+                                    capture_output=True, text=True, cwd=BASE).stdout.strip()
+            if reste2:
+                print("RESTAURATION_IMPOSSIBLE: le fichier differe encore de HEAD — corriger a la main.")
+                sys.exit(9)
 
 
 if __name__ == "__main__":
