@@ -529,3 +529,82 @@ M1 + A1a rougissent, verify:all 0 rouge.
   SYNTAXE (le bloc d'apres se retrouve dans le try/catch) — esbuild rougit
   AVANT le produit. La mutation doit rester syntaxiquement valide :
   `if (false) {` neutralise la SEMANTIQUE sans casser l'arbre.
+## Chantier 4 — Moteur de surveillance : des règles déterministes vers la boîte de suggestions (08/10)
+
+### La décision jouée
+
+Le moteur de surveillance est un SERVICE PUR : des règles DÉTERMINISTES lisent
+la base et produisent des propositions pré-remplies (route + payload) déposées
+dans la boîte de suggestions (chantier 3). ZÉRO LLM ici — l'intelligence
+viendra au chantier 5, la SURVEILLANCE est mécanique. Le moteur n'écrit
+JAMAIS le métier (§8) : il propose, l'humain exécute.
+
+### Les règles (chaque suggestion porte sa preuve dans l'explication)
+
+- R1 **rupture imminente** : quantity <= minStock + marge_rupture (le seuil
+  est une UNITÉ, pas un pourcentage : un minStock à 0 ne doit pas diviser).
+- R2 **stock mort** : quantity = 0 sur un article à prix > 0 (valeur dormante).
+- R3 **DLC proche** : batches.expiration_date <= J + jours_dlc (registre
+  sanitaire, regl. (CE) 852/2004 art. 5).
+- R4 **températures HACCP** : le DERNIER relevé de chaque equipment hors
+  bornes [temp_min, temp_max] — le dernier ÉTAT est ce que l'humain doit
+  voir, pas l'historique.
+- R5 **anti-gaspillage** : les lots à DLC proche avec quantity > 0 regroupés
+  en une suggestion 'menu'.
+- **Déduplication par clé** (règle+objet+jour) à DEUX niveaux : la ROUTE
+  lit les clés déposées aujourd'hui en base, le SERVICE filtre les doublons
+  intra-scan. Une clé est préfixée dans l'explication ([cle] ...), format
+  jugeable sans colonne supplémentaire.
+
+### Les seuils du maître
+
+`marge_rupture` (5), `jours_dlc` (3), `temp_min` (-20), `temp_max` (60) —
+dans AppSettings, modifiables par POST /api/settings, relus par
+GET /api/surveillance/seuils. Un seuil ABSENT reprend son défaut (jamais
+undefined dans une règle). S9 juge que jours_dlc=30 élargit réellement le
+périmètre (un lot J+10 passe de silencieux à alerté).
+
+### Le scan
+
+POST /api/surveillance/scan — MAÎTRE ou AGENT (son rôle §8 "SURVEILLE et
+INFORME" : le scan n'écrit que dans SA table). STAFF refusé. Sous
+COOKDRIVE_AGENT_OFF=1, l'agent perd le scan aussi. L'exemption gate
+`/surveillance/scan` est ajoutée à ECRITURES_AGENT (chemin RELATIF — piege
+du chantier 3 respecté).
+
+### La porte
+
+- `verify:surveillance` (scripts/verify-surveillance.mjs) : 24 règles —
+  S1 anonyme/staff refusés ; S2..S6 chaque règle jugée par DELTA sur
+  suggestions relu en base avec son action pré-remplie vérifiée ; S7
+  déduplication (rejouer → 0 déposée) ; S8 le moteur n'a JAMAIS touché le
+  métier (articles/lots/relevés semés INTACTS) ; S9 seuils configurables ;
+  S10 seuils actifs lus ; D1 scan tracé dans audit_log. Le terrain est SEMÉ
+  par l'API du dépôt, jamais à la main.
+- `verify:surveillance-mord` (scripts/negative-test-surveillance.py) : la
+  morsure neutralise le filtre de dédup de la ROUTE (S7a rougit :
+  déposées=5 au second scan). Celle du SERVICE seul est masquée par la
+  couche route (mesuré — voir piège).
+- Au lot DEFAUT (verify:surveillance + verify:surveillance-mord), la règle 6
+  exige les deux (capteur-orphelines rougit sinon).
+
+### Vérifié le 08/10
+
+tsc 0, vitest 158/158, build OK, verify:surveillance 24/24 x2, morsure S7a
+rougit + restauration, verify:auth/suggestions/mode-manuel/mode-agent tous
+verts (aucune régression).
+
+### Pièges à retenir
+
+- **La déduplication vit DEUX fois** (route + service) : une morsure sur le
+  service seul est MASQUÉE par la couche route (S7a restait vert, mesuré).
+  Le contrat juge le COMPORTEMENT de bout en bout — la morsure doit viser la
+  couche qui fait la décision OBSERVABLE. Leçon générale : une morsure qui
+  ne rougit pas peut vouloir dire que la mutation a été absorbée par une
+  seconde couche de défense, PAS que la porte est morte.
+- La morsure `if (false) {` : retirer une ligne `if (...) { return }` d'un
+  bloc try/catch casse la syntaxe (esbuild rougit AVANT le produit) —
+  neutraliser la sémantique, jamais l'arbre.
+- Une suggestion déposée deux fois le même jour pour le même objet fait
+  exploser la boite : la clé est dans le CONTENU jugeable ([cle] en tête
+  d'explication), pas dans une colonne de plus — une migration de moins.

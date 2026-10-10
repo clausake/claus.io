@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "ddc11df470399e3f955280cd9afa0ce1f1968eb92c74d37987bcab510db0a514",
-  "chaud_octets": 31531,
+  "original_sha256": "5221d43ee9606e66c6c9fcd189f6f3c2339b38bc528ff72c4d63a66a868dca37",
+  "chaud_octets": 35720,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 531,
-  "tokens_approx_chaud": 7670,
+  "lignes_chaud": 610,
+  "tokens_approx_chaud": 8666,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 6 (portes des deux modes) ajoute au chaud : env COOKDRIVE_AGENT_OFF (boite fermee + exemption fermee) et les deux sondes verify:mode-* avec morsures ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-07T19:38:26.208152",
+    "motif": "chantier 4 (moteur de surveillance) ajoute au chaud : service pur de regles deterministes -> suggestions, seuils du maitre, route de scan, porte verify:surveillance + morsure (dedup route, pas service) ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-10T15:29:08.285875",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 3 (boite de suggestions) ajoute au chaud : table + routes + liste blanche + porte verify:suggestions ; exemption ECRITURES_AGENT activee (le chemin relatif de la gate, piege consigne) ; ancre recalculee par la boucle du juge, jamais recopiee + morsure suggestions jouee apres commit (A4c rougit)",
-    "date": "2026-10-07T17:12:24.431160",
+    "motif": "chantier 6 (portes des deux modes) ajoute au chaud : env COOKDRIVE_AGENT_OFF (boite fermee + exemption fermee) et les deux sondes verify:mode-* avec morsures ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-07T19:38:26.208152",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
