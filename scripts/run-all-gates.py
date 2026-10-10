@@ -136,6 +136,12 @@ DEFAUT = ["verify:split",
           # CRUD terrain. Les retirer rend les deux modes jugeables
           # partiellement sans qu'aucun lot ne le voie.
           "verify:mode-manuel", "verify:mode-agent",
+          # La morsure des deux modes : elle prouve que le garde MODE_SANS_
+          # AGENT et l'exemption §8 peuvent rougir (mutation -> porte rouge ->
+          # restauration). La regle 6 exige sa presence au DEFAUT : une sonde
+          # citee par package.json sans etre au lot est une DEMI-PORTEE (le
+          # capteur-orphelines rougit sinon — mesure du 08/10).
+          "verify:mode-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
