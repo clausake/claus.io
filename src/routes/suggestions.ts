@@ -27,10 +27,14 @@ import type { AuditLogger } from "../services/audit.js";
 // de la gate §8). Le verbe d'application est toujours POST — les routes
 // cibles d'ecriture du produit le sont deja, sauf PUT/DELETE que l'on exprime
 // via leur payload {"__method": ...} rejoue en interne.
-const ROUTES_CIBLES = new Set([
+// Les routes cibles QUE LE PRODUIT CONNAIT — EXPORTÉES : le cerveau Hermes
+// (src/services/hermes.ts) valide ses propositions contre LA MEME liste
+// (une seule source de verité, le chantier 5 ne peut pas la diverger).
+export const ROUTES_CIBLES = new Set([
   "/api/inventory", "/api/inventory/bulk", "/api/inventory/consume",
   "/api/recipes", "/api/menu-planning", "/api/staff",
-  "/api/suppliers", "/api/supplier-prices", "/api/supplier-prices/import-confirm",
+  "/api/suppliers", "/api/purchasing/order", "/api/supplier-prices",
+  "/api/supplier-prices/import-confirm",
   "/api/documents", "/api/haccp/temperature", "/api/haccp/batches",
   "/api/haccp/cleaning", "/api/haccp/production", "/api/haccp/corrective-action",
   "/api/haccp/iot-sensors", "/api/robots/assign",

@@ -50,6 +50,7 @@ import antiwasteRouter from "./src/routes/antiwaste.js";
 import aiRouter from "./src/routes/ai.js";
 import suggestionsRouter from "./src/routes/suggestions.js";
 import surveillanceRouter from "./src/routes/surveillance.js";
+import hermesRouter from "./src/routes/hermes.js";
 import healthRouter from "./src/routes/health.js";
 
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -183,6 +184,9 @@ async function startServer() {
   // Moteur de surveillance (chantier 4) : regles -> suggestions. N'ecrit
   // JAMAIS le metier (§8), depose dans la boite du chantier 3.
   app.use(surveillanceRouter(db, logAudit));
+  // Cerveau Hermes (chantier 5) : contexte -> consigne -> LLM injecte ->
+  // propositions validees -> suggestions. LLM JAMAIS juge par une porte.
+  app.use(hermesRouter(db, logAudit));
   // /health est à la racine (pas sous /api)
   app.use(healthRouter);
 
