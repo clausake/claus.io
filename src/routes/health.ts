@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { getOllamaHost } from "../shared/util.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { ollama, getModel, ollamaSettingsRef, type OllamaModelInfo } from "../shared/ollama.js";
 import { perf } from "../services/perf.js";
 
 const router = Router();
@@ -74,8 +74,11 @@ try {
 }
 let diskFree = -1;
 try {
-  const statfsFn = (fs as any).statfs;
-  if (typeof statfsFn === "function") {
+  // statfs n'est pas dans tous les typages @types/node : cast cible, pas any.
+  const statfsFn = (fs as unknown as { statfs?: { sync: (p: string) => { bavail: number; bsize: number } } }).statfs as
+    | { sync: (p: string) => { bavail: number; bsize: number } }
+    | undefined;
+  if (statfsFn) {
     const stats = statfsFn.sync(dataDir);
     diskFree = Math.round((stats.bavail * stats.bsize) / 1e9);
   }
@@ -86,7 +89,7 @@ const memUsed = Math.round((process.memoryUsage().rss / 1024 / 1024) * 10) / 10;
 
 try {
   const list = await ollama.list();
-  const installed = (list.models || []).map((m: any) => m.name || m.model || "");
+  const installed = (list.models || []).map((m: OllamaModelInfo) => m.name || m.model || "");
   const modelInstalled = installed.some(
     (n: string) => n === model || n.split(":")[0] === String(model).split(":")[0],
   );

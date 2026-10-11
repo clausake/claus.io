@@ -630,7 +630,7 @@ function parseIdList(raw: unknown): string[] {
 function coversOf(planRow: { recipe_json?: string | null }): number {
   if (!planRow.recipe_json) return 1;
   try {
-    let parsed: any = JSON.parse(planRow.recipe_json);
+    let parsed: unknown = JSON.parse(planRow.recipe_json);
     // ⚠ Le champ est SOUVENT double-encode : la vue Menu envoie une chaine
     // deja serialisee et le POST la re-stringify. Un parse seul rend alors une
     // CHAINE, dont .couverts est undefined, et les couverts retombent a 1. Le
@@ -646,7 +646,7 @@ function coversOf(planRow: { recipe_json?: string | null }): number {
     }
     const raw = Number(
       parsed && typeof parsed === "object"
-        ? parsed.couverts ?? parsed.covers
+        ? (parsed as Record<string, unknown>).couverts ?? (parsed as Record<string, unknown>).covers
         : NaN,
     );
     return Number.isFinite(raw) && raw > 0 ? raw : 1;

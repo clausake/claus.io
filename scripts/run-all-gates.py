@@ -172,6 +172,15 @@ DEFAUT = ["verify:split",
           # ECHEC sur H3a puis RESTAURE (preuve de restauration, lecon
           # chantier 4). Au lot par la regle 6.
           "verify:hermes-mord",
+          # Chantier 7 (fond de liste AGENTS.md) : l'hygiene TypeScript. La
+          # porte juge le COMPTEUR d':any du BACKEND (routes/services/
+          # middleware/db/shared, hors commentaires) — 0 depuis le chantier.
+          # Le seuil ne peut qu'etre REABAISSÉ par un commit qui l'accompagne :
+          # une regression remonte un rouge, jamais un silence. La retirer
+          # rend la dette technique invisible a nouveau.
+          "verify:types",
+          # La morsure de l'hygiene : un :any reintroduit rougit (regle 6).
+          "verify:types-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

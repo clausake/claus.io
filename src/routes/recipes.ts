@@ -80,7 +80,7 @@ try {
   let prepStepsRaw = req.body?.preparation_steps;
   let prepSteps = "";
   if (Array.isArray(prepStepsRaw)) {
-    prepSteps = prepStepsRaw.map((s: any) => s?.instructions ?? s?.step ?? "").join("\n");
+    prepSteps = prepStepsRaw.map((s: unknown) => (typeof s === "object" && s !== null ? (s as Record<string, unknown>).instructions ?? (s as Record<string, unknown>).step : "")).join("\n");
   } else if (typeof prepStepsRaw === "string") {
     prepSteps = prepStepsRaw.length > 50000 ? prepStepsRaw.slice(0, 50000) : prepStepsRaw;
   } else if (prepStepsRaw === undefined || prepStepsRaw === null) {
@@ -117,7 +117,7 @@ try {
   const rejetees: Array<{ index: number; raison: string }> = [];
   const lignesValides: Array<{ inventory_name: string; unit: string | null; qte: number }> = [];
   for (let i = 0; i < lignes.length; i++) {
-    const ing = lignes[i] as any;
+    const ing = lignes[i] as Record<string, unknown> | undefined;
     const nomBrut = ing?.inventory_name;
     if (typeof nomBrut !== "string" || nomBrut.trim() === "") {
       rejetees.push({ index: i, raison: "inventory_name_absent_vide" });
@@ -254,7 +254,7 @@ try {
   const rejetees: Array<{ index: number; raison: string }> = [];
   const lignesValides: Array<{ inventory_name: string; unit: string | null; qte: number }> = [];
   for (let i = 0; i < lignes.length; i++) {
-    const ing = lignes[i] as any;
+    const ing = lignes[i] as Record<string, unknown> | undefined;
     const nomBrut = ing?.inventory_name;
     if (typeof nomBrut !== "string" || nomBrut.trim() === "") {
       rejetees.push({ index: i, raison: "inventory_name_absent_vide" });
@@ -374,7 +374,7 @@ try {
   // Les lignes d'inventaire creees PAR LA RECETTE (dont la recette supprimee
   // etait le SEUL proprietaire) partent avec elle; celles partagees avec une
   // autre recette restent chez le chef.
-  const idsAEnlever = ingredientsRelus.map((r: any) => r.inventory_id);
+  const idsAEnlever = ingredientsRelus.map((r: { inventory_id: string }) => r.inventory_id);
   let enlevees: string[] = [];
   for (const invId of idsAEnlever) {
     const autres = await db.get(

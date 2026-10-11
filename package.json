@@ -108,7 +108,9 @@
     "verify:surveillance": "node scripts/verify-surveillance.mjs",
     "verify:surveillance-mord": "python3 scripts/negative-test-surveillance.py",
     "verify:hermes": "node scripts/verify-hermes.mjs",
-    "verify:hermes-mord": "python3 scripts/negative-test-hermes.py"
+    "verify:hermes-mord": "python3 scripts/negative-test-hermes.py",
+    "verify:types": "python3 scripts/verify-types.py",
+    "verify:types-mord": "python3 scripts/negative-test-types.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

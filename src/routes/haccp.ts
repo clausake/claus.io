@@ -12,6 +12,7 @@ import { uploadsDir } from "../services/paths.js";
 import { settingsPath } from "../services/settings.js";
 import { requireString, optionalString } from "../middleware/validate.js";
 import { sensorHub } from "../services/sensor-hub.js";
+import type { SensorReading, StaleSensor } from "../services/sensor-hub.js";
 import type { AuditLogger } from "../services/audit.js";
 import {
   TEMPERATURE_MIN, TEMPERATURE_MAX, RECEPTION_TEMP_MIN, RECEPTION_TEMP_MAX,
@@ -44,10 +45,10 @@ export default function createRouter(db: Database, logAudit: AuditLogger) {
       try {
         const rows = await db.all(
           "SELECT id, name, last_reading_at FROM iot_sensors WHERE last_reading_at IS NOT NULL",
-        );
+        ) as Array<{ id: string; name: string; last_reading_at: string }>;
         const nowMs = Date.now();
         const stale = rows
-          .map((s: any) => {
+          .map((s): StaleSensor | null => {
             const t = Date.parse(s.last_reading_at);
             if (Number.isNaN(t)) return null;
             const silence_seconds = Math.round((nowMs - t) / 1000);
@@ -55,7 +56,7 @@ export default function createRouter(db: Database, logAudit: AuditLogger) {
               ? { id: s.id, name: s.name, last_reading_at: s.last_reading_at, silence_seconds }
               : null;
           })
-          .filter((x: any): x is any => x !== null);
+          .filter((x): x is StaleSensor => x !== null);
         sensorHub.publishStale(stale);
       } catch (err) {
         console.error("[SSE] scan capteurs muets:", err);
@@ -275,11 +276,11 @@ router.post("/api/haccp/iot-sensors", async (req, res) => {
     res.json({ status: "success", token });
     // Un onglet HACCP deja ouvert doit voir le capteur sans rafraichissement.
     try {
-      const list = await db.all("SELECT * FROM iot_sensors");
-      sensorHub.publishList(list.map((s: any) => ({
-        id: s.id, name: s.name, type: s.type, equipment_type: s.equipment_type,
-        temperature: s.last_reading ?? 20.0, battery: s.battery ?? 100,
-        last_reading_at: s.last_reading_at,
+      const list = await db.all("SELECT * FROM iot_sensors") as Array<Record<string, unknown>>;
+      sensorHub.publishList(list.map((s): SensorReading => ({
+        id: String(s.id), name: String(s.name), type: s.type ? String(s.type) : undefined, equipment_type: s.equipment_type ? String(s.equipment_type) : undefined,
+        temperature: (s.last_reading as number) ?? 20.0, battery: (s.battery as number) ?? 100,
+        last_reading_at: String(s.last_reading_at ?? ""),
       })));
     } catch (pushErr) {
       console.error("[SSE] diffusion liste ignoree:", pushErr);
@@ -297,10 +298,10 @@ try {
   // Le tableau de bord doit retirer la ligne sans attendre un rafraichissement.
   try {
     sensorHub.publishList(
-      (await db.all("SELECT * FROM iot_sensors")).map((s: any) => ({
-        id: s.id, name: s.name, type: s.type, equipment_type: s.equipment_type,
-        temperature: s.last_reading ?? 20.0, battery: s.battery ?? 100,
-        last_reading_at: s.last_reading_at,
+      ((await db.all("SELECT * FROM iot_sensors")) as Array<Record<string, unknown>>).map((s): SensorReading => ({
+        id: String(s.id), name: String(s.name), type: s.type ? String(s.type) : undefined, equipment_type: s.equipment_type ? String(s.equipment_type) : undefined,
+        temperature: (s.last_reading as number) ?? 20.0, battery: (s.battery as number) ?? 100,
+        last_reading_at: String(s.last_reading_at ?? ""),
       })),
     );
   } catch (pushErr) {

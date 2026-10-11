@@ -220,8 +220,8 @@ router.post("/api/inventory/bulk", async (req, res) => {
   }[] = [];
   const vuIds = new Set<string>();
 
-  brut.forEach((it: any, i: number) => {
-    const o = it && typeof it === "object" ? it : {};
+  brut.forEach((it: unknown, i: number) => {
+    const o = (it && typeof it === "object" ? it : {}) as Record<string, unknown>;
     // Une ligne qui n'est pas un objet est une faute nominative du fichier:
     // elle est nommee comme tout le reste, jamais ignoree en silence.
     if (it === null || typeof it !== "object") {
@@ -305,7 +305,7 @@ router.post("/api/inventory/bulk", async (req, res) => {
     return res.status(409).json({
       status: "error",
       message: "Un ou plusieurs articles portent deja cet identifiant",
-      ids_pris: prises.map((p: any) => p.id),
+      ids_pris: prises.map((p: { id: string }) => p.id),
       importes: 0,
     });
   }
@@ -326,19 +326,19 @@ router.post("/api/inventory/bulk", async (req, res) => {
     en_transaction = false;
     // Le compte-rendu est RE-LU en base (meme contrat que le POST et le PUT de
     // ce fichier), pas recite depuis le corps de la requisette.
-    const relues: any[] = [];
+    const relues: Array<Record<string, unknown>> = [];
     for (const p of prepares) {
       const relu = await db.get(
         "SELECT id, name, quantity, minStock, unit, status, category, unit_price, yield_percent FROM inventory WHERE id = ?",
         [p.id],
-      );
+      ) as Record<string, unknown> | undefined;
       if (!relu) {
         return res.status(500).json({ status: "error", message: "Ligne non relue apres import", importes: relues.length });
       }
       relues.push(relu);
     }
-    await logAudit(req, res, { route: "/api/inventory/bulk", action: "create", payload: { importes: relues.length, ids: relues.map((r: any) => r.id) } });
-    res.json({ status: "success", importes: relues.length, ids: relues.map((r: any) => r.id), items: relues });
+    await logAudit(req, res, { route: "/api/inventory/bulk", action: "create", payload: { importes: relues.length, ids: relues.map((r) => String(r.id)) } });
+    res.json({ status: "success", importes: relues.length, ids: relues.map((r) => String(r.id)), items: relues });
   } catch (error) {
     if (en_transaction) {
       try {
@@ -552,7 +552,7 @@ try {
   // NUMERIQUE finie et STRICTEMENT POSITIVE. On ne « continue » plus dessus.
   const rejetees: number[] = [];
   const valides: { index: number; id: string; quantite: number }[] = [];
-  items.forEach((item: any, index: number) => {
+  items.forEach((item: { inventory_id?: unknown; quantity?: unknown } | null | undefined, index: number) => {
     const brut = item?.quantity;
     const quantite =
       typeof brut === "number" ? brut
