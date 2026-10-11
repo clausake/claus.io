@@ -37,18 +37,23 @@ def main():
         print("ARBRE_SALE: src/routes/hermes.ts a des changements non committes:", statut)
         return 1
 
-    # Mutation : l'INSERT est saute (la boucle "rend 200" mais ne depose plus
-    # rien). H3a rougit (deposees=0) ET H3b rougit (0 ligne en base).
+    # Mutation : le compteur de deposition est MORT — `if (false) { deposees++; }`
+    # rend le compte a zero SANS casser la syntaxe (lecon chantier 6 : la
+    # mutation `if (false) await db.run(...)` jetait un TransformError
+    # esbuild AVANT le produit). H3a rougit (deposees=0).
+    ANCRE2 = '        deposees++;'
     lignes = src.splitlines(True)
     idx = None
     for n, l in enumerate(lignes):
-        if l == ANCRE:
+        # .rstrip("\n") : la ligne brute porte son retour chariot, l'ancre
+        # non — l'egalite directe ne matchait JAMAIS (lecon chantier 4).
+        if l.rstrip("\n") == ANCRE2:
             idx = n
             break
     if idx is None:
-        print("ANCRE_ABSENTE: l'INSERT n'est plus la (forme changee ?).")
+        print("ANCRE_ABSENTE: le compteur deposees++ n'est plus la (forme changee ?).")
         return 1
-    mute = "".join(lignes[:idx]) + "        if (false) await db.run(\n          `INSERT INTO suggestions (id, type, priorite, titre, explication, action_route, action_payload)" + "".join(lignes[idx + 1:])
+    mute = "".join(lignes[:idx]) + "        if (false) { deposees++; } // morsure: deposition morte\n" + "".join(lignes[idx + 1:])
 
     with open(HERMES, "w", encoding="utf-8") as f:
         f.write(mute)
