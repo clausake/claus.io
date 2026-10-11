@@ -608,3 +608,84 @@ verts (aucune régression).
 - Une suggestion déposée deux fois le même jour pour le même objet fait
   exploser la boite : la clé est dans le CONTENU jugeable ([cle] en tête
   d'explication), pas dans une colonne de plus — une migration de moins.
+
+## Chantier 5 — Hermes cerveau outillé : contexte → consigne → LLM injecté → suggestions (08/10)
+
+### La décision jouée
+
+Le dernier chantier de la feuille de route : le cerveau de Hermes LIT le
+produit et PRODUIT des suggestions. L'architecture suit la règle du
+transport injecté (Tache 4, Sprint 15) : le service est PUR, le "cerveau"
+(cerveau: consigne -> texte JSON) est INJECTÉ — **JAMAIS de LLM réel en
+CI** (la porte injecte le cerveau factice déterministe), Ollama local en
+production, un fournisseur de la liste blanche optionnel.
+
+### Ce qui a été écrit
+
+- `src/services/hermes.ts` (PUR, jugeable sans réseau) :
+  - `construireContexte(db)` : le contexte lisible — schéma résumé +
+    dashboard (articles/critiques/alertes/valeur) + rupture + DLC proches +
+    dernières températures. Un appel SQL par famille, jamais un dump (budget
+    de contexte du LLM, AGENTS.md "Limites").
+  - `construireConsigne(ctx)` : le prompt système DÉTERMINISTE (jugé par la
+    porte), qui exige le JSON des propositions.
+  - `parseSuggestions(texte)` : la réponse LLM -> propositions VALIDÉES.
+    Une route hors liste blanche est rejetée NOMMÉE (le LLM ne contourne pas
+    la liste du chantier 3), un JSON illisible est un refus NOMMÉ.
+  - `cerveauFactice()` : le cerveau déterministe — il lit le contexte encodé
+    DANS la consigne et répond toujours pareil.
+- `src/routes/hermes.ts` : POST /api/hermes/reflechir (maître ou agent ; le
+  staff est refusé ; AGENT_OFF coupe l'agent) — construit le contexte,
+  injecte le cerveau (factice sur demande du corps ou COOKDRIVE_HERMES_
+  FACTICE=1, Ollama sinon), valide, dépose dans la boîte (dédup
+  route+titre). LLM muet/jetable -> 502 CERVEAU_INJOIGNABLE, nommé.
+  GET /api/hermes/contexte : le contexte PUR (lecture libre, l'UI le lit).
+- `src/routes/suggestions.ts` : ROUTES_CIBLES EXPORTÉE — le chantier 5
+  valide contre LA MÊME liste (une seule source de vérité).
+  `/api/purchasing/order` ajoutée (elle existait mais était absente de la
+  liste — mesure: la première exécution a rejeté route_inconnue).
+- `src/middleware/auth.ts` : exemption §8 /hermes/reflechir (le cerveau
+  n'écrit que SA table).
+
+### La porte
+
+- `verify:hermes` (scripts/verify-hermes.mjs) : 13 règles sur le serveur
+  RÉEL — H1 anonyme/staff refusés ; H2 la boucle complète tourne avec le
+  cerveau factice joué PAR L'AGENT (sa voie §8) ; H3 DELTA en base (les
+  propositions de l'agent relues avec leur action pré-remplie) ; H4 la
+  liste blanche est la même que la boîte ; H5 déduplication ; H6 le cerveau
+  n'a JAMAIS touché le métier (terrain semé INTACT) ; H8 le contexte PUR ;
+  H9 AGENT_OFF coupe le cerveau pour l'agent (SECOND serveur — l'env est de
+  lancement, pas changeable à chaud) mais le MAÎTRE le garde ; D1 tracé.
+- `verify:hermes-mord` (scripts/negative-test-hermes.py) : la morsure
+  neutralise le compteur de déposition (`if (false) { deposees++; }`) ->
+  H3a rougit. Restauration PROUVÉE (leçon chantier 4).
+- Au lot DEFAUT (verify:hermes + verify:hermes-mord, règle 6).
+
+### Vérifié le 08/10
+
+tsc 0, vitest 158/158, build OK, verify:hermes 13/13 x2, morsure H3a
+rougit + restauration OK, verify:suggestions/mode-manuel/mode-agent tous
+verts (aucune régression), capteur-orphelines vert.
+
+### Pièges à retenir
+
+- **PORT=0 ne marche pas avec ce harnais** : le serveur bind un port
+  aléatoire mais la boucle d'attente sonde le port ÉCRIT dans l'env — un
+  env1.PORT écrasé APRÈS la création de l'objet faisait attendre la sonde
+  sur le mauvais port (serveur "pas prêt" avec un serveur VIVANT ailleurs).
+  Le port alloué est écrit dans env AVANT le spawn : une seule source de
+  vérité. (Mesure du premier run : 40s perdues.)
+- **rmSync AVANT openSync du stderr** : l'ordre inverse supprimait le
+  répertoire sous le fd ouvert — le log restait vide et le diagnostic
+  impossible (leçon héritée du chantier 6, rejouée ici).
+- **ROUTES_CIBLES divergait de la réalité** : /api/purchasing/order existait
+  dans suppliers.ts mais pas dans la liste — le cerveau factice proposait
+  une action LÉGITIME et la liste la rejetait route_inconnue. La liste est
+  maintenant exportée et partagée, mais l'inventaire des routes cibles doit
+  être refait à chaque nouvelle route d'écriture.
+- La morsure `if (false) await db.run(...)` casse la syntaxe esbuild
+  (TransformError avant le produit) — même leçon que le chantier 6 :
+  neutraliser la SÉMANTIQUE (`if (false) { compteur; }`), jamais l'arbre.
+- Une égalité de ligne `l == ANCRE` sans rstrip("\n") ne matche JAMAIS
+  (la ligne brute porte son retour chariot) — même piège que le chantier 4.
