@@ -63,6 +63,9 @@ const ECRITURES_AGENT = new Set([
   // Chantier 4 : le scan de surveillance n'ecrit que dans SA table
   // (regles -> suggestions), c'est son role §8 "SURVEILLE et INFORME".
   "/surveillance/scan",
+  // Chantier 5 : le cerveau Hermes n'ecrit que ses propositions dans SA
+  // table (contexte -> consigne -> LLM injecte -> suggestions).
+  "/hermes/reflechir",
   // MODE SANS AGENT (§8) : quand COOKDRIVE_AGENT_OFF=1, ces exemptions sont
   // FERMEES (voir plus bas) — l'agent ne propose plus rien, la boite lui rend
   // 404 et la gate 403 sur toute ecriture.

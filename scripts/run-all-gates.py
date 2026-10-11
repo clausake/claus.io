@@ -158,6 +158,20 @@ DEFAUT = ["verify:split",
           # par la regle 6 (une sonde package.json sans DEFAUT est une
           # DEMI-PORTEE — le capteur-orphelines rougit sinon, mesure 08/10).
           "verify:surveillance-mord",
+          # Chantier 5 (feuille de route §8) : le cerveau Hermes. La sonde
+          # juge la BOUCLE (contexte -> consigne -> cerveau INJECTE ->
+          # propositions validees -> boite) avec le cerveau FACTICE
+          # DETERMINISTE — JAMAIS de LLM reel en CI. H3 DELTA en base sur
+          # les propositions deposes, H5 dedup, H6 le cerveau n'a JAMAIS
+          # touche le metier, H8 le contexte PUR, H9 AGENT_OFF coupe le
+          # cerveau. La retirer rend le cerveau jugeable partiellement sans
+          # qu'aucun lot ne le voie.
+          "verify:hermes",
+          # La morsure du cerveau : elle saute l'INSERT de deposition (la
+          # boucle rend 200 sans rien deposer), rejoue verify:hermes, exige
+          # ECHEC sur H3a puis RESTAURE (preuve de restauration, lecon
+          # chantier 4). Au lot par la regle 6.
+          "verify:hermes-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
