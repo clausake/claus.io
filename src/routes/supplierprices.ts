@@ -30,6 +30,23 @@ interface SupplierPriceRow {
   inventory_unit_price?: number | null;
 }
 
+interface SupplierPriceGroup {
+  inventory_id: string;
+  inventory_name: string;
+  inventory_unit: string;
+  current_inventory_price: number;
+  supplier_prices: Array<{
+    id: string;
+    supplier_id: string;
+    supplier_name: string;
+    raw_unit_price: number;
+    unit: string;
+    calculated_price_per_ref: number | null;
+    is_verified_from_invoice: number;
+    valid_until: string | null;
+  }>;
+}
+
 export default function createRouter(db: Database, logAudit: AuditLogger) {
   const router = Router();
 
@@ -460,7 +477,7 @@ try {
     JOIN suppliers s ON sp.supplier_id = s.id
     JOIN inventory i ON sp.inventory_id = i.id
   `);
-  const groups: Record<string, any> = {};
+  const groups: Record<string, SupplierPriceGroup> = {};
   for (const p of rawPrices) {
     if (!groups[p.inventory_id]) {
       groups[p.inventory_id] = {
@@ -482,7 +499,7 @@ try {
       valid_until: p.valid_until
     });
   }
-  const comparisonList = Object.values(groups).map((group: any) => {
+  const comparisonList = Object.values(groups).map((group: SupplierPriceGroup) => {
     // L'ELECTION. Deux defauts, et les deux font le meme degat a l'ecran.
     //
     //  1. `if (!bestPriceEntry || ...)` SEME avec la premiere ligne, meme

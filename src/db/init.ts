@@ -62,7 +62,7 @@ uwIDAQAB
 // Vérifie une clé d'unlock signée (base64 du RSA signature de machineId).
 export function verifyLicenseKey(machineId: string, keyCandidate: string): boolean {
   try {
-    const cryptoMod: any = crypto as any;
+    const cryptoMod = crypto;
     const normalized = keyCandidate.replace(/[^A-Za-z0-9+/=]/g, "");
     const signature = Buffer.from(normalized, "base64");
     if (signature.length === 0) return false;
@@ -542,7 +542,7 @@ export async function initDatabase(): Promise<DbInitResult> {
     "SELECT value FROM app_license WHERE key = 'machine_id'",
   ) as { value: string } | undefined;
   if (!machineIdRow) {
-    const cryptoMod: any = crypto as any;
+    const cryptoMod = crypto;
     const interfaces = os.networkInterfaces();
     let macAddresses = "";
     for (const key in interfaces) {

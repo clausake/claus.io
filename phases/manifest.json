@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "cfa79aea0d62a812db5366503eb08fb59389ebb0ce2395f3a232ed466c508cc6",
-  "chaud_octets": 40433,
+  "original_sha256": "e4d88807578dc86eb2fd7342da800ac89af5956f7f4e70ab6edc1aa5bcfecaf3",
+  "chaud_octets": 43157,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 691,
-  "tokens_approx_chaud": 9790,
+  "lignes_chaud": 743,
+  "tokens_approx_chaud": 10444,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 5 (cerveau Hermes) ajoute au chaud : service pur (contexte+consigne+parse), cerveau injecte (factice CI / Ollama prod), route reflechir, ROUTES_CIBLES exportee + /api/purchasing/order, porte verify:hermes + morsure ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-11T06:36:33.940545",
+    "motif": "chantier 7 (hygiene TypeScript) ajoute au chaud : 22 :any backend types, porte verify:types (compteur seuil 0, commentaires exclus) + morsure ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-11T07:23:14.577469",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 4 (moteur de surveillance) ajoute au chaud : service pur de regles deterministes -> suggestions, seuils du maitre, route de scan, porte verify:surveillance + morsure (dedup route, pas service) ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-10T15:29:08.285875",
+    "motif": "chantier 5 (cerveau Hermes) ajoute au chaud : service pur (contexte+consigne+parse), cerveau injecte (factice CI / Ollama prod), route reflechir, ROUTES_CIBLES exportee + /api/purchasing/order, porte verify:hermes + morsure ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-11T06:36:33.940545",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
