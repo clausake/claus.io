@@ -689,3 +689,55 @@ verts (aucune régression), capteur-orphelines vert.
   neutraliser la SÉMANTIQUE (`if (false) { compteur; }`), jamais l'arbre.
 - Une égalité de ligne `l == ANCRE` sans rstrip("\n") ne matche JAMAIS
   (la ligne brute porte son retour chariot) — même piège que le chantier 4.
+
+## Chantier 7 — Hygiène TypeScript : zéro :any au backend, la porte compteur (08/10)
+
+### La décision jouée
+
+La feuille de route §8 est close ; le "fond de liste" (AGENTS.md:123) est la
+dette technique. Le chantier 7 attaque le SOCLE : les `:any` du BACKEND
+(routes/services/middleware/db/shared) — le métier jugeable, là où un type
+libre peut faire taire un contrat. Les composants UI (140 `:any`) restent
+hors périmètre : ils ne jugent rien, ils affichent.
+
+**Le seuil est un PAS, pas un mur** : `tsc --strict` d'un coup casse 3500
+lignes d'UI sans que personne ne puisse relire. La porte juge le compteur
+FIGÉ au niveau atteint (0 au backend) — un seuil ne peut qu'ÊTRE
+RÉABAISSÉ par un commit qui l'accompagne, jamais augmenté.
+
+### Ce qui a été écrit
+
+- **22 `:any` backend typés, fichier par fichier** :
+  - `db/init.ts` (2) : `cryptoMod: any = crypto as any` -> `cryptoMod = crypto`
+    (le double cast était inutile, le module natif a les méthodes).
+  - `haccp.ts` (4) : les maps SSE -> `StaleSensor` / `SensorReading` (les
+    types existaient déjà dans sensor-hub.ts, ils n'étaient pas importés).
+  - `health.ts` (2) : `statfs` casté vers sa forme réelle (pas dans tous les
+    typages), `OllamaModelInfo` importé.
+  - `inventory.ts` (5) : callbacks bulk/consume -> `unknown` + Record.
+  - `menu.ts` (1), `recipes.ts` (4) : payload -> `Record<string, unknown>`.
+  - `supplierprices.ts` (1) : interface `SupplierPriceGroup` extraite (le
+    `Record<string, any>` des groupes de comparaison).
+  - `suppliers.ts` (1) : `parsed: unknown` + accès `Record<string, unknown>`.
+- **`verify:types`** (scripts/verify-types.py) : le compteur, avec les
+  commentaires EXCLUS de la regex — la porte juge le code, pas la doc (au
+  premier run, le commentaire « cast cible, pas any » de health.ts comptait 1).
+- **`verify:types-mord`** : un `:any` réintroduit rougit. Au lot DEFAUT
+  (règle 6), restauration prouvée.
+
+### Vérifié le 08/10
+
+tsc 0, vitest 158/158, build OK, verify:types 0/0, morsure rougit +
+restauration OK, verify:routes 46/46, verify:hermes + verify:surveillance
+verts (aucune régression), capteur-orphelines vert.
+
+### Piège à retenir
+
+- **Un compteur de regex compte les COMMENTAIRES** : `// cast cible, pas
+  any` matchait `: any`... et rougissait le backend SAIN. La regex retire
+  d'abord `/* ... */` et `// ...` — un juge qui lit la doc au lieu du code
+  n'est pas un juge.
+- Les `:any` des composants UI (140, dont 59 dans FichesTechniques.tsx)
+  restent HORS périmètre : ils affichent, ils ne jugent pas. Les typer
+  demanderait un chantier UI à part (les composants consomment des types
+  inférés de la base, le chantier 8 le fera en découpant).

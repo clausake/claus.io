@@ -193,7 +193,7 @@ recette: "Recipe Name", categorie: "Kategorie", ingredients: [{name: "Name", qua
         // « Starter »...) se rangent dans la bonne carte. Une valeur non
         // reconnue reste telle quelle (la carte UI la range en « Fiches
         // Importées » ; jamais de devinette).
-        dish_type: normaliserCarte(String((recipe as any).categorie ?? "")),
+        dish_type: normaliserCarte(String((recipe as Record<string, unknown>).categorie ?? "")),
       }),
     );
   }
