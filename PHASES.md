@@ -741,3 +741,65 @@ verts (aucune régression), capteur-orphelines vert.
   restent HORS périmètre : ils affichent, ils ne jugent pas. Les typer
   demanderait un chantier UI à part (les composants consomment des types
   inférés de la base, le chantier 8 le fera en découpant).
+## Chantier 8 — Découpage de FichesTechniques.tsx : 2425 -> 1550 lignes, le modal extrait (08/10)
+
+### La décision jouée
+
+Le "fond de liste" (AGENTS.md:123) pointait FichesTechniques.tsx à 2425
+lignes. Le chantier le découpe SANS changer le comportement : les portes
+e2e jugent le même produit (verify:routes 46/46, verify:recipes 24/24,
+verify:reception vert), le bundle est IDENTIQUE à l'octet près (492.70 ko —
+le découpage ne doit rien coûter).
+
+### La cartographie (mesurée avant de couper)
+
+Cinq responsabilités identifiées dans les 2425 lignes :
+1. **exportSingleRecipeToPDF** (l.243-317) : jsPDF/autoTable, PUR sauf
+   `t`/`guestCounts`/`getIngredientEffectivePrice`.
+2. **handleFileScan** (l.113-242) : OCR IA, couplé au state — RESTE dans le
+   composant (son extraction demanderait un state manager).
+3. **CRUD** (saveRecipe/handleSaveToBook/deleteRecipe/generateSteps) :
+   fetches API, couplés — RESTENT.
+4. **appartientDossier** (l.615-630) : PUR — extractible tel quel.
+5. **Modal** (l.1508-2319) : 812 lignes de JSX, 15 deps comptées une à une
+   par grep du bloc (et non devinées).
+
+### Ce qui a été écrit
+
+- `src/lib/fiches.ts` (144 l.) : `appartientDossier` (PUR, jouable au test)
+  + `exportSingleRecipeToPDF` (le module reçoit `labels`/`guestCount`/
+  `prixEffectif` en paramètres — il ne connaît ni React ni le composant).
+  Le composant garde un wrapper de 6 lignes qui passe les deps.
+- `src/components/RecipeModal.tsx` (876 l.) : le modal extrait. **ZÉRO state
+  propre** — tout arrive en props, les handlers du parent passés tels quels.
+  Le JSX est déplacé octet pour octet. `outerModalScrollRef` (le parent y
+  reset le scrollTop) et `modalScrollRef` (interne) passent en props —
+  l'effect de scroll du parent reste INTACT.
+- FichesTechniques.tsx : 2425 -> 1550 lignes (-875), le state reste ENTIER
+  chez le parent.
+
+### Vérifié le 08/10
+
+tsc 0, vitest 158/158, build 492.70 ko (identique), verify:routes 46/46,
+verify:recipes 24/24, verify:reception vert, registre recipes
+ANCRE_ES_ALL_VERT (les ancres ne citent pas le JSX déplacé), verify:all
+82 portes 0 rouge.
+
+### Pièges à retenir
+
+- **Compter les deps par grep du bloc AVANT de couper** : le modal "utilise
+  tout le composant" était une impression — le grep a rendu 15 deps exactes
+  et a réfuté 8 supposées (expandedRecipes, cartItems, showNotification...
+  n'y figurent PAS). Une extraction prop-par-prop inventée aurait cassé le
+  build une fois sur deux.
+- **Les refs du modal traversent la frontière** : `outerModalScrollRef`
+  appartient au parent (l'effect y reset le scroll à l'ouverture) — le
+  passer en props, pas le recréer, sinon l'effect du parent mute un ref
+  que personne ne lit.
+- **Le JSX déplacé octet pour octet** : la tentation de "nettoyer au
+  passage" est le risque n°1 d'un découpage — les portes e2e jugent le
+  rendu, un attribut perdu rougit ailleurs. Déplacer d'abord, nettoyer
+  jamais (ou dans un commit séparé jugé séparément).
+- Le gain est en LISIBILITÉ (1550 + 876 + 144 = 2570 lignes > 2425) : le
+  découpage AJOUTE des lignes (props, imports) et gagne en responsabilité
+  par fichier. Un chantier de découpage ne se juge pas au total de lignes.
