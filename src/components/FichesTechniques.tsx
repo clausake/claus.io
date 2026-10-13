@@ -33,6 +33,51 @@ import { useToast, ConfirmDialog } from "./ui/Toast";
 import { appartientDossier, exportSingleRecipeToPDF as exportPDF } from "../lib/fiches";
 import { RecipeModal } from "./RecipeModal";
 
+// Une ligne du panier de production : soit l'entete d'une recette (isRecipeHeader),
+// soit un ingredient a acheter. Les champs prix/fournisseur ne sont presents
+// que pour les lignes ingredient.
+interface CartItem {
+  id: string;
+  item?: string;
+  inventory_id?: string | null;
+  quantity?: number;
+  quantity_per_person?: number;
+  guests?: number;
+  unit?: string;
+  supplier?: string;
+  price?: number;
+  total?: number;
+  sourceRecipeId?: string;
+  recipeName?: string;
+  isRecipeHeader?: boolean;
+  [k: string]: unknown;
+}
+
+// La fiche technique telle que stockee en base et editee dans le formulaire.
+// Les champs sont optionnels : les fiches viennent d'OCR (scan), du chat
+// culinaire, ou de saisie manuelle — les formes varient.
+interface RecipeIngredient {
+  id?: string;
+  inventory_name?: string;
+  name?: string;
+  quantity_per_person?: string | number;
+  unit?: string;
+  unit_price?: number;
+  inventory_id?: string | null;
+  [k: string]: unknown;
+}
+
+interface Recipe {
+  id?: string;
+  name?: string;
+  category?: string;
+  dish_type?: string;
+  ingredients?: RecipeIngredient[];
+  preparation_steps?: string | { step_order: number; instructions: string }[];
+  is_saved?: boolean;
+  [k: string]: unknown;
+}
+
 export function FichesTechniques({
   activeTab,
   cartItems,
@@ -43,10 +88,10 @@ export function FichesTechniques({
   ficheDepuisChatConsommee,
 }: {
   activeTab: string;
-  cartItems?: any[];
-  setCartItems?: any;
-  t: any;
-  showNotification: (m: string, type?: any) => void;
+  cartItems?: CartItem[];
+  setCartItems?: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  t: Record<string, string>;
+  showNotification: (m: string, type?: string) => void;
   // La fiche nee du chat culinaire (Sprint 16) : MenuAnalysis la remet via
   // App, elle ouvre le VRAI formulaire en pre-rempli — le chef edite texte
   // et quantites a 100 % puis enregistre. Apres consommation, App vide.
@@ -62,9 +107,9 @@ export function FichesTechniques({
 }) {
   const toast = useToast();
   const [pendingDeleteRecipe, setPendingDeleteRecipe] = useState<string | null>(null);
-  const [recipes, setRecipes] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [supplierComparison, setSupplierComparison] = useState<any[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [inventory, setInventory] = useState<RecipeIngredient[]>([]);
+  const [supplierComparison, setSupplierComparison] = useState<RecipeIngredient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [guestCounts, setGuestCounts] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<"categories" | "book">("categories");
