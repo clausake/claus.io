@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 interface EpicureStudioProps {
-  t: any;
+  t: Record<string, string>;
   settings: {
     language: string;
     model_name: string;
