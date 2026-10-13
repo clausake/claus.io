@@ -13,16 +13,30 @@ interface ForecastItem {
   besoin_recettes: number;
 }
 
+interface OrderItem {
+  id: string;
+  raw_name?: string;
+  raw_price?: number;
+  raw_unit?: string;
+  inventory_name?: string;
+  original_name?: string;
+  inventory_id?: string | null;
+  in_stock?: boolean;
+  quantity?: number;
+  unit?: string;
+  received_quantity?: number;
+}
+
 interface PurchaseOrder {
   id: string;
   status: string;
   supplier: string;
   date: string;
-  items: { raw_name: string; raw_price: number; raw_unit: string }[];
+  items: OrderItem[];
   total_amount: number;
 }
 
-export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, translateIngredient?: (name: string, lang: string) => string, manualIds?: Set<string> }) {
+export function PurchasingTab({ t, translateIngredient, manualIds }: { t: Record<string, string>, translateIngredient?: (name: string, lang: string) => string, manualIds?: Set<string> }) {
   const toast = useToast();
   const [pendingDeletePrice, setPendingDeletePrice] = useState<string | null>(null);
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
@@ -30,9 +44,9 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
   // chiffre du besoin n'a pas d'origine et le cuisinier ne peut pas dire s'il
   // couvre le service du lendemain ou trois semaines.
   const [forecastWindow, setForecastWindow] = useState<{ from: string; horizon: number } | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [history, setHistory] = useState<Record<string, any[]>>({});
+  const [history, setHistory] = useState<Record<string, {supplier: string; date?: string; unit_price?: number}[]>>({});
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Record<string, string>>({});
@@ -613,9 +627,9 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
           >
             <PackageCheck className="w-4 h-4" />
             {t.receiveTab || "Reception"}
-            {orders.filter((o: any) => (o.status || 'PENDING').toUpperCase() === 'PENDING').length > 0 && (
+            {orders.filter((o: PurchaseOrder) => (o.status || 'PENDING').toUpperCase() === 'PENDING').length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 text-[10px] font-black">
-                {orders.filter((o: any) => (o.status || 'PENDING').toUpperCase() === 'PENDING').length}
+                {orders.filter((o: PurchaseOrder) => (o.status || 'PENDING').toUpperCase() === 'PENDING').length}
               </span>
             )}
           </button>
@@ -761,14 +775,14 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                               <h4 className="font-bold mb-2 text-emerald-400/80 text-xs uppercase tracking-wider">{t.priceHistory || "Tarifs Enregistrés de l'ingrédient:"}</h4>
                               {history[item.inventory_id]?.length > 0 ? (
                                 <div className="grid gap-2">
-                                  {history[item.inventory_id].map((h: any, i: number) => (
+                                  {history[item.inventory_id].map((h: {supplier: string; date?: string; unit_price?: number}, i: number) => (
                                     <div key={i} className="flex justify-between items-center p-3 bg-white/5 rounded-lg border border-white/5 hover:border-emerald-500/30 transition-all">
                                       <div className="flex flex-col">
                                         <span className="font-medium text-slate-200">{h.supplier}</span>
                                         <span className="text-[10px] text-slate-500 italic">{h.date}</span>
                                       </div>
                                       <div className="flex gap-4 items-center">
-                                        <span className="text-sm font-bold text-amber-400">{h.unit_price.toFixed(2)} € / {item.unit}</span>
+                                        <span className="text-sm font-bold text-amber-400">{(h.unit_price || 0).toFixed(2)} € / {item.unit}</span>
                                         <button 
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -821,7 +835,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
               </div>
             ) : (
               <div className="overflow-auto flex-1 custom-scrollbar space-y-4">
-                {orders.map((order: any) => {
+                {orders.map((order: PurchaseOrder) => {
                   const isPending = (order.status || 'PENDING').toUpperCase() !== 'RECEIVED';
                   return (
                     <div key={order.id} className="p-5 bg-white/5 border border-white/5 rounded-2xl">
@@ -863,7 +877,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                           </tr>
                         </thead>
                         <tbody>
-                          {(order.items || []).map((it: any) => (
+                          {(order.items || []).map((it: OrderItem) => (
                             <tr key={it.id} className="border-b border-white/5">
                               <td className="py-2">{it.inventory_name || it.original_name || '—'}
                                 {!it.inventory_id || !it.in_stock ? (
@@ -1129,7 +1143,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                       onClick={handleConfirmImport}
                       className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-black rounded-lg text-xs shadow-lg shadow-amber-500/10"
                     >
-                      Enregistrer les prix ({importMatches.filter((m: any) => m.prix_exploitable !== false && m.matched_inventory_id).length})
+                      Enregistrer les prix ({importMatches.filter((m: ImportMatch) => m.prix_exploitable !== false && m.matched_inventory_id).length})
                     </button>
                   </div>
                 </div>
@@ -1284,7 +1298,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                               <td colSpan={5} className="bg-black/40 p-4 border-b border-white/10">
                                 <h4 className="text-xs uppercase font-black tracking-widest text-indigo-400 mb-3">Toutes les offres disponibles pour cet ingrédient :</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {g.supplier_prices.map((p: any) => (
+                                  {g.supplier_prices.map((p: {id: string; supplier_name?: string; raw_unit_price?: number; unit?: string; is_verified_from_invoice?: boolean; calculated_price_per_ref?: number}) => (
                                     <div key={p.id} className="p-3 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center group">
                                       <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
@@ -1296,12 +1310,12 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                                           </span>
                                         </div>
                                         <span className="text-[10px] text-slate-500 font-mono">
-                                          Tarif d'achat brut: {p.raw_unit_price.toFixed(2)} € / {p.unit}
+                                          Tarif d'achat brut: {(p.raw_unit_price || 0).toFixed(2)} € / {p.unit}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-4">
                                         <div className="text-right">
-                                          <span className="font-mono text-sm font-black text-amber-400">{p.calculated_price_per_ref.toFixed(2)} €</span>
+                                          <span className="font-mono text-sm font-black text-amber-400">{(p.calculated_price_per_ref || 0).toFixed(2)} €</span>
                                           <span className="block text-caption uppercase tracking-wider text-slate-600">Ramene au {g.inventory_unit}</span>
                                         </div>
                                         <button 
