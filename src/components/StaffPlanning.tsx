@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, FileDown, X, Calculator, Clock, ChevronDown, Calendar as CalendarIcon, Copy } from 'lucide-react';
 import { startOfWeek, endOfWeek, addDays, format, parseISO } from 'date-fns';
 
+interface Shift {
+  start: string;
+  end: string;
+}
+
+interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  rate: string;
+  schedule: Record<string, Shift>;
+}
+
 const UI_TO_DB_DAY: Record<string, string> = { lun: 'monday', mar: 'tuesday', mer: 'wednesday', jeu: 'thursday', ven: 'friday', sam: 'saturday', dim: 'sunday' };
 const DB_TO_UI_DAY: Record<string, string> = { monday: 'lun', tuesday: 'mar', wednesday: 'mer', thursday: 'jeu', friday: 'ven', saturday: 'sam', sunday: 'dim' };
 
@@ -12,13 +25,13 @@ const mapUIToDBSlots = (shift: {start: string, end: string}) => {
   return [];
 };
 
-const mapDBSlotsToUI = (slots: any[]) => {
+const mapDBSlotsToUI = (slots: {start?: string; end?: string}[]) => {
   if (!slots || slots.length === 0) return { start: '', end: '' };
   const first = slots[0];
   return { start: first.start || '', end: first.end || '' };
 };
 
-const emptySchedule = () => ({
+const emptySchedule = (): Record<string, Shift> => ({
   lun: { start: '', end: '' },
   mar: { start: '', end: '' },
   mer: { start: '', end: '' },
@@ -28,8 +41,12 @@ const emptySchedule = () => ({
   dim: { start: '', end: '' }
 });
 
-export function StaffPlanning({ t }: { t: any }) {
-  const [staff, setStaff] = useState<any[]>([]);
+interface StaffPlanningProps {
+  t: Record<string, string>;
+}
+
+export function StaffPlanning({ t }: StaffPlanningProps) {
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [name, setName] = useState('');
   const [role, setRole] = useState('Chef de Cuisine');
   const [rate, setRate] = useState('15');
@@ -70,8 +87,8 @@ export function StaffPlanning({ t }: { t: any }) {
       .then(res => res.json())
       .then(data => {
          const mapping = EXACT_DATE_TO_UI();
-         const mapped = data.map((dbStaff: any) => {
-            const newSched: any = emptySchedule();
+         const mapped = data.map((dbStaff: {id: string; name: string; role: string; hourlyRate: string; schedule?: Record<string, {start?: string; end?: string}[]>}) => {
+            const newSched: Record<string, Shift> = emptySchedule();
             if (dbStaff.schedule) {
               Object.entries(dbStaff.schedule).forEach(([dbDayOrDate, slots]) => {
                   const uiDay = mapping[dbDayOrDate] || DB_TO_UI_DAY[dbDayOrDate];
@@ -85,7 +102,7 @@ export function StaffPlanning({ t }: { t: any }) {
               name: dbStaff.name,
               role: dbStaff.role,
               rate: dbStaff.hourlyRate,
-              schedule: newSched
+              schedule: newSched as Record<string, Shift>
             };
          });
          setStaff(mapped);
@@ -118,8 +135,8 @@ export function StaffPlanning({ t }: { t: any }) {
     }
   };
 
-  const saveToBackend = async (member: any) => {
-    const dbSchedule: any = {};
+  const saveToBackend = async (member: StaffMember) => {
+    const dbSchedule: Record<string, {start: string; end: string}[]> = {};
     const uiToDate = UI_TO_EXACT_DATE();
     Object.entries(member.schedule).forEach(([uiDay, shift]: [string, any]) => {
       const exactDate = uiToDate[uiDay as keyof typeof uiToDate];
@@ -146,11 +163,11 @@ export function StaffPlanning({ t }: { t: any }) {
 
   const addStaff = async () => {
     if (name.trim() === '') return;
-    const newMember = {
+    const newMember: StaffMember = {
       id: Date.now().toString(),
       name,
       role,
-      rate: parseFloat(rate) || 0,
+      rate,
       schedule: emptySchedule()
     };
     setStaff([...staff, newMember]);
@@ -168,7 +185,7 @@ export function StaffPlanning({ t }: { t: any }) {
   };
 
   const updateSchedule = async (id: string, day: string, field: 'start' | 'end', value: string) => {
-    const updatedStaff = staff.map(s => {
+    const updatedStaff: StaffMember[] = staff.map((s): StaffMember => {
       if (s.id === id) {
         return {
           ...s,
@@ -191,7 +208,8 @@ export function StaffPlanning({ t }: { t: any }) {
   const calculateHours = () => {
     let total = 0;
     staff.forEach(s => {
-      Object.values(s.schedule).forEach((shift: any) => {
+      for (const day of Object.keys(s.schedule)) {
+        const shift = s.schedule[day];
         if (shift.start && shift.end) {
           const [h1, m1] = shift.start.split(':').map(Number);
           const [h2, m2] = shift.end.split(':').map(Number);
@@ -201,7 +219,7 @@ export function StaffPlanning({ t }: { t: any }) {
             total += diff / 60;
           }
         }
-      });
+      }
     });
     return Math.round(total);
   };
@@ -209,17 +227,18 @@ export function StaffPlanning({ t }: { t: any }) {
   const calculateCost = () => {
     let total = 0;
     staff.forEach(s => {
-      Object.values(s.schedule).forEach((shift: any) => {
+      for (const day of Object.keys(s.schedule)) {
+        const shift = s.schedule[day];
         if (shift.start && shift.end) {
           const [h1, m1] = shift.start.split(':').map(Number);
           const [h2, m2] = shift.end.split(':').map(Number);
           if (!isNaN(h1) && !isNaN(h2)) {
             let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
             if (diff < 0) diff += 24 * 60;
-            total += (diff / 60) * s.rate;
+            total += (diff / 60) * Number(s.rate);
           }
         }
-      });
+      }
     });
     // Divide by 7 for average daily cost if desired, or just return total per week
     return Math.round(total / 7);
@@ -491,7 +510,7 @@ export function StaffPlanning({ t }: { t: any }) {
               {Object.entries(staff.reduce((acc, s) => {
                 acc[s.role] = (acc[s.role] || 0) + 1;
                 return acc;
-              }, {} as Record<string, number>)).map(([r, count]: any) => (
+              }, {} as Record<string, number>)).map(([r, count]: [string, number]) => (
                 <div key={r}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-300">{r}</span>
