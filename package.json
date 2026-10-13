@@ -1,6 +1,6 @@
 {
-  "name": "agent-culinaire-os",
-  "description": "Assistant culinaire IA",
+  "name": "clausio",
+  "description": "claus.io — assistant culinaire IA open source (AGPL-3.0)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
   "version": "1.0.0",
@@ -114,7 +114,7 @@
   },
   "build": {
     "appId": "com.agentculinaire.os",
-    "productName": "Agent Culinaire OS",
+    "productName": "claus.io",
     "directories": {
       "output": "release"
     },
@@ -255,5 +255,6 @@
   "overrides": {
     "node-gyp": "^11.3.0",
     "tar": "^7.5.22"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

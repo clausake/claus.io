@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Outil de signature de licences CookDrive / Agent Culinaire OS
+ * Outil de signature de licences claus.io
  * ------------------------------------------------------------
  * Génère une clé d'unlock VALIDE pour un machineId donné, en utilisant
  * la CLÉ PRIVÉE RSA (qui reste chez l'éditeur, jamais dans le binaire).

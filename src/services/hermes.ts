@@ -88,7 +88,7 @@ export async function construireContexte(db: Database): Promise<ContexteHermes> 
  *  francais, exigeant le format JSON des propositions. */
 export function construireConsigne(ctx: ContexteHermes): string {
   return [
-    "Tu es Hermes, le cerveau de CookDrive. Tu LIS l'etat de l'etablissement et PROPOSES des actions.",
+    "Tu es Hermes, le cerveau de claus.io. Tu LIS l'etat de l'etablissement et PROPOSES des actions.",
     "Tu ne peux PAS executer : l'humain tranche. Chaque proposition est une SUGGESTION.",
     "",
     "ETAT DE L'ETABLISSEMENT :",

@@ -1,4 +1,4 @@
-// CookDrive — Serveur Express (Phase 2 : découpage en routeurs).
+// claus.io — Serveur Express (Phase 2 : découpage en routeurs).
 // server.ts ne fait que :
 //   1. créer l'app express + middlewares globaux (helmet, json, rate-limit),
 //   2. initialiser la base SQLite (src/db/init.ts) et l'état de licence,

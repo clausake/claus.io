@@ -110,7 +110,7 @@ export function Assistant({
       <div className="w-full max-w-2xl led-glow-container bg-black/40 border-emerald-500/20 p-8 rounded-2xl">
         <h2 className="text-2xl font-bold text-white mb-1 flex items-center">
           <Brain className="w-6 h-6 text-emerald-400 mr-3" />
-          {t.assistantTitre || "Bienvenue dans CLAUS.IO"}
+          {t.assistantTitre || "Bienvenue dans claus.io"}
         </h2>
         <p className="text-sm text-slate-400 mb-6">
           {(t.assistantSousTitre || "Trois étapes pour équiper l'application de son intelligence.")}{" "}
