@@ -28,8 +28,8 @@ export function CulinaryChat({
   settings,
   onProposition,
 }: {
-  t: any;
-  settings: any;
+  t: Record<string, string>;
+  settings: Record<string, unknown>;
   // Remet le CONTENU BRUT de chaque reponse de l'assistant. L'interpretation
   // (lecture en recette) appartient a l'onglet, pas au chat.
   onProposition?: (contenu: string) => void;
@@ -90,13 +90,13 @@ export function CulinaryChat({
               ? "de-DE"
               : "en-US";
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognitionRef.current.onresult = (event: {results: {0: {0: {transcript: string}}}}) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = (event: any) => {
+      recognitionRef.current.onerror = (event: {error?: string}) => {
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
       };

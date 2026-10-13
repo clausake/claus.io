@@ -122,7 +122,7 @@ export function InventoryAudit({
             return map[cat] || cat;
           };
 
-          const items = results.data.map((row: any) => {
+          const items = (results.data as Record<string, string>[]).map((row) => {
             const quantity = parseFloat(
               row["Quantité"] || row["Quantity"] || row["quantite"] || "0",
             );
@@ -203,7 +203,7 @@ export function InventoryAudit({
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
 
-      recognitionRef.current.onresult = async (event: any) => {
+      recognitionRef.current.onresult = async (event: {results: {0: {0: {transcript: string}}}}) => {
         const transcript = event.results[0][0].transcript;
         setIsListening(false);
         await handleAiChat(transcript);

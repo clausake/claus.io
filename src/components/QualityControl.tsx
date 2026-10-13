@@ -8,7 +8,13 @@ import {
 import { translateAlertMessage, translateIngredientHelper } from "../lib/helpers";
 import { useToast } from "./ui/Toast";
 
-export function QualityControl({ t }: { t: any }) {
+interface AlertItem {
+  id: string;
+  message: string;
+  [k: string]: unknown;
+}
+
+export function QualityControl({ t }: { t: Record<string, string> }) {
   const toast = useToast();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,8 +24,8 @@ export function QualityControl({ t }: { t: any }) {
       const res = await fetch("/api/alerts");
       const data = await res.json();
       setAlerts(data);
-    } catch (e: any) {
-      if (e && e.message === "Failed to fetch") return;
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message === "Failed to fetch") return;
       console.error(t.loadingAlerts, e);
     } finally {
       setIsLoading(false);
@@ -30,7 +36,7 @@ export function QualityControl({ t }: { t: any }) {
     fetchAlerts();
   }, []);
 
-  const handleResolveAlert = async (alertItem: any) => {
+  const handleResolveAlert = async (alertItem: AlertItem) => {
     try {
       const res = await fetch(`/api/alerts/${alertItem.id}/resolve`, {
         method: "POST",
@@ -47,7 +53,7 @@ export function QualityControl({ t }: { t: any }) {
     }
   };
 
-  const handleIgnoreAlert = async (alertItem: any) => {
+  const handleIgnoreAlert = async (alertItem: AlertItem) => {
     try {
       const res = await fetch(`/api/alerts/${alertItem.id}/ignore`, {
         method: "POST",

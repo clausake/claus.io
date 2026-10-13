@@ -7,7 +7,7 @@ import {
 
   Menu as MenuIcon} from "lucide-react";
 
-export function RobotManagement({ t }: { t: any }) {
+export function RobotManagement({ t }: { t: Record<string, string> }) {
   const [robots, setRobots] = useState<any[]>([]);
 
   useEffect(() => {
@@ -15,8 +15,8 @@ export function RobotManagement({ t }: { t: any }) {
       try {
         const res = await fetch("/api/robots");
         if (res.ok) setRobots(await res.json());
-      } catch (e: any) {
-        if (e && e.message === "Failed to fetch") return;
+      } catch (e: unknown) {
+        if (e && (e instanceof Error ? e.message : String(e)) === "Failed to fetch") return;
         console.error("Error loading robots", e);
       }
     };
