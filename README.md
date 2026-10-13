@@ -1,8 +1,17 @@
-# Agent Culinaire OS (CLAUS.IO)
+# claus.io
 
 Application de bureau **100 % locale** pour la gestion de cuisine professionnelle : génération de menus par IA, HACCP, inventaire, achats fournisseurs, planning du personnel et analyse aromatique d'ingrédients (moteur Epicure).
 
 L'IA fonctionne **localement via [Ollama](https://ollama.com)** : aucune donnée n'est envoyée dans le cloud.
+
+## Licence
+
+claus.io est un logiciel libre distribué sous **[GNU AGPL-3.0](./LICENSE)**.
+
+- **Usage** : libre, y compris commercial.
+- **Modification** : libre ; toute version modifiée doit rester sous AGPL-3.0 et publier son code source, y compris pour un déploiement en réseau (SaaS inclus).
+- **Fork commercial fermé** : interdit — quiconque distribue ou expose claus.io (modifié ou non) doit partager l'intégralité de son code source.
+- **Copyright** : © 2026 ClausIO
 
 ## Architecture
 

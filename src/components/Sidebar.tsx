@@ -48,10 +48,10 @@ export function Sidebar({
                 className="flex flex-col"
               >
                 <span className="text-xl font-black text-white tracking-tighter leading-none">
-                  CLAUS
+                  claus.io
                 </span>
                 <span className="text-[10px] font-mono text-brand-500 uppercase tracking-widest mt-1">
-                  Logiciel de Gestion
+                  claus.io
                 </span>
               </motionSlim.div>
             )}

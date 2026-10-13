@@ -26,7 +26,7 @@ function createWindow(url) {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    title: "CLAUS.IO - Agent Culinaire"
+    title: "claus.io"
   });
 
   mainWindow.setMenuBarVisibility(false);
@@ -50,7 +50,7 @@ function createWindow(url) {
 
 // Ouvre la fenetre sur l'URL REELLE du serveur, Apres avoir prouvé que ce port
 // est bien le notre. Une divergence d'identite est bloquante : afficher
-// l'application d'un tiers sous le nom de CLAUS.IO est pire que n'en afficher
+// l'application d'un tiers sous le nom de claus.io est pire que n'en afficher
 // aucune, parce que le cuisinier travaillerait sur des donnes qui ne sont pas
 // les siennes en croyant que si.
 async function ouvrirFenetre(info) {
@@ -62,10 +62,10 @@ async function ouvrirFenetre(info) {
   const conforme = await R.verifierIdentite(url, INSTANCE_TOKEN);
   if (!conforme) {
     fenetreOuverte = true; // on ne rejoue pas une seconde tentative sur un intrus
-    console.error(`[Serveur] IDENTITE NON CONFORME sur ${url} : le port est tenu par une application qui n'est pas CLAUS.IO. La fenetre n'est pas ouverte.`);
+    console.error(`[Serveur] IDENTITE NON CONFORME sur ${url} : le port est tenu par une application qui n'est pas claus.io. La fenetre n'est pas ouverte.`);
     dialog.showErrorBox(
-      'Erreur Critique du Serveur CLAUS.IO',
-      `Le port ${info.port} est occupé par une autre application.\n\nQuittez cette application ou libérez le port, puis relancez CLAUS.IO.\n\n(URL testée: ${url})`
+      'Erreur Critique du Serveur claus.io',
+      `Le port ${info.port} est occupé par une autre application.\n\nQuittez cette application ou libérez le port, puis relancez claus.io.\n\n(URL testée: ${url})`
     );
     app.quit();
     return;
@@ -128,7 +128,7 @@ function startServer() {
         if (!info) {
           console.error('[Serveur] compte-rendu de pret jamais recu (30 s) : la fenetre ne peut pas deviner le port.');
           dialog.showErrorBox(
-            'Erreur Critique du Serveur CLAUS.IO',
+            'Erreur Critique du Serveur claus.io',
             "Le moteur n'a pas annonce son port dans le delai imparti.\n\nRelancez l'application."
           );
           app.quit();
@@ -140,7 +140,7 @@ function startServer() {
     } catch (error) {
       console.error("Erreur fatale de lancement Express :", error);
       dialog.showErrorBox(
-        'Erreur Critique du Serveur CLAUS.IO',
+        'Erreur Critique du Serveur claus.io',
         `Impossible de démarrer le moteur. Capture d'écran requise pour l'ingénieur :\n\n${error.toString()}\n\nDétails de la stack:\n${error.stack}`
       );
     }

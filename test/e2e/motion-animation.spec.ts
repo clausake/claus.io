@@ -94,7 +94,7 @@ test("motion: un element `m` avec initial opacity:0 atteint opacity:1 (pas fige)
 
   const mesure = await page.evaluate(() => {
     const cible = Array.from(document.querySelectorAll("body *")).find(
-      (e) => (e.textContent ?? "").trim() === "CLAUS",
+      (e) => (e.textContent ?? "").trim() === "claus.io",
     );
     if (!cible) return { absent: true as const };
     // `cible` est un <span> : le noeud anime est son parent (le <m.div> qui porte
@@ -108,7 +108,7 @@ test("motion: un element `m` avec initial opacity:0 atteint opacity:1 (pas fige)
       tag: parent ? parent.tagName : null,
     };
   });
-  expect(mesure.absent, "marque CLAUS absente du DOM apres entree").toBe(false);
+  expect(mesure.absent, "marque claus.io absente du DOM apres entree").toBe(false);
   if (!mesure.absent) {
     expect(
       Number(mesure.parent),

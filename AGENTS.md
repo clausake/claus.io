@@ -150,7 +150,7 @@ python3 scripts/lire-gates.py           # qui est rouge (jamais grepper test/gat
 - `ONNXRUNTIME_NODE_INSTALL=skip` en variable globale : le postinstall de onnxruntime-node telecharge les providers CUDA/TensorRT depuis un CDN Microsoft BLOQUE depuis le runner (ETIMEDOUT) ; les binaires CPU linux/x64 sont deja bundles (install-metadata.js : linux/x64 = [cuda12] seulement).
 - Barriere npm-audit au seuil CRITICAL (un rouge high permanent n'est plus un signal) + job npm-audit-report (allow_failure, artefact JSON 1 mois). 3 high dev-only acceptees : pdf-to-img/pdfjs-dist (fix = montee majeure 7), xlsx (pas de fix).
 - TOUTES les sondes metier (18 .mjs + 5 .py) et les 15 specs e2e bootent le serveur avec COOKDRIVE_AUTH_OFF=1 ; verify:auth seul la juge active.
-- test reception-view : ouvrirAchats attend le bouton 30 s et re-essaie tant que le PREMIER bouton est « Acceder » (hydratation lente en CI, 2 lecons 2910822108/2910844482 — ne PAS detecter la landing par le body : « Restauration IO » est aussi dans l'app).
+- test reception-view : ouvrirAchats attend le bouton 30 s et re-essaie tant que le PREMIER bouton est « Acceder » (hydratation lente en CI, 2 lecons 2910822108/2910844482 — ne PAS detecter la landing par le body : « claus.io » est aussi dans l'app).
 
 ### Mission nuit 05/10 — 5 gates rouges rendues vertes (0 rouge sur 69)
 - Etat de depart : verify:livrable rc=1, verify:instance-mord rc=1, verify:forecast rc=2, verify:forecast-mord rc=2, verify:labor-cost-zero rc=3. Etat final : PORTES=69 ROUGES=0.

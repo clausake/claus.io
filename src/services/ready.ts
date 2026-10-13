@@ -12,7 +12,7 @@
 //     s'ouvre que par le filet de secours en production ;
 //  2. plus grave : quand 3000 est occupe par un tiers, le serveur glisse a 3001
 //     EN SILENCE et Electron, lui, charge 3000 — c'est-a-dire l'application du
-//     voisin. La fenetre affiche une app qui n'est pas CookDrive sans que rien
+//     voisin. La fenetre affiche une app qui n'est pas claus.io sans que rien
 //     ne rougisse.
 //
 // Le correctif ne peut pas se faire cote Electron seul : il faut que le port
