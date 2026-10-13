@@ -33,6 +33,25 @@ import { useToast, ConfirmDialog } from "./ui/Toast";
 import { appartientDossier, exportSingleRecipeToPDF as exportPDF } from "../lib/fiches";
 import { RecipeModal } from "./RecipeModal";
 
+// Le payload du chat culinaire (Sprint 16) : recette nommee en francais,
+// ingredients en nom/quantite/unite, etapes en string[].
+interface FicheIngredient {
+  name?: string;
+  ingredient?: string;
+  qte?: string | number;
+  quantite?: string | number;
+}
+
+interface FicheScanneePayload {
+  recette?: string;
+  categorie?: string;
+  jour?: string;
+  ingredients?: FicheIngredient[];
+  etapes?: { step_order: number; instructions: string }[];
+  preparation_steps?: string;
+  instructions?: string;
+}
+
 // Une ligne du panier de production : soit l'entete d'une recette (isRecipeHeader),
 // soit un ingredient a acheter. Les champs prix/fournisseur ne sont presents
 // que pour les lignes ingredient.
@@ -142,7 +161,7 @@ export function FichesTechniques({
       name: recette.nom || "",
       category: "chat",
       dish_type: carte,
-      ingredients: (recette.ingredients || []).map((ing: any, idx: number) => ({
+      ingredients: (recette.ingredients || []).map((ing: {nom?: string; quantite?: number | null; unite?: string}, idx: number) => ({
         id: "ing-" + Date.now() + "-" + idx,
         inventory_name: ing.nom,
         name: ing.nom,
@@ -179,8 +198,8 @@ export function FichesTechniques({
           for (const recipe of data.fiches_techniques) {
             const recipeName = recipe.recette || recipe.name || "Nouvelle Recette";
             const rawIngredients = recipe.ingredients || [];
-            const ingredients = rawIngredients.map((ing: any) => ({
-              inventory_name: ing.name || ing.ingredient || "Ingrédient",
+            const ingredients = rawIngredients.map((ing: {nom?: string; quantite?: number | null; unite?: string; name?: string; ingredient?: string; qte?: string | number; unit?: string}) => ({
+              inventory_name: ing.name || ing.ingredient || ing.nom || "Ingrédient",
               quantity_per_person: ing.quantite || ing.qte || 0,
               unit: ing.unite || ing.unit || "g",
             }));
@@ -217,14 +236,14 @@ export function FichesTechniques({
             // Initialize guest counts, preserving existing ones if present
             setGuestCounts((prev) => {
               const next = { ...prev };
-              upData.forEach((r: any) => {
-                if (next[r.id] === undefined) next[r.id] = 1;
+              upData.forEach((r: Recipe) => {
+                if (r.id && next[r.id] === undefined) next[r.id] = 1;
               });
               return next;
             });
 
             if (lastCreatedId) {
-              const matched = upData.find((r: any) => r.id === lastCreatedId);
+              const matched = upData.find((r: Recipe) => r.id === lastCreatedId);
               if (matched) {
                 setSelectedRecipeForModal(matched);
               }
@@ -340,8 +359,8 @@ export function FichesTechniques({
       // Initialize guest counts, preserving existing ones if present
       setGuestCounts((prev) => {
         const next = { ...prev };
-        data.forEach((r: any) => {
-          if (next[r.id] === undefined) next[r.id] = 1;
+        data.forEach((r: Recipe) => {
+          if (r.id && next[r.id] === undefined) next[r.id] = 1;
         });
         return next;
       });
@@ -363,17 +382,17 @@ export function FichesTechniques({
     }
   };
 
-  const saveRecipe = async (recipe: any) => {
+  const saveRecipe = async (recipe: Recipe) => {
     try {
       // Sprint 16 : la carte (entree/plat/dessert) est PORTEE a l'enregistre-
       // ment — c'est elle qui range la fiche dans le bon dossier. Defaut : la
       // categorie du dossier courant si c'est une carte, sinon "plat".
-      const carteDeLaFiche = ["entree", "plat", "dessert"].includes(recipe.dish_type)
-        ? recipe.dish_type
-        : ["entree", "plat", "dessert"].includes(recipe.category)
-          ? recipe.category
+      const carteDeLaFiche = ["entree", "plat", "dessert"].includes(recipe.dish_type || "")
+        ? (recipe.dish_type as string)
+        : ["entree", "plat", "dessert"].includes(recipe.category || "")
+          ? (recipe.category as string)
           : "plat";
-      if (recipe.id.startsWith("manual-")) {
+      if (recipe.id && recipe.id.startsWith("manual-")) {
         const res = await fetch(`/api/recipes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -396,7 +415,7 @@ export function FichesTechniques({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: recipe.name,
-            ingredients: recipe.ingredients.map((ing: any) => ({
+            ingredients: (recipe.ingredients || []).map((ing: RecipeIngredient) => ({
               inventory_name: ing.inventory_name,
               inventory_id: ing.inventory_id,
               quantity_per_person: ing.quantity_per_person,
@@ -417,13 +436,13 @@ export function FichesTechniques({
     }
   };
 
-  const handleSaveFicheToBook = async (fiche: any) => {
+  const handleSaveFicheToBook = async (fiche: FicheScanneePayload) => {
     // Transform fiche to recipe format
     const recipe = {
       id: "manual-" + Date.now(),
       name: fiche.recette,
       category: fiche.categorie || "Non classé",
-      ingredients: (fiche.ingredients || []).map((ing: any) => ({
+      ingredients: (fiche.ingredients || []).map((ing: FicheIngredient) => ({
         inventory_name: ing.name || ing.ingredient,
         inventory_id: null,
         quantity_per_person: ing.qte || ing.quantite || 0,
@@ -469,7 +488,7 @@ export function FichesTechniques({
       if (r.id === recipeId) {
         return {
           ...r,
-          ingredients: r.ingredients.filter((i: any) => i.id !== ingId),
+          ingredients: r.ingredients.filter((i: RecipeIngredient) => i.id !== ingId),
         };
       }
       return r;
@@ -477,7 +496,7 @@ export function FichesTechniques({
     setRecipes(newRecipes);
   };
 
-  const addToCart = (recipe: any) => {
+  const addToCart = (recipe: Recipe) => {
     if (!setCartItems || !cartItems) return;
 
     const count = guestCounts[recipe.id] || 1;
@@ -499,7 +518,7 @@ export function FichesTechniques({
       inventory_id: null,
     });
 
-    recipe.ingredients?.forEach((ing: any) => {
+    recipe.ingredients?.forEach((ing: RecipeIngredient) => {
       if (!ing.inventory_name) return;
 
       const totalQty =
@@ -512,10 +531,10 @@ export function FichesTechniques({
         item: ing.inventory_name,
         inventory_id: ing.inventory_id || ing.id,
         quantity: totalQty,
-        quantity_per_person: ing.quantity_per_person || 0,
+        quantity_per_person: Number(ing.quantity_per_person) || 0,
         guests: count,
         unit: ing.unit || "kg",
-        supplier: getSupplierForIngredient(ing.inventory_name),
+        supplier: getSupplierForIngredient(ing.inventory_name || ""),
         price: ing.unit_price || 0,
         total: totalQty * getIngredientEffectivePrice(ing),
         sourceRecipeId: recipe.id,
@@ -537,7 +556,7 @@ export function FichesTechniques({
         t.successAddToCartProduction ||
         "✅ {name} a été ajouté au Plan de Production avec {count} convive(s)."
       )
-        .replace("{name}", recipe.name)
+        .replace("{name}", recipe.name || "")
         .replace("{count}", count.toString()),
     );
   };
@@ -579,8 +598,14 @@ export function FichesTechniques({
   ];
 
   // Le module pur reçoit les deps du composant (labels, couverts, prix).
-  const exportSingleRecipeToPDF = (recipe: any) => {
-    exportPDF(recipe, {
+  const exportSingleRecipeToPDF = (recipe: Recipe) => {
+    if (!recipe.id) return;
+    const steps = recipe.preparation_steps;
+    const stepsFlat = Array.isArray(steps)
+      ? steps.map((s, i) => `${i + 1}. ${s.instructions}`).join("\n")
+      : steps;
+    const recipeWithId = { ...recipe, id: recipe.id, preparation_steps: stepsFlat };
+    exportPDF(recipeWithId, {
       labels: t,
       guestCount: guestCounts[recipe.id] || 1,
       prixEffectif: (ing) => getIngredientEffectivePrice(ing),
@@ -682,7 +707,7 @@ export function FichesTechniques({
           {categories.map((cat) => {
             const count = (
               viewMode === "book" ? savedRecipes : generatedRecipes
-            ).filter((r: any) => appartientDossier(r, cat.id)).length;
+            ).filter((r: Recipe) => appartientDossier(r, cat.id)).length;
             return (
               <button
                 key={cat.id}
@@ -721,7 +746,7 @@ export function FichesTechniques({
             // MODE GENERATED
 
             generatedRecipes.filter(
-              (r: any) => appartientDossier(r, selectedCategory),
+              (r: Recipe) => appartientDossier(r, selectedCategory),
             ).length === 0 ? (
               <div className="text-center py-20 bg-[#0A0A0A] rounded-3xl border border-white/5">
                 <BookOpen className="w-16 h-16 text-slate-600 mx-auto mb-6" />
@@ -737,7 +762,7 @@ export function FichesTechniques({
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {generatedRecipes
                   .filter(
-                    (r: any) => appartientDossier(r, selectedCategory),
+                    (r: Recipe) => appartientDossier(r, selectedCategory),
                   )
                   .map((recipe) => (
                     <div
@@ -765,7 +790,7 @@ export function FichesTechniques({
                             <span className="text-emerald-400 font-bold text-sm">
                               {(
                                 recipe.ingredients?.reduce(
-                                  (sum: number, ing: any) =>
+                                  (sum: number, ing: RecipeIngredient) =>
                                     sum +
                                     (parseFloat(
                                       (ing.quantity_per_person || "")
@@ -938,7 +963,7 @@ export function FichesTechniques({
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {recipe.ingredients?.map((ing: any) => (
+                                  {recipe.ingredients?.map((ing: RecipeIngredient) => (
                                     <tr
                                       key={ing.id}
                                       className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
@@ -954,7 +979,7 @@ export function FichesTechniques({
                                               if (r.id === recipe.id) {
                                                 return {
                                                   ...r,
-                                                  ingredients: r.ingredients.map((i: any) =>
+                                                  ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                     i.id === ing.id
                                                       ? {
                                                           ...i,
@@ -992,7 +1017,7 @@ export function FichesTechniques({
 
                                                       ingredients:
                                                         r.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -1020,7 +1045,7 @@ export function FichesTechniques({
                                                 if (r.id === recipe.id) {
                                                   return {
                                                     ...r,
-                                                    ingredients: r.ingredients.map((i: any) =>
+                                                    ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                       i.id === ing.id
                                                         ? { ...i, unit: newUnit }
                                                         : i,
@@ -1046,7 +1071,7 @@ export function FichesTechniques({
                                               if (r.id === recipe.id) {
                                                 return {
                                                   ...r,
-                                                  ingredients: r.ingredients.map((i: any) =>
+                                                  ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                     i.id === ing.id
                                                       ? { ...i, unit_price: newPrice }
                                                       : i,
@@ -1072,7 +1097,7 @@ export function FichesTechniques({
                                       <td className="px-4 py-2 text-center">
                                         <button
                                           onClick={() =>
-                                            removeIngredient(recipe.id, ing.id)
+                                            removeIngredient(recipe.id || "", ing.id || "")
                                           }
                                           className="p-1.5 text-slate-500 hover:text-red-500 transition-colors bg-white/5 rounded-lg"
                                           title={t.delete || "Supprimer"}
@@ -1117,7 +1142,7 @@ export function FichesTechniques({
                 {ALPHABET.map((letter) => {
                   const hasItems =
                     savedRecipes.filter(
-                      (r: any) =>
+                      (r: Recipe) =>
                         appartientDossier(r, selectedCategory) &&
                         r.name &&
                         r.name.toUpperCase().startsWith(letter),
@@ -1145,18 +1170,18 @@ export function FichesTechniques({
               {["entree", "plat", "dessert"].map((dishType) => {
                 const filteredSortedRecipes = savedRecipes
                   .filter(
-                    (r: any) => appartientDossier(r, selectedCategory),
+                    (r: Recipe) => appartientDossier(r, selectedCategory),
                   )
                   .filter(
-                    (r: any) =>
+                    (r: Recipe) =>
                       !activeLetter ||
                       (r.name && r.name.toUpperCase().startsWith(activeLetter)),
                   )
-                  .filter((r: any) => {
+                  .filter((r: Recipe) => {
                     const tType = r.dish_type || "plat";
                     return tType === dishType;
                   })
-                  .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+                  .sort((a: Recipe, b: Recipe) => (a.name || "").localeCompare(b.name || ""));
 
                 if (filteredSortedRecipes.length === 0) return null;
 
@@ -1205,7 +1230,7 @@ export function FichesTechniques({
                         <span className="text-amber-500 font-bold bg-amber-500/10 px-3 py-1 rounded-lg">
                           {(
                             recipe.ingredients?.reduce(
-                              (sum: number, ing: any) =>
+                              (sum: number, ing: RecipeIngredient) =>
                                 sum +
                                 (parseFloat(
                                   (ing.quantity_per_person || "")
@@ -1372,7 +1397,7 @@ export function FichesTechniques({
                               </tr>
                             </thead>
                             <tbody>
-                              {recipe.ingredients?.map((ing: any) => (
+                              {recipe.ingredients?.map((ing: RecipeIngredient) => (
                                 <tr
                                   key={ing.id}
                                   className="border-b border-white/5 last:border-0 hover:bg-white/5"
@@ -1388,7 +1413,7 @@ export function FichesTechniques({
                                           r.id === recipe.id
                                             ? {
                                                 ...r,
-                                                ingredients: r.ingredients.map((i: any) =>
+                                                ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                   i.id === ing.id
                                                     ? {
                                                         ...i,
@@ -1422,7 +1447,7 @@ export function FichesTechniques({
                                               ? {
                                                   ...r,
                                                   ingredients: r.ingredients.map(
-                                                    (i: any) =>
+                                                    (i: RecipeIngredient) =>
                                                       i.id === ing.id
                                                         ? {
                                                             ...i,
@@ -1448,7 +1473,7 @@ export function FichesTechniques({
                                             r.id === recipe.id
                                               ? {
                                                   ...r,
-                                                  ingredients: r.ingredients.map((i: any) =>
+                                                  ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                     i.id === ing.id
                                                       ? { ...i, unit: newUnit }
                                                       : i
@@ -1473,7 +1498,7 @@ export function FichesTechniques({
                                           r.id === recipe.id
                                             ? {
                                                 ...r,
-                                                ingredients: r.ingredients.map((i: any) =>
+                                                ingredients: r.ingredients.map((i: RecipeIngredient) =>
                                                   i.id === ing.id
                                                     ? { ...i, unit_price: newPrice }
                                                     : i
@@ -1498,7 +1523,7 @@ export function FichesTechniques({
                                   <td className="px-4 py-3 text-center">
                                     <button
                                       onClick={() =>
-                                        removeIngredient(recipe.id, ing.id)
+                                        removeIngredient(recipe.id || "", ing.id || "")
                                       }
                                       className="p-1.5 text-slate-600 hover:text-red-500 bg-red-500/0 hover:bg-red-500/10 rounded-lg"
                                     >
@@ -1531,10 +1556,10 @@ export function FichesTechniques({
         })}
               {savedRecipes
                 .filter(
-                  (r: any) => appartientDossier(r, selectedCategory),
+                  (r: Recipe) => appartientDossier(r, selectedCategory),
                 )
                 .filter(
-                  (r: any) =>
+                  (r: Recipe) =>
                     !activeLetter ||
                     (r.name && r.name.toUpperCase().startsWith(activeLetter)),
                 ).length === 0 && (
