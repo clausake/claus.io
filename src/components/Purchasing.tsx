@@ -1021,7 +1021,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
               )}
             </div>
             <div className="p-4 mt-4 bg-black/20 border border-white/5 rounded-2xl text-center text-[10px] uppercase tracking-[0.3em] text-slate-600 font-black">
-              Restauration IO — Database
+              claus.io — Database
             </div>
           </motionSlim.div>
         ) : (
@@ -1043,7 +1043,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
                     <h3 className="text-lg font-black text-white">Import Intelligent de Mercuriale</h3>
                   </div>
                   <p className="text-slate-400 text-sm mb-6">
-                    Déposez une feuille de tarifs (CSV) envoyée par votre fournisseur. L'IA de Restauration IO va faire correspondre les lignes au bon ingrédient en stock.
+                    Déposez une feuille de tarifs (CSV) envoyée par votre fournisseur. L'IA de claus.io va faire correspondre les lignes au bon ingrédient en stock.
                   </p>
                 </div>
 

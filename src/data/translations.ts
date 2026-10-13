@@ -157,7 +157,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     haccp: "Traçabilité HACCP",
     haccpTitle: "Suivi & Traçabilité HACCP",
     haccpSubtitle:
-      "Gestion des températures, traçabilité et preuves sanitaires Restauration IO",
+      "Gestion des températures, traçabilité et preuves sanitaires claus.io",
     manualEntry: "Saisie Manuelle",
     equipment: "Équipement",
     equipmentPlaceholder: "ex: Frigo 1",
@@ -177,7 +177,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traceability: "Traçabilité",
     labels: "Étiquetage",
     evidence: "Preuves & Audits",
-    haccpPdfTitle: "Journal de Conformité HACCP - Restauration IO",
+    haccpPdfTitle: "Journal de Conformité HACCP - claus.io",
     admissionEntry: "Entrée Admission",
     product: "Produit",
     lotNumberShort: "N° Lot",
@@ -283,7 +283,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     realTimeData: "Données en temps réel base locale",
     importCsv: "Importer CSV",
     add: "Ajouter",
-    clausAdvice: "Avis Restauration IO",
+    clausAdvice: "Avis claus.io",
     updateInventory: "Mettre à jour l'inventaire",
     inventoryUpdateSuccess:
       "✅ Inventaire mis à jour via la balance connectée !",
@@ -305,7 +305,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     save: "Enregistrer",
     editIngredient: "Modifier l'ingrédient",
     update: "Mettre à jour",
-    clausStrategic: "Analyse Stratégique de Restauration IO",
+    clausStrategic: "Analyse Stratégique de claus.io",
     expired: "Périmé",
     catDry: "Sec",
     catDairy: "Crémerie",
@@ -403,7 +403,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     modeTraditionalDesc:
       "Générez des menus hebdomadaires créatifs de type bistrot parisien chic.",
     analysisInProgress: "ANALYSE EN COURS...",
-    generatingCreative: "Restauration IO GÉNÈRE VOTRE MENU CRÉATIF...",
+    generatingCreative: "claus.io GÉNÈRE VOTRE MENU CRÉATIF...",
     creatingGastronomic: "CONCEPTION GASTRONOMIQUE...",
     generatingTraditional: "GÉNÉRATION BISTRO CHIC...",
     decomposeAnalysisDesc:
@@ -432,12 +432,12 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     highGastronomy: "Haute Gastronomie",
 
     gastronomicAIPrompt:
-      "L'IA Restauration IO va élaborer 1 menu signature complet avec des techniques de pointe.",
+      "L'IA claus.io va élaborer 1 menu signature complet avec des techniques de pointe.",
 
     generateGastronomic: "Générer Menus Gastronomiques",
 
     traditionalRecipesPrompt:
-      "L'IA Restauration IO va élaborer des menus hebdomadaires de bistronomie de terroir.",
+      "L'IA claus.io va élaborer des menus hebdomadaires de bistronomie de terroir.",
 
     generateTraditional: "Générer Menus Bistro Chic",
 
@@ -504,15 +504,15 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     fourWeekCycle: "Cycle 4 Semaines",
     freeTrial: "Essai Gratuit",
     trialDaysLeft: "Il vous reste {days} jours d'essai.",
-    configTrialDesc: "Il vous reste {days} jours d'essai pour tester Restauration IO.",
+    configTrialDesc: "Il vous reste {days} jours d'essai pour tester claus.io.",
     trialExpired: "Essai Terminé",
     days: "jours",
-    landingTitle: "Logiciel de Gestion",
+    landingTitle: "claus.io",
     landingSubtitle:
       "L'intelligence artificielle au service de la restauration et la haute gastronomie.",
     accessKitchen: "Accéder à la Cuisine",
     ollamaStatus: "Statut Ollama",
-    assistantTitre: "Bienvenue dans CLAUS.IO",
+    assistantTitre: "Bienvenue dans claus.io",
     assistantSousTitre: "Trois étapes pour équiper l'application de son intelligence.",
     assistantEcran1: "Choisissez le moteur qui analyse vos documents",
     assistantAucunMoteur: "AUCUN_MOTEUR_TROUVE. Trois voies de recours : installez llama.cpp, installez Ollama, ou choisissez un fournisseur en ligne ci-dessous.",
@@ -605,7 +605,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     deleteError: "Erreur lors de la suppression.",
     updateSuccess: "L'ingrédient a été mis à jour.",
     updateError: "Erreur lors de la modification.",
-    clausUnavailable: "Impossible de joindre Restauration IO.",
+    clausUnavailable: "Impossible de joindre claus.io.",
     analyzing: "Analyse...",
     unitsLabel: "unités",
     piecesLabel: "pièces",
@@ -695,10 +695,10 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     ignore: "Ignorer",
     antiWasteTitle: "Anti-Gaspillage & Créativité",
     antiWasteSubtitle:
-      "Restauration IO analyse vos stocks critiques pour proposer des recettes rentables",
-    generatingClaus: "Restauration IO RÉFLÉCHIT...",
+      "claus.io analyse vos stocks critiques pour proposer des recettes rentables",
+    generatingClaus: "claus.io RÉFLÉCHIT...",
 
-    generateWithClaus: "GÉNÉRER AVEC Restauration IO",
+    generateWithClaus: "GÉNÉRER AVEC claus.io",
     alertIngredients: "Ingrédients en alerte",
     noCriticalStock: "Aucun stock critique détecté.",
     urgentStatus: "Urgent",
@@ -706,11 +706,11 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     noRecipeGenerated: "Aucune recette générée",
 
     generateIdeasDesc:
-      "Cliquez sur le bouton 'Générer des idées' pour que Restauration IO analyse vos ingrédients à sauver.",
-    clausAnalyzingCombo: "Restauration IO analyse les combinaisons...",
+      "Cliquez sur le bouton 'Générer des idées' pour que claus.io analyse vos ingrédients à sauver.",
+    clausAnalyzingCombo: "claus.io analyse les combinaisons...",
     profitableSearchDesc:
       "Recherche de recettes rentables et créatives dans la base de données gastronomique.",
-    clausProposals: "Propositions de Restauration IO",
+    clausProposals: "Propositions de claus.io",
     savingsLabel: "Économie :",
     usesLabel: "Utilise :",
     difficultyLabel: "Difficulté",
@@ -749,7 +749,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     dragDrop: "Glissez-déposez ou cliquez",
     aiProcessing: "Traitement IA en cours...",
     systemCore: "Cœur du Système",
-    advancedConfig: "Configuration Avancée Restauration IO",
+    advancedConfig: "Configuration Avancée claus.io",
     aiSection: "Moteur d'Intelligence Artificielle",
     activeModel: "Modèle IA Actif",
     systemLanguage: "Langue du Système",
@@ -758,7 +758,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     typeFroid: "Froid (Frigo/Chambre froide)",
     typeChaud: "Chaud (Cuisson)",
     typeRefroid: "Refroidissement Rapide",
-    purchasingSubtitle2: "Restauration IO — Logistique & Approvisionnement",
+    purchasingSubtitle2: "claus.io — Logistique & Approvisionnement",
     phone: "Téléphone",
     email: "Email",
     dailyLaborCost: "Coût Main d'Œuvre",
@@ -860,7 +860,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
 
     mode04: "Mode 04",
 
-    initClaus: "Restauration IO Initialization...",
+    initClaus: "claus.io Initialization...",
 
     instructionsNotAvailable:
       "Detailed instructions not available for this recipe.",
@@ -946,7 +946,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     realTimeData: "Real-Time Tracking",
     importCsv: "Import CSV",
     add: "Add",
-    clausAdvice: "Restauration IO Advice",
+    clausAdvice: "claus.io Advice",
     updateInventory: "Update Stock",
     inventoryUpdateSuccess: "Inventory successfully updated.",
     valuationChart: "Stock Valuation",
@@ -1025,7 +1025,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     valueByCategory: "Value by Category",
     menuEngineering: "Menu Engineering",
     menuAnalysisSubtitle:
-      "Restauration IO intelligent analysis and strategic planning",
+      "claus.io intelligent analysis and strategic planning",
     backToModes: "Back to modes",
 
     modeDecompose: "Menu Decomposition",
@@ -1129,7 +1129,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
 
     addToProductionPlan: "Add to Production Plan",
     analysisInProgress: "ANALYSIS IN PROGRESS...",
-    generatingCreative: "Restauration IO IS GENERATING YOUR CREATIVE MENU...",
+    generatingCreative: "claus.io IS GENERATING YOUR CREATIVE MENU...",
     creatingGastronomic: "GASTRONOMIC CONCEPT...",
     generatingTraditional: "GENERATING BISTRO CHIC...",
 
@@ -1150,12 +1150,12 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     highGastronomy: "High Gastronomy",
 
     gastronomicAIPrompt:
-      "Restauration IO AI will develop 1 complete signature menu with cutting-edge techniques.",
+      "claus.io AI will develop 1 complete signature menu with cutting-edge techniques.",
 
     generateGastronomic: "Generate Gastronomic Menus",
 
     traditionalRecipesPrompt:
-      "Restauration IO AI will develop weekly terroir bistronomy menus.",
+      "claus.io AI will develop weekly terroir bistronomy menus.",
 
     generateTraditional: "Generate Bistro Chic Menus",
 
@@ -1236,7 +1236,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     haccp: "HACCP Traceability",
     haccpTitle: "HACCP Monitoring & Traceability",
     haccpSubtitle:
-      "Temperature management, traceability, and sanitary evidence Restauration IO",
+      "Temperature management, traceability, and sanitary evidence claus.io",
     manualEntry: "Manual Entry",
     equipment: "Equipment",
     equipmentPlaceholder: "ex: Fridge 1",
@@ -1256,7 +1256,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traceability: "Traceability",
     labels: "Labels",
     evidence: "Evidence & Audits",
-    haccpPdfTitle: "HACCP Compliance Log - Restauration IO",
+    haccpPdfTitle: "HACCP Compliance Log - claus.io",
     admissionEntry: "Admission Entry",
     product: "Product",
     lotNumberShort: "Lot N°",
@@ -1332,7 +1332,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     fourWeekCycle: "4-Week Cycle",
     freeTrial: "Free Trial",
     trialDaysLeft: "You have {days} days left in your trial.",
-    configTrialDesc: "You have {days} trial days left to test Restauration IO.",
+    configTrialDesc: "You have {days} trial days left to test claus.io.",
     trialExpired: "Trial Expired",
     days: "days",
     landingTitle: "Management Software",
@@ -1340,7 +1340,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
       "Artificial Intelligence at the service of catering and high gastronomy.",
     accessKitchen: "Access the Kitchen",
     ollamaStatus: "Ollama Status",
-    assistantTitre: "Welcome to CLAUS.IO",
+    assistantTitre: "Welcome to claus.io",
     assistantSousTitre: "Three steps to equip the application with its intelligence.",
     assistantEcran1: "Choose the engine that analyses your documents",
     assistantAucunMoteur: "NO_ENGINE_FOUND. Three ways forward: install llama.cpp, install Ollama, or choose an online provider below.",
@@ -1424,7 +1424,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     importError: "❌ Error during import.",
     csvReadError: "❌ Error reading CSV file.",
     csvLoadError: "❌ Impossible to read CSV file.",
-    inventoryLoadError: "Impossible to load inventory from Restauration IO server.",
+    inventoryLoadError: "Impossible to load inventory from claus.io server.",
     addSuccess: "Ingredient added successfully.",
     addError: "Error adding the ingredient.",
     serverConnError: "Server connection error.",
@@ -1432,7 +1432,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     deleteError: "Error during deletion.",
     updateSuccess: "Ingredient updated.",
     updateError: "Error during modification.",
-    clausUnavailable: "Unable to reach Restauration IO.",
+    clausUnavailable: "Unable to reach claus.io.",
     analyzing: "Analyzing...",
     unitsLabel: "units",
     piecesLabel: "pieces",
@@ -1526,10 +1526,10 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     ignore: "Ignore",
     antiWasteTitle: "Anti-Waste & Creativity",
     antiWasteSubtitle:
-      "Restauration IO analyzes your critical stocks to suggest profitable recipes",
-    generatingClaus: "Restauration IO IS THINKING...",
+      "claus.io analyzes your critical stocks to suggest profitable recipes",
+    generatingClaus: "claus.io IS THINKING...",
 
-    generateWithClaus: "GENERATE WITH Restauration IO",
+    generateWithClaus: "GENERATE WITH claus.io",
     alertIngredients: "Alert Ingredients",
     noCriticalStock: "No critical stock detected.",
     urgentStatus: "Urgent",
@@ -1537,11 +1537,11 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     noRecipeGenerated: "No recipe generated",
 
     generateIdeasDesc:
-      "Click the 'Generate ideas' button for Restauration IO to analyze your ingredients to save.",
-    clausAnalyzingCombo: "Restauration IO is analyzing combinations...",
+      "Click the 'Generate ideas' button for claus.io to analyze your ingredients to save.",
+    clausAnalyzingCombo: "claus.io is analyzing combinations...",
     profitableSearchDesc:
       "Searching for profitable and creative recipes in the gastronomic database.",
-    clausProposals: "Restauration IO Proposals",
+    clausProposals: "claus.io Proposals",
     savingsLabel: "Savings :",
     usesLabel: "Uses :",
     difficultyLabel: "Difficulty",
@@ -1574,7 +1574,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     dragDrop: "Drag & drop or click",
     aiProcessing: "AI Processing in progress...",
     systemCore: "System Core",
-    advancedConfig: "Restauration IO Advanced Configuration",
+    advancedConfig: "claus.io Advanced Configuration",
     aiSection: "Artificial Intelligence Engine",
     activeModel: "Active AI Model",
     systemLanguage: "System Language",
@@ -1583,7 +1583,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     typeFroid: "Cold (Fridge / Cold Room)",
     typeChaud: "Hot (Cooking)",
     typeRefroid: "Blast Chilling",
-    purchasingSubtitle2: "Restauration IO — Logistics & Purchasing",
+    purchasingSubtitle2: "claus.io — Logistics & Purchasing",
     phone: "Phone",
     email: "Email",
     dailyLaborCost: "Labor Cost",
@@ -1649,7 +1649,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     docDesignationEx: "Bezeichnung auf Dokument (z. B. Rispentomaten)",
     trialEndedTitle: "Testzeitraum abgelaufen",
     enterActivationKey: "Aktivierungsschlüssel eingeben",
-    clausIsActivated: "Restauration IO ist auf diesem Gerät aktiviert.",
+    clausIsActivated: "claus.io ist auf diesem Gerät aktiviert.",
 
     loadingLicense: "Lizenz wird geladen...",
     machineIdSupport: "Maschinen-ID (dem Support mitzuteilen)",
@@ -1661,7 +1661,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     mode02: "Modus 02",
     mode03: "Modus 03",
     mode04: "Modus 04",
-    initClaus: "Restauration IO wird initialisiert...",
+    initClaus: "claus.io wird initialisiert...",
     instructionsNotAvailable:
       "Detaillierte Anweisungen sind für dieses Rezept nicht verfügbar.",
     sourceLabel: "Quelle",
@@ -1734,7 +1734,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     realTimeData: "Echtzeit-Tracking",
     importCsv: "CSV Importieren",
     add: "Hinzufügen",
-    clausAdvice: "Restauration IO Empfehlung",
+    clausAdvice: "claus.io Empfehlung",
     updateInventory: "Bestand aktualisieren",
     inventoryUpdateSuccess: "Inventar erfolgreich aktualisiert.",
     valuationChart: "Bestandsbewertung",
@@ -1831,7 +1831,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     haccp: "HACCP-Rückverfolgbarkeit",
     haccpTitle: "HACCP-Überwachung & Rückverfolgbarkeit",
     haccpSubtitle:
-      "Temperaturmanagement, Rückverfolgbarkeit und hygienische Nachweise Restauration IO",
+      "Temperaturmanagement, Rückverfolgbarkeit und hygienische Nachweise claus.io",
     manualEntry: "Manuelle Eingabe",
     equipment: "Gerät",
     equipmentPlaceholder: "Bsp: Kühlschrank 1",
@@ -1851,7 +1851,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traceability: "Rückverfolgbarkeit",
     labels: "Etiketten",
     evidence: "Nachweise & Audits",
-    haccpPdfTitle: "HACCP-Compliance-Protokoll - Restauration IO",
+    haccpPdfTitle: "HACCP-Compliance-Protokoll - claus.io",
     admissionEntry: "Wareneingang",
     product: "Produkt",
     lotNumberShort: "Chargen-Nr.",
@@ -1883,7 +1883,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     chatPlaceholder:
       "Stellen Sie eine Frage (z.B.: Wie macht man eine Bearnaise?)",
     chatWelcome:
-      "Hallo Chef, ich bin Restauration IO, Ihr intelligenter kulinarischer Assistent. Wie kann ich Ihnen helfen?",
+      "Hallo Chef, ich bin claus.io, Ihr intelligenter kulinarischer Assistent. Wie kann ich Ihnen helfen?",
     chatError: "Fehler bei der Kommunikation mit der KI.",
     chatServerError: "Server konnte nicht erreicht werden.",
     technicalSheets: "Technische Datenblätter",
@@ -1957,7 +1957,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     fourWeekCycle: "4-Wochen-Zyklus",
     freeTrial: "Kostenlose Testversion",
     trialDaysLeft: "Sie haben noch {days} Tage Testzeitraum.",
-    configTrialDesc: "Sie haben noch {days} Tage Testzeit für Restauration IO.",
+    configTrialDesc: "Sie haben noch {days} Tage Testzeit für claus.io.",
     trialExpired: "Testzeit abgelaufen",
     days: "Tage",
     landingTitle: "Management-Software",
@@ -1965,7 +1965,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
       "Künstliche Intelligenz im Dienste von Catering und hoher Gastronomie.",
     accessKitchen: "Zugang zur Küche",
     ollamaStatus: "Ollama-Status",
-    assistantTitre: "Willkommen bei CLAUS.IO",
+    assistantTitre: "Willkommen bei claus.io",
     assistantSousTitre: "Drei Schritte, um die Anwendung mit Intelligenz auszustatten.",
     assistantEcran1: "Wählen Sie die Engine für die Dokumentenanalyse",
     assistantAucunMoteur: "KEIN_MOTOR_GEFUNDEN. Drei Wege: llama.cpp installieren, Ollama installieren, oder unten einen Online-Anbieter wählen.",
@@ -2051,7 +2051,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     csvReadError: "❌ Fehler beim Lesen der CSV-Datei.",
     csvLoadError: "❌ CSV-Datei kann nicht gelesen werden.",
     inventoryLoadError:
-      "Inventar konnte nicht vom Restauration IO-Server geladen werden.",
+      "Inventar konnte nicht vom claus.io-Server geladen werden.",
     addSuccess: "Zutat erfolgreich hinzugefügt.",
     addError: "Fehler beim Hinzufügen der Zutat.",
     serverConnError: "Serververbindungsfehler.",
@@ -2059,7 +2059,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     deleteError: "Fehler beim Löschen.",
     updateSuccess: "Zutat aktualisiert.",
     updateError: "Fehler bei der Änderung.",
-    clausUnavailable: "Restauration IO nicht erreichbar.",
+    clausUnavailable: "claus.io nicht erreichbar.",
     analyzing: "Wird analysiert...",
     unitsLabel: "Einheiten",
     piecesLabel: "Stücke",
@@ -2156,8 +2156,8 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     ignore: "Ignorieren",
     antiWasteTitle: "Resteverwertung",
     antiWasteSubtitle:
-      "Restauration IO analysiert Ihre kritischen Bestände, um profitable Rezepte vorzuschlagen",
-    generatingClaus: "Restauration IO DENKT NACH...",
+      "claus.io analysiert Ihre kritischen Bestände, um profitable Rezepte vorzuschlagen",
+    generatingClaus: "claus.io DENKT NACH...",
 
     generateWithClaus: "MIT KI GENERIEREN",
     alertIngredients: "Warnzutaten",
@@ -2923,7 +2923,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     landingSubtitle: "Su sistema inteligente para la alta cocina.",
     accessKitchen: "Acceder a la Cocina",
     ollamaStatus: "Estado Ollama",
-    assistantTitre: "Bienvenido a CLAUS.IO",
+    assistantTitre: "Bienvenido a claus.io",
     assistantSousTitre: "Tres pasos para equipar la aplicación con su inteligencia.",
     assistantEcran1: "Elige el motor que analiza tus documentos",
     assistantAucunMoteur: "NINGUN_MOTOR_ENCONTRADO. Tres vías: instala llama.cpp, instala Ollama, o elige un proveedor en línea abajo.",
@@ -3686,7 +3686,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
       "L'intelligenza artificiale al servizio della ristorazione e dell'alta gastronomia.",
     accessKitchen: "Accedi alla Cucina",
     ollamaStatus: "Stato Ollama",
-    assistantTitre: "Benvenuto in CLAUS.IO",
+    assistantTitre: "Benvenuto in claus.io",
     assistantSousTitre: "Tre passi per equipare l'applicazione con la sua intelligenza.",
     assistantEcran1: "Scegli il motore che analizza i tuoi documenti",
     assistantAucunMoteur: "NESSUN_MOTORE_TROVATO. Tre vie: installa llama.cpp, installa Ollama, oppure scegli un fornitore online qui sotto.",

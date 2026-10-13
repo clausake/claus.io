@@ -269,7 +269,7 @@ export function SettingsView({
         fileName: "Guide_Utilisateur_Agent_Culinaire_OS.pdf",
         title: "AGENT CULINAIRE OS - GUIDE D'UTILISATION",
         subtitle: "Système de Pilotage Culinaire Premium, Ingénierie des Menus & HACCP",
-        intro: "Bienvenue dans l'interface de l'Agent Culinaire OS. Ce guide complet vous détaille les différentes rubriques et outils de l'application conçus en étroite synergie pour optimiser vos marges, faciliter votre approvisionnement et garantir la conformité réglementaire de votre établissement.",
+        intro: "Bienvenue dans l'interface de l'claus.io. Ce guide complet vous détaille les différentes rubriques et outils de l'application conçus en étroite synergie pour optimiser vos marges, faciliter votre approvisionnement et garantir la conformité réglementaire de votre établissement.",
         sections: [
           {
             title: "1. GESTION DE L'INVENTAIRE & STOCK EN TEMPS RÉEL",
@@ -316,13 +316,13 @@ export function SettingsView({
             ]
           }
         ],
-        footer: "Agent Culinaire OS - Solution de Pilotage Professionnel de Cuisine"
+        footer: "claus.io - Solution de Pilotage Professionnel de Cuisine"
       },
       en: {
         fileName: "User_Guide_Agent_Culinaire_OS.pdf",
         title: "AGENT CULINAIRE OS - USER MANUAL",
         subtitle: "Premium Kitchen Management, Menu Engineering & HACCP System",
-        intro: "Welcome to Agent Culinaire OS. This master guide describes how to navigate and make the most out of our comprehensive professional kitchen tools, designed in harmony to simplify operations, protect margins, streamline ordering, and ensure complete sanitary compliance.",
+        intro: "Welcome to claus.io. This master guide describes how to navigate and make the most out of our comprehensive professional kitchen tools, designed in harmony to simplify operations, protect margins, streamline ordering, and ensure complete sanitary compliance.",
         sections: [
           {
             title: "1. REAL-TIME INVENTORY & INGREDIENT MANAGEMENT",
@@ -369,13 +369,13 @@ export function SettingsView({
             ]
           }
         ],
-        footer: "Agent Culinaire OS - Professional Kitchen Control Deck"
+        footer: "claus.io - Professional Kitchen Control Deck"
       },
       de: {
         fileName: "Benutzerhandbuch_Agent_Culinaire_OS.pdf",
         title: "AGENT CULINAIRE OS - BENUTZERHANDBUCH",
         subtitle: "Premium Küchenmanagement, Menü-Analyse und HACCP-System",
-        intro: "Willkommen bei Agent Culinaire OS. Dieses Handbuch führt Sie durch die hocheffizienten Funktionen unseres Küchen-Betriebssystems. Die nahtlos vernetzten Module senken Ihren Wareneinsatz, optimieren den Einkauf und garantieren die lückenlose Einhaltung aller Hygienevorschriften.",
+        intro: "Willkommen bei claus.io. Dieses Handbuch führt Sie durch die hocheffizienten Funktionen unseres Küchen-Betriebssystems. Die nahtlos vernetzten Module senken Ihren Wareneinsatz, optimieren den Einkauf und garantieren die lückenlose Einhaltung aller Hygienevorschriften.",
         sections: [
           {
             title: "1. INVENTAR & ZUTATENVERWALTUNG IN ECHTZEIT",
@@ -422,13 +422,13 @@ export function SettingsView({
             ]
           }
         ],
-        footer: "Agent Culinaire OS - Professionelle Steuerzentrale für Großküchen"
+        footer: "claus.io - Professionelle Steuerzentrale für Großküchen"
       },
       es: {
         fileName: "Guia_del_Usuario_Agent_Culinaire_OS.pdf",
         title: "AGENT CULINAIRE OS - GUÍA DE USUARIO",
         subtitle: "Gestión Culinaria Premium, Ingeniería de Menús e Higiene HACCP",
-        intro: "Bienvenido a Agent Culinaire OS. Esta guía maestra describe el uso y la sinergia de nuestro conjunto completo de herramientas profesionales, diseñadas para optimizar sus márgenes, organizar las compras y garantizar el máximo cumplimiento de las normativas de seguridad de cocina.",
+        intro: "Bienvenido a claus.io. Esta guía maestra describe el uso y la sinergia de nuestro conjunto completo de herramientas profesionales, diseñadas para optimizar sus márgenes, organizar las compras y garantizar el máximo cumplimiento de las normativas de seguridad de cocina.",
         sections: [
           {
             title: "1. CONTROL DE INVENTARIO E INGREDIENTES EN TIEMPO REAL",
@@ -475,13 +475,13 @@ export function SettingsView({
             ]
           }
         ],
-        footer: "Agent Culinaire OS - Plataforma de Mando Culinario Profesional"
+        footer: "claus.io - Plataforma de Mando Culinario Profesional"
       },
       it: {
         fileName: "Guida_Utente_Agent_Culinaire_OS.pdf",
         title: "AGENT CULINAIRE OS - GUIDA PER L'UTENTE",
         subtitle: "Gestione di Cucina Premium, Ingegneria dei Menu e Protocollo HACCP",
-        intro: "Benvenuto in Agent Culinaire OS. Questa guida centrale illustra come utilizzare le potenti utilità del nostro sistema operativo per ristorazione per consolidare i margini finanziari, regolare l'approvvigionamento e soddisfare appieno i requisiti HACCP ed allergeni del locale.",
+        intro: "Benvenuto in claus.io. Questa guida centrale illustra come utilizzare le potenti utilità del nostro sistema operativo per ristorazione per consolidare i margini finanziari, regolare l'approvvigionamento e soddisfare appieno i requisiti HACCP ed allergeni del locale.",
         sections: [
           {
             title: "1. ARCHIVIO ED INVENTARIO INGREDIENTI IN TEMPO REALE",
@@ -528,7 +528,7 @@ export function SettingsView({
             ]
           }
         ],
-        footer: "Agent Culinaire OS - Pannello di Controllo Professionale di Cucina"
+        footer: "claus.io - Pannello di Controllo Professionale di Cucina"
       }
     };
 

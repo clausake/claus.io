@@ -65,7 +65,7 @@ export const gerer_flux_culinaire = async (jsonData: string, notify?: (msg: stri
 
     console.log("Transmission au serveur local (Asus G16) :", payload);
 
-    // Appel API vers le cerveau Agent Culinaire OS
+    // Appel API vers le cerveau claus.io
     const response = await fetch("/api/agent/command", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,7 +86,7 @@ ${result.claus_analysis}`, "success");
   } catch (error) {
     console.error("Erreur de transmission:", error);
     notify?.(
-      "❌ Erreur de connexion au serveur Agent Culinaire OS. Vérifiez que le backend est lancé.",
+      "❌ Erreur de connexion au serveur claus.io. Vérifiez que le backend est lancé.",
       "error"
     );
   }

@@ -1,4 +1,4 @@
-# CookDrive — Audit UI/UX & Propositions d'amélioration
+# claus.io — Audit UI/UX & Propositions d'amélioration
 
 > **Statut :** Document de propositions (aucun fichier modifié)
 > **Base :** lecture du code réel — `src/index.css` (249 lignes), `src/App.tsx` (934 lignes), `src/components/DashboardOverview.tsx` (550), `src/components/InventoryAudit.tsx` (1231), `src/components/MenuAnalysis.tsx` (1753), `src/components/FichesTechniques.tsx` (2348), `src/components/NavItem.tsx` (46), `index.html`, `package.json`.
