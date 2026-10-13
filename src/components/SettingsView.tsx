@@ -36,11 +36,11 @@ export function SettingsView({
   trialStatus,
   setTrialStatus,
 }: {
-  settings: any;
-  setSettings: any;
-  t: any;
-  trialStatus: any;
-  setTrialStatus: any;
+  settings: Record<string, unknown>;
+  setSettings: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  t: Record<string, string>;
+  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked: boolean; machineId?: string } | null;
+  setTrialStatus: React.Dispatch<React.SetStateAction<{ isExpired: boolean; daysLeft: number; isUnlocked: boolean } | null>>;
 }) {
   const toast = useToast();
   const [ollamaStatus, setOllamaStatus] = React.useState<
@@ -112,7 +112,7 @@ export function SettingsView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(llm),
     });
-    setSettings((s: any) => ({ ...s, ...llm }));
+    setSettings((s: Record<string, unknown>) => ({ ...s, ...llm }));
     return llm;
   };
 
@@ -211,7 +211,7 @@ export function SettingsView({
         if (data.models && Array.isArray(data.models)) {
           // Assume models are objects with a 'name' field
           setAvailableModels(
-            data.models.map((m: any) => (typeof m === "string" ? m : m.name)),
+            data.models.map((m: string | {name: string}) => (typeof m === "string" ? m : m.name)),
           );
         }
       } else {
@@ -255,7 +255,7 @@ export function SettingsView({
   
   const handleDownloadGuide = () => {
     const doc = new jsPDF();
-    const lang = settings.language || "fr";
+    const lang = (settings.language as string) || "fr";
 
     const guides: Record<string, {
       fileName: string;
@@ -532,7 +532,7 @@ export function SettingsView({
       }
     };
 
-    const activeGuide = guides[lang] || guides.fr;
+    const activeGuide = (guides as Record<string, typeof guides.fr>)[lang] || guides.fr;
 
     // Font layout setup
     doc.setFont("helvetica", "bold");
