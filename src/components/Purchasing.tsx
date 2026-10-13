@@ -269,7 +269,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
       });
   };
 
-  const generateOrderPdf = (supplierName: string, supplierData: { supplier_id: string; supplier_name: string; email: string; phone: string }, items: { raw_name: string; raw_price: number; raw_unit: string }[]) => {
+  const generateOrderPdf = (supplierName: string, supplierData: { supplier_id: string; supplier_name: string; email: string; phone: string }, items: { name?: string; quantity?: number; unit_price?: number; total?: number }[]) => {
     const doc = new jsPDF();
     
     // Header
@@ -300,13 +300,13 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
     doc.line(14, 55, 196, 55);
 
     let totalOrder = 0;
-    const tableData = items.map((i: { raw_name: string; raw_price: number; raw_unit: string }) => {
+    const tableData = items.map((i: { name?: string; quantity?: number; unit_price?: number; total?: number }) => {
         totalOrder += (i.total || 0);
         return [
-            i.name,
-            i.quantity,
-            i.unit_price > 0 ? `${i.unit_price.toFixed(2)}` : '-',
-            i.total > 0 ? `${i.total.toFixed(2)}` : '-'
+            i.name ?? '',
+            i.quantity ?? 0,
+            (i.unit_price || 0) > 0 ? `${(i.unit_price || 0).toFixed(2)}` : '-',
+            (i.total || 0) > 0 ? `${(i.total || 0).toFixed(2)}` : '-'
         ];
     });
 
