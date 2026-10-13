@@ -26,6 +26,7 @@ interface Document {
   total_amount: number;
   source_image_url: string | null;
   items: Item[];
+  status?: string;
 }
 
 interface Item {
@@ -369,7 +370,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
   // Group documents by month and day
   const groupedDocuments = documents
     .filter((doc) => doc.status !== "DRAFT")
-    .reduce((acc: any, doc: any) => {
+    .reduce<Record<string, Record<string, Document[]>>>((acc, doc) => {
       const date = new Date(doc.date);
       const month = date.toLocaleString(
         t.language === "fr"
@@ -403,7 +404,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
     }, {});
 
   const validatedDocs = documents.filter((doc) => doc.status === "VALIDATED");
-  const docsBySupplier = validatedDocs.reduce((acc: any, doc: any) => {
+  const docsBySupplier = validatedDocs.reduce<Record<string, Document[]>>((acc, doc) => {
     const sup = doc.supplier || "Inconnu";
     if (!acc[sup]) acc[sup] = [];
     acc[sup].push(doc);
@@ -480,7 +481,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
         <div className="mb-6">
           <DocumentUpload
             t={t}
-            onUploadComplete={(result?: {type?: string; data?: any; source_image_url?: string}) => {
+            onUploadComplete={(result?: {type?: string; data?: {items?: {item?: string; description?: string; quantity?: number; unit_price?: number}[]; type?: string; supplier?: string; date?: string; total_amount?: number}; source_image_url?: string}) => {
               if (result && result.type === "draft") {
                 fetchDocuments();
                 setArchiveTab("drafts");
