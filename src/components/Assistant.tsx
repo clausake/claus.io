@@ -30,7 +30,7 @@ interface Verdict {
 export function Assistant({
   t, onTermine,
 }: {
-  t: any;
+  t: Record<string, string>;
   onTermine: () => void;
 }) {
   const [ecran, setEcran] = useState(0);
