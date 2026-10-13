@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 import { MediaDisplay } from "../lib/helpers";
 import { useToast, ConfirmDialog } from "./ui/Toast";
 
-export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateIngredient?: (name: string, lang: string) => string }) => {
+export const AdmissionModule = ({ t, translateIngredient }: { t: Record<string, string>, translateIngredient?: (name: string, lang: string) => string }) => {
   const toast = useToast();
   const [view, setView] = React.useState<'stocks' | 'history' | 'suppliers'>('stocks');
   const [batches, setBatches] = React.useState<any[]>([]);
@@ -306,7 +306,7 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
               alt="Etiquette agrandie" 
               className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl ring-1 ring-white/10" 
               interactive={true}
-              onClick={(e: any) => e.stopPropagation()} 
+              onClick={(e: React.MouseEvent) => e.stopPropagation()} 
             />
           </div>
         </div>
@@ -315,7 +315,7 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: any, translateI
   );
 };
 
-export const TransformationModule = ({ t }: { t: any }) => {
+export const TransformationModule = ({ t }: { t: Record<string, string> }) => {
     const [recipes, setRecipes] = React.useState<any[]>([]);
     const [batches, setBatches] = React.useState<any[]>([]);
     const [history, setHistory] = React.useState<any[]>([]);
@@ -386,7 +386,7 @@ export const TransformationModule = ({ t }: { t: any }) => {
 };
 
 // Helper function to export HACCP logs as PDF
-const exportHaccpToPdf = async (t: any) => {
+const exportHaccpToPdf = async (t: Record<string, string>) => {
     const doc = new jsPDF();
     const title = t.haccpPdfTitle || "Journal de Conformité HACCP";
     doc.setFontSize(18);
@@ -405,11 +405,11 @@ const exportHaccpToPdf = async (t: any) => {
     const resTemp = await fetch('/api/haccp/temperatures');
     const logs = await resTemp.json();
     
-    const tempTableData = logs.map((l: any) => [
-        new Date(l.recorded_at).toLocaleDateString(),
-        l.equipment_name,
-        `${l.temperature}°C`,
-        l.user
+    const tempTableData = logs.map((l: {recorded_at?: string; equipment_name?: string; temperature?: number; user?: string}) => [
+        l.recorded_at ? new Date(l.recorded_at).toLocaleDateString() : '-',
+        l.equipment_name || '-',
+        `${l.temperature ?? '-'}°C`,
+        l.user || '-'
     ]);
 
     autoTable(doc, {
@@ -432,11 +432,11 @@ const exportHaccpToPdf = async (t: any) => {
     const resBatches = await fetch('/api/haccp/batches');
     const batches = await resBatches.json();
 
-    const admissionTableData = batches.map((b: any) => [
+    const admissionTableData = batches.map((b: {batch_number?: string; product_name?: string; source_image_url?: string; created_at?: string; inventory_id?: string; lot_number?: string; expiration_date?: string; quantity?: number; unit?: string; [k: string]: unknown}) => [
         b.created_at ? new Date(b.created_at).toLocaleDateString() : '-',
-        b.product_name || b.inventory_id,
-        b.lot_number,
-        b.expiration_date,
+        b.product_name || b.inventory_id || '-',
+        b.lot_number || '-',
+        b.expiration_date || '-',
         b.quantity ? `${b.quantity} ${b.unit || ''}` : '-'
     ]);
 
@@ -451,7 +451,7 @@ const exportHaccpToPdf = async (t: any) => {
     currentY = (doc as any).lastAutoTable.finalY + 15;
 
     // 2.1 SCANNED LABELS IMAGES (Evidence)
-    const batchesWithImages = batches.filter((b: any) => b.source_image_url);
+    const batchesWithImages = batches.filter((b: {source_image_url?: string}) => b.source_image_url);
     if (batchesWithImages.length > 0) {
         if (currentY > 200) { doc.addPage(); currentY = 20; }
         doc.setFontSize(14);
@@ -490,10 +490,10 @@ const exportHaccpToPdf = async (t: any) => {
     const resCleaning = await fetch('/api/haccp/cleaning');
     const cleaning = await resCleaning.json();
 
-    const cleaningTableData = cleaning.map((c: any) => [
-        new Date(c.completed_at).toLocaleDateString(),
-        new Date(c.completed_at).toLocaleTimeString(),
-        c.zone_name,
+    const cleaningTableData = cleaning.map((c: {product_name?: string; agent?: string; completed_at?: string; zone_name?: string; [k: string]: unknown}) => [
+        c.completed_at ? new Date(c.completed_at).toLocaleDateString() : '-',
+        c.completed_at ? new Date(c.completed_at).toLocaleTimeString() : '-',
+        c.zone_name || '-',
         'OK'
     ]);
 
@@ -508,7 +508,7 @@ const exportHaccpToPdf = async (t: any) => {
     doc.save('Journal_Complet_HACCP.pdf');
 };
 
-export const LabelingModule = ({ t }: { t: any }) => {
+export const LabelingModule = ({ t }: { t: Record<string, string> }) => {
     const [product, setProduct] = React.useState('');
     const [dlc, setDlc] = React.useState('');
 
@@ -584,7 +584,7 @@ export const LabelingModule = ({ t }: { t: any }) => {
     );
 };
 
-export const EvidenceModule = ({ t }: { t: any }) => {
+export const EvidenceModule = ({ t }: { t: Record<string, string> }) => {
     const toast = useToast();
     const [pendingDeleteDoc, setPendingDeleteDoc] = React.useState<string | null>(null);
     const [docs, setDocs] = React.useState<any[]>([]);
@@ -730,7 +730,7 @@ export const EvidenceModule = ({ t }: { t: any }) => {
             {enlargedImage && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm" onClick={() => setEnlargedImage(null)}>
                   <div className="relative max-w-[90vw] max-h-[90vh]">
-                     <MediaDisplay src={enlargedImage} alt="Document" className="w-[85vw] h-[85vh] max-w-full max-h-[85vh] object-contain rounded-xl" interactive={true} onClick={(e: any) => e.stopPropagation()} />
+                     <MediaDisplay src={enlargedImage} alt="Document" className="w-[85vw] h-[85vh] max-w-full max-h-[85vh] object-contain rounded-xl" interactive={true} onClick={(e: React.MouseEvent) => e.stopPropagation()} />
                      <button className="absolute -top-12 right-0 text-white p-2 rounded-full bg-black/50" onClick={() => setEnlargedImage(null)}><X size={24} /></button>
                   </div>
                 </div>
