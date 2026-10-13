@@ -31,12 +31,12 @@ export function InventoryAudit({
   onAddToPurchasing,
   showNotification,
 }: {
-  t: any;
+  t: Record<string, string>;
   translateIngredient: (name: string, lang: string) => string;
-  settings: any;
-  onAddToCart: (item: any) => void;
+  settings: Record<string, unknown>;
+  onAddToCart: (item: {id: string; name: string; quantity: number; unit: string; price?: number; category?: string; min_stock?: number}) => void;
   onAddToPurchasing: (id: string) => void;
-  showNotification: (m: string, type?: any) => void;
+  showNotification: (m: string, type?: string) => void;
 }) {
   const toast = useToast();
   const [inventory, setInventory] = useState<any[]>([]);
@@ -479,15 +479,15 @@ export function InventoryAudit({
     0,
   );
 
-  const ChartTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length && !payload[0].payload.isEmpty) {
+  const ChartTooltip = ({ active, payload }: {active?: boolean; payload?: Array<{isEmpty?: boolean; name?: string; value?: number; color?: string}>}) => {
+    if (active && payload && payload.length && !payload[0].isEmpty) {
       return (
         <div className="glass-panel p-3 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-md">
           <p className="text-slate-300 font-medium text-xs uppercase tracking-widest mb-1">
             {payload[0].name}
           </p>
           <p className="text-emerald-400 font-mono font-bold text-lg">
-            {payload[0].value.toFixed(2)}
+            {(payload[0].value || 0).toFixed(2)}
           </p>
         </div>
       );
@@ -495,13 +495,13 @@ export function InventoryAudit({
     return null;
   };
 
-  const StatusTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length && !payload[0].payload.isEmpty) {
+  const StatusTooltip = ({ active, payload }: {active?: boolean; payload?: Array<{isEmpty?: boolean; name?: string; value?: number; color?: string}>}) => {
+    if (active && payload && payload.length && !payload[0].isEmpty) {
       return (
         <div className="glass-panel p-2 border border-white/10 shadow-2xl bg-black/95 backdrop-blur-md flex items-center gap-2">
           <div
             className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: payload[0].payload.color }}
+            style={{ backgroundColor: payload[0].color }}
           ></div>
           <p className="text-slate-300 font-medium text-xs">
             {payload[0].name}:
@@ -603,7 +603,7 @@ export function InventoryAudit({
                   dataKey="value"
                   stroke="none"
                 >
-                  {categoryData.map((entry: any, index) => (
+                  {categoryData.map((entry: {isEmpty?: boolean}, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={
