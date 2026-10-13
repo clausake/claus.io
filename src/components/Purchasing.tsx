@@ -6,10 +6,26 @@ import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
 import { useToast, ConfirmDialog } from "./ui/Toast";
 
+interface ForecastItem {
+  inventory_id: string;
+  minStock: number;
+  quantity: number;
+  besoin_recettes: number;
+}
+
+interface PurchaseOrder {
+  id: string;
+  status: string;
+  supplier: string;
+  date: string;
+  items: { raw_name: string; raw_price: number; raw_unit: string }[];
+  total_amount: number;
+}
+
 export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, translateIngredient?: (name: string, lang: string) => string, manualIds?: Set<string> }) {
   const toast = useToast();
   const [pendingDeletePrice, setPendingDeletePrice] = useState<string | null>(null);
-  const [forecast, setForecast] = useState<any[]>([]);
+  const [forecast, setForecast] = useState<ForecastItem[]>([]);
   // La fenetre reelle du besoin (« sur 14 jours a partir du ... »). Sans elle le
   // chiffre du besoin n'a pas d'origine et le cuisinier ne peut pas dire s'il
   // couvre le service du lendemain ou trois semaines.
@@ -37,7 +53,13 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
   // Price Comparison & Mercuriales States
   const [comparisonData, setComparisonData] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  const [importMatches, setImportMatches] = useState<any[] | null>(null);
+  interface ImportMatch {
+  prix_exploitable: boolean;
+  matched_inventory_id: string | null;
+  [k: string]: unknown;
+}
+
+const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
   const [importSupplierId, setImportSupplierId] = useState('');
   const [isAnalyzingImport, setIsAnalyzingImport] = useState(false);
   const [priceSearch, setPriceSearch] = useState('');
@@ -126,7 +148,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         setForecastWindow(payload && !Array.isArray(payload) ? payload.window ?? null : null);
         setSuppliers(supplierData);
         const initialOverrides: Record<string, number> = { ...overrides };
-        forecastData.forEach((item: any) => {
+        forecastData.forEach((item: ForecastItem) => {
           if (initialOverrides[item.inventory_id] === undefined) {
              initialOverrides[item.inventory_id] = Math.max(0, item.minStock - item.quantity + item.besoin_recettes);
           }
@@ -149,7 +171,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
   // ConfirmDialog) et elle se dit ensuite a voix haute (toast) avec le solde.
   const [pendingReceive, setPendingReceive] = useState<any | null>(null);
 
-  const receiveOrder = async (order: any) => {
+  const receiveOrder = async (order: PurchaseOrder) => {
     try {
       const res = await fetch(`/api/purchasing/orders/${order.id}/receive`, {
         method: 'POST',
@@ -247,7 +269,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
       });
   };
 
-  const generateOrderPdf = (supplierName: string, supplierData: any, items: any[]) => {
+  const generateOrderPdf = (supplierName: string, supplierData: { supplier_id: string; supplier_name: string; email: string; phone: string }, items: { raw_name: string; raw_price: number; raw_unit: string }[]) => {
     const doc = new jsPDF();
     
     // Header
@@ -278,7 +300,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
     doc.line(14, 55, 196, 55);
 
     let totalOrder = 0;
-    const tableData = items.map((i: any) => {
+    const tableData = items.map((i: { raw_name: string; raw_price: number; raw_unit: string }) => {
         totalOrder += (i.total || 0);
         return [
             i.name,
@@ -400,7 +422,7 @@ export function PurchasingTab({ t, translateIngredient, manualIds }: { t: any, t
         if (priceIdx === -1) priceIdx = headerRow.length > 1 ? 1 : 0;
         if (unitIdx === -1 && headerRow.length > 2) unitIdx = 2;
 
-        const items: any[] = [];
+        const items: { raw_name: string; raw_price: number; raw_unit: string }[] = [];
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
           if (line.length <= Math.max(nameIdx, priceIdx)) continue;

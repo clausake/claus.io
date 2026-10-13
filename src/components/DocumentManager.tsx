@@ -18,11 +18,44 @@ import { DocumentUpload } from "../components/DocumentUpload";
 import { MediaDisplay, translateIngredientHelper } from "../lib/helpers";
 import { useToast } from "./ui/Toast";
 
-export function DocumentManager({ t }: { t: any }) {
+interface Document {
+  id: string;
+  type: string;
+  supplier: string;
+  date: string;
+  total_amount: number;
+  source_image_url: string | null;
+  items: Item[];
+}
+
+interface Item {
+  inventory_name: string;
+  name: string;
+  quantity_per_person: string | number;
+  unit: string;
+  unit_price: number;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+}
+
+interface InitialState {
+  documents: Document[];
+  inventory: string[];
+  suppliersList: Supplier[];
+}
+
+interface DocumentManagerProps {
+  t: Record<string, string>;
+}
+
+export function DocumentManager({ t }: DocumentManagerProps) {
   const toast = useToast();
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [suppliersList, setSuppliersList] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [inventory, setInventory] = useState<string[]>([]);
+  const [suppliersList, setSuppliersList] = useState<Supplier[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [archiveTab, setArchiveTab] = useState<
@@ -121,7 +154,7 @@ export function DocumentManager({ t }: { t: any }) {
     });
   };
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleItemChange = (index: number, field: string, value: string | number) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
@@ -212,7 +245,7 @@ export function DocumentManager({ t }: { t: any }) {
       // ne se dit pas est une saisie perdue.
       if (!res.ok) {
         const corps = await res.json().catch(() => null as any);
-        const rejetees: any[] = Array.isArray(corps?.rejetees) ? corps.rejetees : [];
+        const rejetees: {index?: number; nom?: string; raison?: string}[] = Array.isArray(corps?.rejetees) ? corps.rejetees : [];
         const detail = rejetees
           .map((r) => `ligne ${(r?.index ?? 0) + 1} (${r?.nom || "?"}) : ${r?.raison || "?"}`)
           .join(" · ");
@@ -230,7 +263,7 @@ export function DocumentManager({ t }: { t: any }) {
       // reponse (la lecon des prix_non_exploitables collectes et jamais lus).
       if (Array.isArray(corps?.rejetees) && corps.rejetees.length > 0) {
         const detail = corps.rejetees
-          .map((r: any) => `ligne ${(r?.index ?? 0) + 1} (${r?.nom || "?"}) : ${r?.raison}`)
+          .map((r: {index?: number; nom?: string; raison?: string}) => `ligne ${(r.index ?? 0) + 1} (${r.nom || "?"}) : ${r.raison}`)
           .join(" · ");
         toast(
           `${t.partialDocument || "Document enregistre, mais "} ${corps.rejetees.length} ${
@@ -289,7 +322,7 @@ export function DocumentManager({ t }: { t: any }) {
       if (res.ok) {
         const result = await res.json();
         if (result && result.data) {
-          const matchedItems = (result.data.items || []).map((item: any) => {
+          const matchedItems = (result.data.items || []).map((item: {item?: string; description?: string}) => {
             const itemName = item.item || item.description || "";
             const found = inventory.find(
               (inv) =>
@@ -447,13 +480,13 @@ export function DocumentManager({ t }: { t: any }) {
         <div className="mb-6">
           <DocumentUpload
             t={t}
-            onUploadComplete={(result?: any) => {
+            onUploadComplete={(result?: {type?: string; data?: any}) => {
               if (result && result.type === "draft") {
                 fetchDocuments();
                 setArchiveTab("drafts");
               } else if (result && result.data) {
                 const matchedItems = (result.data.items || []).map(
-                  (item: any) => {
+                  (item: {item?: string; description?: string}) => {
                     const itemName = item.item || item.description || "";
                     // Recherche dans l'inventaire
                     const found = inventory.find(
@@ -820,7 +853,7 @@ export function DocumentManager({ t }: { t: any }) {
 
                               <div className="grid grid-cols-1 gap-4">
                                 {groupedDocuments[month][day].map(
-                                  (doc: any) => (
+                                  (doc: {id: string; supplier?: string; date?: string; status?: string}) => {
                                     <div
                                       key={doc.id}
                                       className="bg-[#1A1A1A] border border-white/10 rounded-2xl p-6 hover:border-emerald-500/30 transition-all group"
@@ -928,7 +961,7 @@ export function DocumentManager({ t }: { t: any }) {
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {doc.items?.map((item: any) => (
+                                            {doc.items?.map((item: {id: string; name?: string; quantity?: number}) => (
                                               <tr
                                                 key={item.id}
                                                 className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
@@ -1016,7 +1049,7 @@ export function DocumentManager({ t }: { t: any }) {
                             className="mt-6 space-y-4 pt-6 border-t border-white/5 flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {docsBySupplier[sup].map((doc: any) => (
+                            {docsBySupplier[sup].map((doc: {id: string; supplier?: string; date?: string; status?: string}) => (
                               <div
                                 key={doc.id}
                                 className="bg-black rounded-xl border border-white/5 overflow-hidden"
@@ -1148,7 +1181,7 @@ export function DocumentManager({ t }: { t: any }) {
               alt={t.enlargedDocAlt || "Document agrandi"}
               className="w-full h-full object-contain rounded-xl shadow-2xl ring-1 ring-white/10"
               interactive={true}
-              onClick={(e: any) => e.stopPropagation()}
+              onClick={(e: MouseEvent) => e.stopPropagation()}
             />
           </div>
         </div>
