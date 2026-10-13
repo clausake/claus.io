@@ -507,10 +507,10 @@ export function StaffPlanning({ t }: StaffPlanningProps) {
               {t.roleDistribution || "RÉPARTITION DES RÔLES"}
             </h3>
             <div className="space-y-4">
-              {Object.entries(staff.reduce((acc, s) => {
+              {(Object.entries(staff.reduce<Record<string, number>>((acc, s) => {
                 acc[s.role] = (acc[s.role] || 0) + 1;
                 return acc;
-              }, {} as Record<string, number>)).map(([r, count]: [string, number]) => (
+              }, {})) as [string, number][]).map(([r, count]) => (
                 <div key={r}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-300">{r}</span>
