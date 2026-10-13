@@ -4,7 +4,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-export function LandingPage({ onEnter, t }: { onEnter: () => void; t: any }) {
+export function LandingPage({ onEnter, t }: { onEnter: () => void; t: Record<string, string> }) {
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center relative overflow-hidden text-slate-200">
       {/* Background decoration */}

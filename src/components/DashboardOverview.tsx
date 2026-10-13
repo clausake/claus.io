@@ -21,7 +21,7 @@ import {
 import { LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
 
-export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
+export function DashboardOverview({ t, settings }: { t: Record<string, string>; settings: Record<string, unknown> }) {
   const [stats, setStats] = useState({
     totalStockValue: 0,
     activeAlerts: 0,
@@ -88,7 +88,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
         if (costRes.ok) setCostData(await costRes.json());
         if (stockRes.ok) {
           const rawStock = await stockRes.json();
-          const hasValues = rawStock.some((d: any) => d.value > 0);
+          const hasValues = rawStock.some((d: {value: number}) => d.value > 0);
           if (!hasValues) {
             setStockData([
               {
@@ -99,7 +99,7 @@ export function DashboardOverview({ t, settings }: { t: any; settings: any }) {
               },
             ]);
           } else {
-            setStockData(rawStock.filter((d: any) => d.value > 0));
+            setStockData(rawStock.filter((d: {value: number}) => d.value > 0));
           }
         }
       } catch (e) {

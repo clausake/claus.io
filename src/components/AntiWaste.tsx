@@ -15,7 +15,7 @@ import {
 import { translateIngredientHelper } from "../lib/helpers";
 import { useToast } from "./ui/Toast";
 
-export function AntiWaste({ t }: { t: any }) {
+export function AntiWaste({ t }: { t: Record<string, string> }) {
   const toast = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [recipes, setRecipes] = useState<any[] | null>(null);
@@ -319,7 +319,7 @@ export function AntiWaste({ t }: { t: any }) {
                 <ul className="grid grid-cols-1 gap-2">
                   {(
                     selectedRecipe.quantities || selectedRecipe.ingredients
-                  ).map((item: any, i: number) => {
+                  ).map((item: string | {quantity: number | string; unit: string; name: string}, i: number) => {
                     // Logic to extract name/qty if item is an object vs string
                     const displayItem =
                       typeof item === "string"
