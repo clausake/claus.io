@@ -2,7 +2,19 @@ import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, Clock } from 'lucide-react';
 import { useToast } from "./ui/Toast";
 
-export function DocumentUpload({ onUploadComplete, t }: { onUploadComplete: (data?: any) => void, t: any }) {
+export interface UploadResult {
+  type?: string;
+  data?: {
+    items?: {item?: string; description?: string; quantity?: number; unit_price?: number}[];
+    type?: string;
+    supplier?: string;
+    date?: string;
+    total_amount?: number;
+  };
+  source_image_url?: string;
+}
+
+export function DocumentUpload({ onUploadComplete, t }: { onUploadComplete: (data?: UploadResult) => void, t: Record<string, string> }) {
   const toast = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [isDraft, setIsDraft] = useState(true); // Default to true (fast mobile upload)

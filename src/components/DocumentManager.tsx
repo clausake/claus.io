@@ -481,7 +481,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
         <div className="mb-6">
           <DocumentUpload
             t={t}
-            onUploadComplete={(result?: {type?: string; data?: {items?: {item?: string; description?: string; quantity?: number; unit_price?: number}[]; type?: string; supplier?: string; date?: string; total_amount?: number}; source_image_url?: string}) => {
+            onUploadComplete={(result?: import("./DocumentUpload").UploadResult) => {
               if (result && result.type === "draft") {
                 fetchDocuments();
                 setArchiveTab("drafts");
