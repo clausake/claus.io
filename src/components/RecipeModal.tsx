@@ -6,14 +6,50 @@ import {
 import * as motionSlim from "motion/react-m";
 import { MediaDisplay, getCostModifier, getIngredientEffectivePrice } from "../lib/helpers";
 
+interface RecipeIngredient {
+  id?: string;
+  inventory_name?: string;
+  name?: string;
+  quantity_per_person?: string | number;
+  unit?: string;
+  unit_price?: number;
+  inventory_id?: string | null;
+  allergens?: string;
+  [k: string]: unknown;
+}
+
+interface Recipe {
+  id?: string;
+  name?: string;
+  category?: string;
+  dish_type?: string;
+  allergens?: string[];
+  ingredients?: RecipeIngredient[];
+  preparation_steps?: string | { step_order: number; instructions: string }[];
+  is_saved?: boolean;
+  [k: string]: unknown;
+}
+
+interface Optimisation {
+  type?: string;
+  label?: string;
+  ingredient_name?: string;
+  supplier_name?: string;
+  best_price?: number;
+  current_price?: number;
+  unit?: string;
+  savings_percent?: number;
+  savings_value?: number;
+}
+
 export interface RecipeModalProps {
   /** La recette affichee (state du parent) — null = modal ferme. */
-  selectedRecipeForModal: Record<string, any>;
-  setSelectedRecipeForModal: React.Dispatch<React.SetStateAction<any>>;
-  recipes: any[];
-  inventory: any[];
-  supplierComparison: any[];
-  setRecipes: React.Dispatch<React.SetStateAction<any[]>>;
+  selectedRecipeForModal: Recipe;
+  setSelectedRecipeForModal: React.Dispatch<React.SetStateAction<Recipe | null>>;
+  recipes: Recipe[];
+  inventory: RecipeIngredient[];
+  supplierComparison: RecipeIngredient[];
+  setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
   guestCounts: Record<string, number>;
   setGuestCounts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   isRecipeModalFullScreen: boolean;
@@ -22,14 +58,14 @@ export interface RecipeModalProps {
   generateSteps: (id: string) => Promise<void>;
   addIngredient: (recipeId: string) => void;
   removeIngredient: (recipeId: string, ingId: string) => void;
-  saveRecipe: (recipe: any) => Promise<void>;
-  addToCart: (recipe: any) => void;
+  saveRecipe: (recipe: Recipe) => Promise<void>;
+  addToCart: (recipe: Recipe) => void;
   /** Le ref de scroll EXTERIEUR (le parent y reset le scrollTop). */
   outerModalScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Le ref de scroll INTERIEUR (le modal lui-meme). */
   modalScrollRef: React.RefObject<HTMLDivElement | null>;
-  t: any;
-  exportSingleRecipeToPDF: (recipe: any) => void;
+  t: Record<string, string>;
+  exportSingleRecipeToPDF: (recipe: Recipe) => void;
 }
 
 
@@ -58,6 +94,7 @@ export function RecipeModal({
   t,
   exportSingleRecipeToPDF,
 }: RecipeModalProps) {
+  const rid = selectedRecipeForModal.id || "";
   return (
       <AnimatePresence>
         {selectedRecipeForModal && (
@@ -112,7 +149,7 @@ export function RecipeModal({
                             (a: string) => a.trim().toUpperCase(),
                           ),
                           ...(selectedRecipeForModal.ingredients || []).flatMap(
-                            (ing: any) =>
+                            (ing: RecipeIngredient) =>
                               ing.allergens
                                 ? ing.allergens
                                     .split(",")
@@ -129,7 +166,7 @@ export function RecipeModal({
                               <AlertTriangle className="w-3 h-3 mr-1" />{" "}
                               ALLERGÈNES :
                             </span>
-                            {recipeAllergens.map((a: any) => (
+                            {recipeAllergens.map((a: string) => (
                               <span
                                 key={a}
                                 className="px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest rounded"
@@ -148,7 +185,7 @@ export function RecipeModal({
                         <span className="text-emerald-400 font-bold text-lg">
                           {(
                             selectedRecipeForModal.ingredients?.reduce(
-                              (sum: number, ing: any) =>
+                              (sum: number, ing: RecipeIngredient) =>
                                 sum +
                                 (parseFloat(
                                   (ing.quantity_per_person || "")
@@ -270,19 +307,19 @@ export function RecipeModal({
                           </p>
                           <button
                             onClick={() =>
-                              generateSteps(selectedRecipeForModal.id)
+                              selectedRecipeForModal.id && generateSteps(rid)
                             }
                             disabled={
-                              generatingSteps[selectedRecipeForModal.id]
+                              generatingSteps[rid]
                             }
                             className="flex items-center justify-center gap-3 px-8 py-4 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-400 rounded-2xl border border-emerald-500/30 font-black uppercase tracking-widest text-xs transition-all disabled:opacity-50 shadow-lg shadow-emerald-500/10 active:scale-[0.98]"
                           >
-                            {generatingSteps[selectedRecipeForModal.id] ? (
+                            {generatingSteps[rid] ? (
                               <RefreshCw className="w-5 h-5 animate-spin" />
                             ) : (
                               <ChefHat className="w-5 h-5" />
                             )}
-                            {generatingSteps[selectedRecipeForModal.id]
+                            {generatingSteps[rid]
                               ? t.generating || "Génération en cours..."
                               : t.generateSteps || "Générer les Étapes"}
                           </button>
@@ -295,12 +332,12 @@ export function RecipeModal({
                   <div className="lg:col-span-2 flex flex-col space-y-6">
                     {/* Meilleure Offre Ingrédients Advise Box */}
                     {(() => {
-                      const optimisations: any[] = [];
+                      const optimisations: Optimisation[] = [];
                       let totalCurrentCost = 0;
                       let totalOptimizedCost = 0;
                       
-                      selectedRecipeForModal.ingredients?.forEach((ing: any) => {
-                        const guests = guestCounts[selectedRecipeForModal.id] || 1;
+                      selectedRecipeForModal.ingredients?.forEach((ing: RecipeIngredient) => {
+                        const guests = guestCounts[rid] || 1;
                         const totalQty = (parseFloat((ing.quantity_per_person || "").toString().replace(",", ".")) || 0) * guests;
                         
                         const inventoryItem = inventory.find(i => i.id === ing.inventory_id);
@@ -309,9 +346,10 @@ export function RecipeModal({
                         totalCurrentCost += originalCost;
 
                         const comparison = supplierComparison.find(c => c.inventory_id === ing.inventory_id);
+                        const bestSupplier = comparison?.best_supplier_price as {supplier_name?: string; calculated_price_per_ref?: number} | undefined;
                         
-                        if (comparison && comparison.best_supplier_price) {
-                          const bestPrice = comparison.best_supplier_price.calculated_price_per_ref;
+                        if (bestSupplier) {
+                          const bestPrice = bestSupplier.calculated_price_per_ref || 0;
                           const optimizedCost = totalQty * bestPrice;
                           totalOptimizedCost += optimizedCost;
                           
@@ -321,11 +359,11 @@ export function RecipeModal({
                             const savingsValue = totalQty * diff;
                             if (savingsValue > 0.01) {
                               optimisations.push({
-                                ingredient_name: ing.inventory_name || ing.name,
-                                supplier_name: comparison.best_supplier_price.supplier_name,
+                                ingredient_name: ing.inventory_name || ing.name || "Ingrédient",
+                                supplier_name: bestSupplier.supplier_name || "Fournisseur",
                                 best_price: bestPrice,
                                 current_price: standardPrice,
-                                unit: comparison.inventory_unit,
+                                unit: ((comparison?.inventory_unit as string) || "kg"),
                                 savings_percent: savingsPercent,
                                 savings_value: savingsValue
                               });
@@ -365,10 +403,10 @@ export function RecipeModal({
                                 </span>
                                 <div className="text-right">
                                   <span className="block font-bold text-emerald-400 font-mono">
-                                    {opt.best_price.toFixed(2)} € / {opt.unit}
+                                    {(opt.best_price || 0).toFixed(2)} € / {opt.unit}
                                   </span>
                                   <span className="text-[10px] text-slate-500">
-                                    (vs {opt.current_price.toFixed(2)} €, soit -{opt.savings_percent}%)
+                                    (vs {(opt.current_price || 0).toFixed(2)} €, soit -{opt.savings_percent || 0}%)
                                   </span>
                                 </div>
                               </div>
@@ -384,7 +422,7 @@ export function RecipeModal({
                         {t.ingredients || "Ingrédients"}
                         <button
                           onClick={() =>
-                            addIngredient(selectedRecipeForModal.id)
+                            addIngredient(rid)
                           }
                           className="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded transition-colors"
                         >
@@ -398,11 +436,11 @@ export function RecipeModal({
                         <input
                           type="number"
                           min="1"
-                          value={guestCounts[selectedRecipeForModal.id] || 1}
+                          value={guestCounts[rid] || 1}
                           onChange={(e) =>
                             setGuestCounts({
                               ...guestCounts,
-                              [selectedRecipeForModal.id]:
+                              [rid]:
                                 parseInt(e.target.value) || 1,
                             })
                           }
@@ -432,9 +470,9 @@ export function RecipeModal({
                             {selectedRecipeForModal.ingredients &&
                             selectedRecipeForModal.ingredients.length > 0 ? (
                               selectedRecipeForModal.ingredients.map(
-                                (ing: any) => {
+                                (ing: RecipeIngredient) => {
                                   const guests =
-                                    guestCounts[selectedRecipeForModal.id] || 1;
+                                    guestCounts[rid] || 1;
                                   const totalQty =
                                     (parseFloat(
                                       (ing.quantity_per_person || "")
@@ -461,7 +499,7 @@ export function RecipeModal({
                                                       ...r,
                                                       ingredients:
                                                         r.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -482,7 +520,7 @@ export function RecipeModal({
                                                       ...prev,
                                                       ingredients:
                                                         prev.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -519,7 +557,7 @@ export function RecipeModal({
                                                         ...r,
                                                         ingredients:
                                                           r.ingredients.map(
-                                                            (i: any) =>
+                                                            (i: RecipeIngredient) =>
                                                               i.id === ing.id
                                                                 ? {
                                                                     ...i,
@@ -538,7 +576,7 @@ export function RecipeModal({
                                                       ...prev,
                                                       ingredients:
                                                         prev.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -567,7 +605,7 @@ export function RecipeModal({
                                                         ...r,
                                                         ingredients:
                                                           r.ingredients.map(
-                                                            (i: any) =>
+                                                            (i: RecipeIngredient) =>
                                                               i.id === ing.id
                                                                 ? {
                                                                     ...i,
@@ -585,7 +623,7 @@ export function RecipeModal({
                                                       ...prev,
                                                       ingredients:
                                                         prev.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -626,7 +664,7 @@ export function RecipeModal({
                                                       ...r,
                                                       ingredients:
                                                         r.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -645,7 +683,7 @@ export function RecipeModal({
                                                     ...prev,
                                                     ingredients:
                                                       prev.ingredients.map(
-                                                        (i: any) =>
+                                                        (i: RecipeIngredient) =>
                                                           i.id === ing.id
                                                             ? {
                                                                 ...i,
@@ -686,7 +724,7 @@ export function RecipeModal({
                                                   ".",
                                                 ),
                                               ) || 0;
-                                            const yieldPercent = (ing.yield_percent !== undefined) ? ing.yield_percent : 100;
+                                            const yieldPercent = Number(ing.yield_percent !== undefined ? ing.yield_percent : 100);
                                             const yieldFactor = yieldPercent / 100;
                                             const newPrice =
                                               totalQty > 0
@@ -700,7 +738,7 @@ export function RecipeModal({
                                                       ...r,
                                                       ingredients:
                                                         r.ingredients.map(
-                                                          (i: any) =>
+                                                          (i: RecipeIngredient) =>
                                                             i.id === ing.id
                                                               ? {
                                                                   ...i,
@@ -719,7 +757,7 @@ export function RecipeModal({
                                                     ...prev,
                                                     ingredients:
                                                       prev.ingredients.map(
-                                                        (i: any) =>
+                                                        (i: RecipeIngredient) =>
                                                           i.id === ing.id
                                                             ? {
                                                                 ...i,
@@ -739,8 +777,8 @@ export function RecipeModal({
                                         <button
                                           onClick={() => {
                                             removeIngredient(
-                                              selectedRecipeForModal.id,
-                                              ing.id,
+                                              rid,
+                                              ing.id || "",
                                             );
                                             setSelectedRecipeForModal((prev) =>
                                               prev
@@ -748,7 +786,7 @@ export function RecipeModal({
                                                     ...prev,
                                                     ingredients:
                                                       prev.ingredients.filter(
-                                                        (i: any) =>
+                                                        (i: RecipeIngredient) =>
                                                           i.id !== ing.id,
                                                       ),
                                                   }
@@ -783,7 +821,7 @@ export function RecipeModal({
                               >
                                 <button
                                   onClick={() => {
-                                    addIngredient(selectedRecipeForModal.id);
+                                    addIngredient(rid);
                                     setSelectedRecipeForModal((prev) => {
                                       if (!prev) return prev;
                                       const newIng = {
@@ -817,14 +855,14 @@ export function RecipeModal({
                                 className="px-6 py-4 font-black text-white uppercase tracking-widest text-[10px]"
                               >
                                 {t.totalShort || "TOTAL"} (
-                                {guestCounts[selectedRecipeForModal.id] || 1}{" "}
+                                {guestCounts[rid] || 1}{" "}
                                 {t.guests || "Convive(s)"})
                               </td>
                               <td colSpan={3} className="px-6 py-4 text-right">
                                 <span className="text-2xl font-black text-emerald-500 tabular-nums">
                                   {(
                                     selectedRecipeForModal.ingredients?.reduce(
-                                      (sum: number, ing: any) =>
+                                      (sum: number, ing: RecipeIngredient) =>
                                         sum +
                                         (parseFloat(
                                           (ing.quantity_per_person || "")
@@ -832,7 +870,7 @@ export function RecipeModal({
                                             .replace(",", "."),
                                         ) || 0) *
                                           (guestCounts[
-                                            selectedRecipeForModal.id
+                                            rid
                                           ] || 1) *
                                           getIngredientEffectivePrice(ing),
                                       0,
