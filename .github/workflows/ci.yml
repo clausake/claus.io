@@ -1,0 +1,147 @@
+# CI claus.io — le juge automatique qui rougit sur tout defaut.
+#
+# Regles heritees du poste local (PHASES.md) :
+#  - un job rouge sans artifact est AVEUGLE : chaque job echoue laisse ses
+#    traces, captures et rapports (paths: test-results/, test/*.out).
+#  - le verdict est LU (rc propres par porte), jamais infere d'une chaine shell.
+#  - la morsure verify:types-mord PROUVE que la porte rougit : si un :any
+#    revient dans le backend, la CI devient rouge. Sans elle, une porte verte
+#    ne prouve rien (porte qui ne pique pas = porte decorative).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Lot 1 : statique ──────────────────────────────────────────────────────
+  types:
+    name: types (tsc 0 + zero :any + morsure)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: tsc --noEmit (0 erreur)
+        run: npm run lint
+      - name: verify:types (zero :any backend, seuil 0)
+        run: npm run verify:types
+      - name: verify:types-mord (la porte rougit si un :any revient)
+        run: npm run verify:types-mord
+
+  build:
+    name: build (vite, seuil bundle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: build
+        run: npm run build
+      - name: verify:bundle (chunk features reference, pas de motion lourd)
+        run: npm run verify:bundle
+      - name: seuil bundle < 620 ko
+        run: |
+          KO=$(stat -c %s dist/assets/index-*.js | head -1)
+          KO=$((KO / 1024))
+          echo "index-*.js = ${KO} ko"
+          if [ "$KO" -ge 620 ]; then
+            echo "::error::bundle ${KO} ko >= 620 ko (seuil CI)"
+            exit 1
+          fi
+
+  # ── Lot 2 : unites ────────────────────────────────────────────────────────
+  vitest:
+    name: vitest (158 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --reporter=default
+      - name: artifact vitest (si rouge)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-output
+          path: |
+            test-results/
+          if-no-files-found: ignore
+
+  # ── Lot 3 : journal + portes python (rapides, sans serveur) ──────────────
+  journal:
+    name: journal (verify:split anti-perte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/decouper-phases.py --verify
+
+  # ── Lot 4 : contrats e2e (serveur isole par spec) ────────────────────────
+  e2e:
+    name: e2e (playwright contrats + routes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: playwright install (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: verify:routes (46 routes, serveur isole PORT=3999)
+        run: npm run verify:routes
+      - name: artifact e2e (traces/captures si rouge)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: test-results/
+          retention-days: 7
+
+  # ── Lot 5 : lot complet des portes (le meme verdict que le poste) ────────
+  gates:
+    name: gates (82 portes, run-all-gates)
+    runs-on: ubuntu-latest
+    needs: [types, build, vitest, journal]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: verify:all (le lot complet, verdict LU)
+        run: npm run verify:all
+      - name: resume portes
+        if: always()
+        run: python3 scripts/lire-gates.py || true
+      - name: artifact gates.out (le verdict consigne)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-output
+          path: test/gates*.out
+          retention-days: 7
