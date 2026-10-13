@@ -322,7 +322,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
       if (res.ok) {
         const result = await res.json();
         if (result && result.data) {
-          const matchedItems = (result.data.items || []).map((item: {item?: string; description?: string}) => {
+          const matchedItems = (result.data.items || []).map((item: {item?: string; description?: string; quantity?: number; unit_price?: number; lot?: string; dlc?: string}) => {
             const itemName = item.item || item.description || "";
             const found = inventory.find(
               (inv) =>
@@ -480,13 +480,13 @@ export function DocumentManager({ t }: DocumentManagerProps) {
         <div className="mb-6">
           <DocumentUpload
             t={t}
-            onUploadComplete={(result?: {type?: string; data?: any}) => {
+            onUploadComplete={(result?: {type?: string; data?: any; source_image_url?: string}) => {
               if (result && result.type === "draft") {
                 fetchDocuments();
                 setArchiveTab("drafts");
               } else if (result && result.data) {
                 const matchedItems = (result.data.items || []).map(
-                  (item: {item?: string; description?: string}) => {
+                  (item: {item?: string; description?: string; quantity?: number; unit_price?: number; lot?: string; dlc?: string}) => {
                     const itemName = item.item || item.description || "";
                     // Recherche dans l'inventaire
                     const found = inventory.find(
@@ -853,7 +853,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
 
                               <div className="grid grid-cols-1 gap-4">
                                 {groupedDocuments[month][day].map(
-                                  (doc: {id: string; supplier?: string; date?: string; status?: string}) => {
+                                  (doc: {id: string; supplier?: string; date?: string; status?: string; type?: string; total_amount?: number; items?: {id: string; name?: string; quantity?: number; inventory_name?: string; unit?: string; unit_price?: number}[]; source_image_url?: string}) => (
                                     <div
                                       key={doc.id}
                                       className="bg-[#1A1A1A] border border-white/10 rounded-2xl p-6 hover:border-emerald-500/30 transition-all group"
@@ -961,14 +961,14 @@ export function DocumentManager({ t }: DocumentManagerProps) {
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {doc.items?.map((item: {id: string; name?: string; quantity?: number}) => (
+                                            {doc.items?.map((item: {id: string; name?: string; quantity?: number; inventory_name?: string; unit?: string; unit_price?: number}) => (
                                               <tr
                                                 key={item.id}
                                                 className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
                                               >
                                                 <td className="px-4 py-3 font-medium text-white">
                                                   {translateIngredientHelper(
-                                                    item.inventory_name,
+                                                    item.inventory_name || "",
                                                     t.language,
                                                   )}
                                                 </td>
@@ -980,8 +980,8 @@ export function DocumentManager({ t }: DocumentManagerProps) {
                                                 </td>
                                                 <td className="px-4 py-3 text-right text-emerald-400 font-bold font-mono">
                                                   {(
-                                                    item.quantity *
-                                                    item.unit_price
+                                                    (item.quantity || 0) *
+                                                    (item.unit_price || 0)
                                                   ).toFixed(2)}
                                                 </td>
                                               </tr>
@@ -1049,7 +1049,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
                             className="mt-6 space-y-4 pt-6 border-t border-white/5 flex flex-col"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {docsBySupplier[sup].map((doc: {id: string; supplier?: string; date?: string; status?: string}) => (
+                            {docsBySupplier[sup].map((doc: {id: string; supplier?: string; date?: string; status?: string; type?: string; total_amount?: number; items?: {id: string; name?: string; quantity?: number; inventory_name?: string; unit?: string; unit_price?: number}[]; source_image_url?: string}) => (
                               <div
                                 key={doc.id}
                                 className="bg-black rounded-xl border border-white/5 overflow-hidden"
@@ -1072,7 +1072,7 @@ export function DocumentManager({ t }: DocumentManagerProps) {
                                           : t.deliveryNote}
                                     </span>
                                     <span className="text-slate-400 text-xs font-mono">
-                                      {new Date(doc.date).toLocaleDateString()}
+                                      {doc.date ? new Date(doc.date).toLocaleDateString() : ""}
                                     </span>
                                   </div>
                                   <div className="text-emerald-400 font-bold font-mono text-sm">
