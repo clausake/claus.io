@@ -154,7 +154,7 @@ export default function App() {
     fetch("/api/settings")
       .then((res) => res.json())
       .then((data) => {
-        setSettings((prev: any) => ({ ...prev, ...data }));
+        setSettings((prev: Record<string, unknown>) => ({ ...prev, ...data }));
         setIsSettingsLoaded(true);
       })
       .catch((err) => {
@@ -212,8 +212,8 @@ export default function App() {
       try {
         const res = await fetch("/api/alerts");
         if (res.ok) setAlerts(await res.json());
-      } catch (e: any) {
-        if (e && e.message === "Failed to fetch") return;
+      } catch (e: unknown) {
+        if (e instanceof Error && e.message === "Failed to fetch") return;
         console.error("Alerts fetch error", e);
       }
     };

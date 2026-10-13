@@ -1,5 +1,5 @@
 // Traductions UI (fr/es/de/it/en) — extraite de App.tsx (Phase 2).
-export const TRANSLATIONS: any = {
+export const TRANSLATIONS: Record<string, Record<string, string>> = {
   fr: {
     epicureStudio: "Studio Epicure AI",
     quickDraft: "Brouillon rapide",
