@@ -254,8 +254,8 @@ export function RecipeModal({
                     {selectedRecipeForModal.source_image_url && (
                       <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black/40 aspect-video relative group">
                         <MediaDisplay
-                          src={selectedRecipeForModal.source_image_url}
-                          alt={selectedRecipeForModal.name}
+                          src={selectedRecipeForModal.source_image_url as string}
+                          alt={selectedRecipeForModal.name || "Recette"}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>

@@ -803,3 +803,67 @@ ANCRE_ES_ALL_VERT (les ancres ne citent pas le JSX déplacé), verify:all
 - Le gain est en LISIBILITÉ (1550 + 876 + 144 = 2570 lignes > 2425) : le
   découpage AJOUTE des lignes (props, imports) et gagne en responsabilité
   par fichier. Un chantier de découpage ne se juge pas au total de lignes.
+## Chantiers 10a-10f — ZÉRO :any dans tout le src/ (13/10)
+
+### La décision jouée
+
+Après le backend (chantier 7, 22 `:any` typés, seuil 0) et le découpage UI
+(chantiers 8-9), la dette `:any` restante était 100 % UI : 152 occurrences
+réparties sur 14 composants + 4 dans lib/helpers + 2 dans App + 1 dans
+translations. Le chantier les élimine TOUS sans changer le comportement :
+les portes e2e jugent le même produit.
+
+### La méthode (répétée fichier par fichier, preuve par les champs réels)
+
+Pour chaque composant : grep des `:any` → lecture des champs réellement
+accédés → interface nommée (jamais de type inline dupliqué quand le type
+traverse une frontière) → compilation → gardes optionnels seulement là où
+le type le révèle (jamais de `!` masquant un vrai bug).
+
+### Interfaces créées (source unique par domaine)
+
+- **Recipe / RecipeIngredient / CartItem / FicheScanneePayload /
+  FicheIngredient** (FichesTechniques + RecipeModal + ProductionPlan) :
+  la fiche molle issue d'OCR/chat/saisie — formes variables documentées
+  (`nom OU name OU ingredient`, `qte OU quantite`).
+- **StaffMember / Shift** (StaffPlanning) : planning hebdo.
+- **Sensor / HaccpLog** (Haccp) + exports PDF types (HaccpModules).
+- **PurchaseOrder / OrderItem / ForecastItem / ImportMatch /
+  PriceHistoryEntry** (Purchasing).
+- **Document / Item / UploadResult** (DocumentManager + DocumentUpload —
+  type partagé exporté, pas dupliqué).
+- **Optimisation** (RecipeModal) : conseil meilleur prix.
+- **MediaDisplayProps / PricedIngredient** (lib/helpers) +
+  `TRANSLATIONS: Record<string, Record<string, string>>`.
+
+### Pièges à retenir
+
+- **Object.values sur Record renvoie unknown[] dans cette config TS** :
+  remplacé par `for (const k of Object.keys(obj)) { obj[k] }` — le typage
+  traverse proprement (StaffPlanning calculateHours/Cost).
+- **Le cast `{} as Record<K,V>` brouille l'inférence d'Object.entries** :
+  annoter le reduce générique `reduce<Record<string, number>>((acc…`
+  et laisser le cast `{}` tomber.
+- **Un callback flèche qui rend du JSX ouvre avec `(`, pas `{`** :
+  l'ouverture `{` + fermeture `),` compile un jour et casse le suivant
+  (DocumentManager groupedDocuments).
+- **Les index de Record refusent `undefined`** : `const rid = recipe.id || ""`
+  dans le composant, puis `rid` partout (RecipeModal) — un seul point de
+  garde, zéro propagation.
+- **Le type partagé s'exporte, il ne se copie pas** : UploadResult vit
+  dans DocumentUpload et DocumentManager l'importe — sinon les deux
+  évoluent en divergent.
+- **`e.message` sur unknown** : `e instanceof Error` (jamais `(e as any).message`).
+
+### Vérifié le 13/10
+
+tsc 0, vitest 158/158, build 483.58 ko (seuil 620 ko), verify:routes 46/46,
+verify:recipes 24/24, verify:reception vert, verify:types ANY_BACKEND=0
+(seuil 0), morsure negative-test-types OK (la porte rougit si un `:any`
+revient), bundle < 620 ko.
+
+### Le chiffre
+
+`:any` dans src/ : 152 (composants) + 7 (lib/App/data) = **159 → 0**.
+Sept commits poussés (10a → 10f), chaque fichier validé par les portes
+avant le suivant.
