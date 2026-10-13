@@ -35,6 +35,41 @@ import { parserRecette, type RecetteChat } from "../shared/recette-chat";
 
 export type CarteRecette = "entree" | "plat" | "dessert";
 
+// Une fiche scannée depuis un menu papier (OCR) — les champs sont optionnels
+// car l'OCR renvoie des formes variables (nom OU recette, qte OU quantite...).
+interface IngredientFiche {
+  name?: string;
+  nom?: string;
+  ingredient?: string;
+  quantite?: string | number;
+  qte?: string | number;
+  unite?: string;
+  unit?: string;
+}
+
+interface FicheScannee {
+  // Nom : l'analyse renvoie des formes variables selon la source (OCR menu,
+  // chat culinaire, fichier importe).
+  recette?: string;
+  name?: string;
+  nom?: string;
+  title?: string;
+  plat_creatif?: string;
+  ingredients?: IngredientFiche[];
+  fiche_technique?: IngredientFiche[];
+  allergens?: string[];
+  perte?: string;
+  categorie?: string;
+  category?: string;
+  jour?: string;
+  dish_type?: string;
+  etapes?: { step_order: number; instructions: string }[];
+  preparation_steps?: { step_order: number; instructions: string }[] | string;
+  preparation?: { step_order: number; instructions: string }[] | string;
+  instructions?: string;
+  source_image_url?: string | null;
+}
+
 interface Proposition {
   id: string;
   contenu: string;
@@ -50,10 +85,10 @@ export function MenuAnalysis({
   showNotification,
   onOuvrirFiche,
 }: {
-  setActiveTab?: any;
-  t: any;
-  settings: any;
-  showNotification: (m: string, type?: any) => void;
+  setActiveTab?: (tab: string) => void;
+  t: Record<string, string>;
+  settings: Record<string, unknown>;
+  showNotification: (m: string, type?: string) => void;
   // Ouvre l'onglet Fiches Techniques avec le formulaire VALIDÉ PAR LE CHEF :
   // la fiche née du chat y est pré-remplie, le chef corrige texte/quantités
   // puis enregistre. Absent = le bouton de sauvegarde reste caché.
@@ -63,7 +98,7 @@ export function MenuAnalysis({
   const [vue, setVue] = useState<"chat" | "analyser">("chat");
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [fichesTechniques, setFichesTechniques] = useState<any[] | null>(null);
+  const [fichesTechniques, setFichesTechniques] = useState<FicheScannee[] | null>(null);
   const [guestCount] = useState<number>(1);
   const [propositions, setPropositions] = useState<Proposition[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,7 +178,7 @@ export function MenuAnalysis({
     return map[lowerDay] || day;
   };
 
-  const saveGeneratedRecipes = async (recipes: any[]) => {
+  const saveGeneratedRecipes = async (recipes: FicheScannee[]) => {
     try {
       for (const recipe of recipes) {
         const recipeName =
@@ -158,7 +193,7 @@ export function MenuAnalysis({
           recipe.ingredients || recipe.fiche_technique || [];
         const ingredients = (
           Array.isArray(rawIngredients) ? rawIngredients : []
-        ).map((ing: any) => ({
+        ).map((ing: IngredientFiche) => ({
           inventory_name: ing.name || ing.nom || ing.ingredient || "Ingrédient",
           quantity_per_person: ing.quantite || ing.qte || 0,
           unit: ing.unite || ing.unit || "g",
@@ -193,7 +228,7 @@ export function MenuAnalysis({
     }
   };
 
-  const exportToPDF = (fiche: any) => {
+  const exportToPDF = (fiche: FicheScannee) => {
     const doc = new jsPDF();
     doc.setFontSize(22);
     doc.setTextColor(16, 185, 129); // Emerald 500
@@ -201,7 +236,7 @@ export function MenuAnalysis({
 
     doc.setFontSize(16);
     doc.setTextColor(31, 41, 55); // Gray 800
-    doc.text(fiche.recette, 20, 35);
+    doc.text(fiche.recette || "Recette", 20, 35);
 
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128); // Gray 500
@@ -232,10 +267,10 @@ export function MenuAnalysis({
     doc.text(t.requiredIngredients || "Ingrédients requis :", 20, y);
 
     const ingredientsList = fiche.ingredients || fiche.fiche_technique || [];
-    const tableData = ingredientsList.map((ing: any) => {
-      const name = ing.name || ing.ingredient;
-      const qte = ing.qte || ing.quantite;
-      const unit = ing.unit || ing.unite;
+    const tableData = ingredientsList.map((ing: IngredientFiche) => {
+      const name = ing.name || ing.ingredient || "Ingrédient";
+      const qte = Number(ing.qte || ing.quantite || 0);
+      const unit = ing.unit || ing.unite || "g";
 
       let totalQte = qte * guestCount;
       let displayUnit = unit;
@@ -246,9 +281,9 @@ export function MenuAnalysis({
       }
 
       return [
-        name,
+        name as string,
         `${totalQte.toFixed(unit === "g" || (unit === "ml" && totalQte >= 1) ? 2 : 0)} ${displayUnit}`,
-      ];
+      ] as [string, string];
     });
 
     autoTable(doc, {
@@ -272,14 +307,17 @@ export function MenuAnalysis({
       finalY += 8;
       doc.setFontSize(10);
       doc.setTextColor(75, 85, 99);
-      const stepsText = doc.splitTextToSize(
-        fiche.preparation_steps || fiche.instructions || "",
-        170,
-      );
+      const rawSteps = fiche.preparation_steps || fiche.instructions || "";
+      const stepsFlat = Array.isArray(rawSteps)
+        ? rawSteps
+            .map((s, i) => `${i + 1}. ${s.instructions}`)
+            .join("\n")
+        : rawSteps;
+      const stepsText = doc.splitTextToSize(stepsFlat, 170);
       doc.text(stepsText, 20, finalY);
     }
 
-    doc.save(`Fiche_Technique_${fiche.recette.replace(/\s+/g, "_")}.pdf`);
+    doc.save(`Fiche_Technique_${(fiche.recette || "recette").replace(/\s+/g, "_")}.pdf`);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -342,12 +380,12 @@ export function MenuAnalysis({
     }
   };
 
-  const handleSaveFicheToBook = async (fiche: any) => {
+  const handleSaveFicheToBook = async (fiche: FicheScannee) => {
     try {
       const recipe = {
         name: fiche.recette || "Nouvelle Recette",
         category: fiche.categorie || fiche.jour || "Non classé",
-        ingredients: (fiche.ingredients || []).map((ing: any) => ({
+        ingredients: (fiche.ingredients || []).map((ing: IngredientFiche) => ({
           inventory_name: ing.name || ing.ingredient,
           quantity_per_person: ing.qte || ing.quantite || 0,
           inventory_id: null,
@@ -559,7 +597,7 @@ export function MenuAnalysis({
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {fichesTechniques.map((fiche: any, idx) => (
+              {fichesTechniques.map((fiche: FicheScannee, idx) => (
                 <div
                   key={idx}
                   className="border border-white/10 rounded-2xl p-6 bg-black shadow-lg shadow-black/20 hover:shadow-md transition-shadow duration-300"
