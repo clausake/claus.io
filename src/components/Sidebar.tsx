@@ -1,3 +1,29 @@
+import React from "react";
+import {
+  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Zap, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
+} from "lucide-react";
+import * as motionSlim from "motion/react-m";
+import { NavItem } from "./views";
+import type { Utilisateur } from "./AuthGate";
+
+interface SidebarProps {
+  t: Record<string, string>;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+  isMobile: boolean;
+  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked: boolean } | null;
+  user: Utilisateur | null;
+}
+
+export function Sidebar({
+  t, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen,
+  isMobile, trialStatus, user,
+}: SidebarProps) {
+  return (
+    <>
+
       {/* Sidebar - Mobile: drawer, Desktop: always visible/toggleable */}
       <aside
         className={`${isSidebarOpen ? "w-full md:w-72" : "hidden md:flex md:w-20"} fixed md:static inset-y-0 left-0 bg-obsidian border-r border-white/5 flex flex-col transition-all duration-500 ease-in-out z-50 shadow-2xl shadow-black`}
@@ -247,3 +273,6 @@
           />
         </div>
       </aside>
+    </>
+  );
+}
