@@ -12,6 +12,34 @@ import {
 import { translateIngredientHelper } from "../lib/helpers";
 import { useToast } from "./ui/Toast";
 
+interface CartItem {
+  id: string;
+  item?: string;
+  inventory_id?: string | null;
+  quantity?: number;
+  quantity_per_person?: number;
+  guests?: number;
+  unit?: string;
+  supplier?: string;
+  price?: number;
+  total?: number;
+  sourceRecipeId?: string;
+  recipeName?: string;
+  isRecipeHeader?: boolean;
+  sourceRecipes?: Set<string>;
+  [k: string]: unknown;
+}
+
+interface RecipeIngredient {
+  id?: string;
+  inventory_name?: string;
+  name?: string;
+  quantity_per_person?: string | number;
+  unit?: string;
+  unit_price?: number;
+  [k: string]: unknown;
+}
+
 export function ProductionPlan({
   cartItems = [],
   setCartItems,
@@ -19,10 +47,10 @@ export function ProductionPlan({
   showNotification,
   isActive,
 }: {
-  cartItems?: any[];
-  setCartItems?: any;
-  t: any;
-  showNotification: (m: string, type?: any) => void;
+  cartItems?: CartItem[];
+  setCartItems?: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  t: Record<string, string>;
+  showNotification: (m: string, type?: string) => void;
   isActive?: boolean;
 }) {
   const toast = useToast();
@@ -129,7 +157,7 @@ export function ProductionPlan({
 
   // Group identical items
   const groupedItems = Object.entries(
-    cartItems.reduce((acc: any, item: any) => {
+    cartItems.reduce<Record<string, Record<string, CartItem & {quantity: number; total: number; sourceRecipes: Set<string>}>>>((acc, item) => {
       if (item.isRecipeHeader || !item.item) return acc;
       if (!acc["Global"]) acc["Global"] = {};
       const translatedName = translateIngredientHelper(item.item, t.language);
@@ -141,10 +169,10 @@ export function ProductionPlan({
           sourceRecipes: new Set(),
         };
       }
-      acc["Global"][translatedName].quantity += item.quantity;
-      acc["Global"][translatedName].total += item.total;
+      acc["Global"][translatedName].quantity += Number(item.quantity || 0);
+      acc["Global"][translatedName].total += Number(item.total || 0);
       if (item.recipeName)
-        acc["Global"][translatedName].sourceRecipes.add(
+        acc["Global"][translatedName]!.sourceRecipes.add(
           translateIngredientHelper(item.recipeName, t.language),
         );
       return acc;
@@ -219,7 +247,7 @@ export function ProductionPlan({
                       <X className="w-3 h-3" />
                     </button>
                     <span className="font-medium text-slate-300 truncate pr-2">
-                      {translateIngredientHelper(recipe.name, t.language)}
+                      {translateIngredientHelper(recipe.name || "", t.language)}
                     </span>
                     <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-lg border border-white/10">
                       <span className="text-xs text-slate-500 font-bold uppercase">
@@ -240,16 +268,16 @@ export function ProductionPlan({
                     </div>
                   </div>
                   <div className="text-xs text-slate-500 space-y-1 mt-2 border-t border-white/5 pt-2">
-                    {recipe.ingredients.map((ing: any, i: number) => (
+                    {recipe.ingredients.map((ing: RecipeIngredient, i: number) => (
                       <div
                         key={i}
                         className="flex justify-between text-slate-400"
                       >
                         <span>
-                          {translateIngredientHelper(ing.name, t.language)}
+                          {translateIngredientHelper(ing.name || ing.inventory_name || "", t.language)}
                         </span>
                         <span>
-                          {ing.quantity.toFixed(2)} {ing.unit}
+                          {Number(ing.quantity_per_person || 0).toFixed(2)} {ing.unit || ""}
                         </span>
                       </div>
                     ))}
@@ -303,7 +331,7 @@ export function ProductionPlan({
       <div className="space-y-6">
         {groupedItems.length > 0 ? (
           groupedItems.map(([groupName, items], idx) => {
-            const typedItems = Object.values(items as any[]);
+            const typedItems = Object.values(items);
             return (
               <div
                 key={idx}
@@ -333,11 +361,11 @@ export function ProductionPlan({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50/10">
-                      {typedItems.map((item: any, i) => (
+                      {typedItems.map((item: CartItem & {quantity: number; total: number}, i) => (
                         <tr key={i} className="group">
                           <td className="py-4 font-medium text-slate-100">
-                            {translateIngredientHelper(item.item, t.language)}
-                            {item.sourceRecipes?.size > 0 && (
+                            {translateIngredientHelper(item.item || "", t.language)}
+                            {(item.sourceRecipes?.size ?? 0) > 0 && (
                               <span className="block text-[10px] text-emerald-500 italic mt-0.5">
                                 {(t.forLabel || "Pour: ") +
                                   Array.from(
