@@ -34,11 +34,26 @@ import {
 import { DocumentUpload } from "./DocumentUpload";
 import { useToast, ConfirmDialog } from "./ui/Toast";
 
+interface Sensor {
+  id: string;
+  name: string;
+  temperature?: number;
+  [k: string]: unknown;
+}
+
+interface HaccpLog {
+  id: string;
+  equipment_name: string;
+  temperature: number;
+  recorded_at?: string;
+  [k: string]: unknown;
+}
+
 export function Haccp({
   t,
   translateIngredient,
 }: {
-  t: any;
+  t: Record<string, string>;
   translateIngredient?: (name: string, lang: string) => string;
 }) {
   const toast = useToast();
@@ -46,7 +61,7 @@ export function Haccp({
   const [activeSubTab, setActiveSubTab] = useState<
     "admission" | "controles" | "tracabilite" | "evidence" | "labeling"
   >("controles");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<HaccpLog[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMonth, setViewMonth] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -60,7 +75,7 @@ export function Haccp({
 
   // --- IoT CONNECTED THERMOMETERS STATES & API (100% FUNCTIONAL) ---
   const [entryMode, setEntryMode] = useState<"manual" | "iot">("manual");
-  const [sensors, setSensors] = useState<any[]>([]);
+  const [sensors, setSensors] = useState<Sensor[]>([]);
   // Capteurs sans émission recente: le silence est l'alerte HACCP, il faut le
   // rendre visible (un capteur a pile morte doit etre distinct d'une chambre ok).
   const [staleIds, setStaleIds] = useState<Set<string>>(new Set());
@@ -158,7 +173,7 @@ export function Haccp({
     fetchSensors();
     let lastPush = Date.now();
 
-    const patchSensor = (payload: any) => {
+    const patchSensor = (payload: Partial<Sensor> | null) => {
       lastPush = Date.now();
       setSensors((prev) => {
         const idx = prev.findIndex((s) => s.id === payload?.id);
@@ -184,7 +199,7 @@ export function Haccp({
       es.addEventListener("stale", (ev) => {
         lastPush = Date.now();
         const list = onData(ev);
-        setStaleIds(new Set((Array.isArray(list) ? list : []).map((s: any) => s.id)));
+        setStaleIds(new Set((Array.isArray(list) ? list : []).map((s: {id: string}) => s.id)));
       });
     } catch {
       es = null; // EventSource indisponible (vieux navigateur): le filet prend.
@@ -778,7 +793,7 @@ export function Haccp({
                 </span>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {filteredLogs.map((log: any) => {
+                {filteredLogs.map((log: HaccpLog) => {
                   const isAlert =
                     log.temperature > 4 &&
                     !log.equipment_name.includes("Congélateur") &&
@@ -801,7 +816,7 @@ export function Haccp({
                           <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500 uppercase tracking-widest font-bold flex-wrap">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3 text-slate-500" />
-                              {new Date(log.recorded_at).toLocaleTimeString(
+                              {new Date(log.recorded_at || 0).toLocaleTimeString(
                                 t.language === "fr"
                                   ? "fr-FR"
                                   : t.language === "es"
