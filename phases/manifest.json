@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "0b282ba392bca65b5eb436743ed8dac20fa11ce00b00f90f27dac6285924211b",
-  "chaud_octets": 46407,
+  "original_sha256": "4b71681ee7c320938ac6bfb6a72b0c59b5a07bc4d922d5263600116e771e7249",
+  "chaud_octets": 49525,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 805,
-  "tokens_approx_chaud": 11222,
+  "lignes_chaud": 869,
+  "tokens_approx_chaud": 11967,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 8 (decoupage FichesTechniques) ajoute au chaud : lib/fiches (dossiers+PDF purs), RecipeModal extrait (812 JSX, 15 props, zero state propre), parent 2425->1550 ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-12T21:49:31.678685",
+    "motif": "chantiers 10a-10f (zero :any UI) ajoutes au chaud : interfaces Recipe/CartItem/StaffMember/Sensor/HaccpLog/PurchaseOrder/Document/Optimisation, types partages exportes (UploadResult), guards optionnels, Object.keys sur Record ; 159 :any -> 0 dans src/ ; ancre recalculee par la boucle du juge",
+    "date": "2026-10-13T21:11:22.905716",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 7 (hygiene TypeScript) ajoute au chaud : 22 :any backend types, porte verify:types (compteur seuil 0, commentaires exclus) + morsure ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-11T07:23:14.577469",
+    "motif": "chantier 8 (decoupage FichesTechniques) ajoute au chaud : lib/fiches (dossiers+PDF purs), RecipeModal extrait (812 JSX, 15 props, zero state propre), parent 2425->1550 ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-12T21:49:31.678685",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }

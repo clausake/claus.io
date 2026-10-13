@@ -2,7 +2,16 @@ import React from "react";
 import { INGREDIENT_TRANSLATIONS, INGREDIENT_TRANSLATIONS_DE, INGREDIENT_TRANSLATIONS_ES, INGREDIENT_TRANSLATIONS_IT } from "../data/ingredientTranslations";
 import VOCAB_TRANSLATIONS from "../../vocab_translations.json";
 
-export const MediaDisplay = ({ src, alt, className, interactive = false, onClick, ...props }: any) => {
+interface MediaDisplayProps {
+  src?: string;
+  alt?: string;
+  className?: string;
+  interactive?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+  [k: string]: unknown;
+}
+
+export const MediaDisplay = ({ src, alt, className, interactive = false, onClick, ...props }: MediaDisplayProps) => {
   if (!src) return null;
   const isPdf = src.toLowerCase().endsWith('.pdf');
   if (isPdf) {
@@ -185,8 +194,8 @@ export const translateIngredientHelper = (name: string, language: string) => {
 
 export function translateAlertMessage(
   message: string,
-  t: any,
-  translateIngredientHelper: any,
+  t: Record<string, string>,
+  translateIngredientHelper: (name: string, lang: string) => string,
 ) {
   if (t.language === "fr") return message;
 
@@ -249,7 +258,15 @@ export const getCostModifier = (unit?: string) => {
   return 1;
 };
 
-export const getIngredientEffectivePrice = (ing: any) => {
+interface PricedIngredient {
+  unit_price?: number;
+  price?: number;
+  unit?: string;
+  yield_percent?: number;
+  [k: string]: unknown;
+}
+
+export const getIngredientEffectivePrice = (ing: PricedIngredient) => {
   const basePrice = (ing.unit_price || ing.price || 0) * getCostModifier(ing.unit);
   const yieldPercent = (ing.yield_percent !== undefined) ? ing.yield_percent : 100;
   if (yieldPercent <= 0) return basePrice;
