@@ -181,6 +181,14 @@ DEFAUT = ["verify:split",
           "verify:types",
           # La morsure de l'hygiene : un :any reintroduit rougit (regle 6).
           "verify:types-mord",
+          # Chantier 11 : la porte unique de generation LLM. Le defaut qu'elle
+          # corrigeait : 12 routes appelaient ollama.generate() directement,
+          # changer llm_choix ne changeait RIEN a la generation. Le test 10
+          # prouve que le reglage COMMANDE le serveur ; la morsure
+          # reintroduit le defaut (dispatch ignore le reglage) et exige que
+          # le juge ROUGISSE. La retirer rend le reglag mensonger a nouveau
+          # sans qu'aucun lot ne le voie.
+          "verify:llm-porte", "verify:llm-porte-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une
