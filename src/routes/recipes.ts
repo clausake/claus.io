@@ -28,7 +28,8 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import { requireString, optionalString } from "../middleware/validate.js";
 import type { AuditLogger } from "../services/audit.js";
 
@@ -418,7 +419,6 @@ try {
     }
   }
 
-  const targetModel = getModel(ollamaSettingsRef.current);
   const langMap = { fr: "FRANÇAIS", es: "ESPAÑOL", de: "DEUTSCH", it: "ITALIANO", en: "ENGLISH" };
   const langName = langMap[ollamaSettingsRef.current.language as keyof typeof langMap] || "ENGLISH";
 
@@ -454,22 +454,22 @@ try {
     prompt += "\\n\\n--- INSTRUCTIONS/CONTENU EXTRAIT DE LA FICHE ---\\n" + pdfText;
   }
 
-  const response = await ollama.generate({
-    model: targetModel,
-    system: `CRITICAL MANDATE: You MUST output all actual content (recipe name, ingredient names, steps, allergens) in ${langName}. The JSON keys must remain as specified. Provide exactly the JSON object, NO extra text. NEVER include actual raw physical newlines inside JSON string properties; use \\n for line breaks instead.`,
+  // Chantier 11 : porte unique (system + image supportés quel que soit le serveur).
+  const response = await generer({
     prompt,
+    system: `CRITICAL MANDATE: You MUST output all actual content (recipe name, ingredient names, steps, allergens) in ${langName}. The JSON keys must remain as specified. Provide exactly the JSON object, NO extra text. NEVER include actual raw physical newlines inside JSON string properties; use \\n for line breaks instead.`,
+    image: isImage ? base64Image : null,
     format: "json",
-    options: { temperature: 0.1 },
-    images: isImage ? [base64Image] : undefined,
+    temperature: 0.1,
   });
 
-  console.log("[OLLAMA] Scan Fiche Technique réussi!");
-  const parsed = safeJsonParse(response.response);
+  console.log("[SCAN] Scan Fiche Technique réussi!");
+  const parsed = safeJsonParse(response.texte);
   res.json(parsed);
 } catch (error) {
   console.error("[ERROR] Recipe scan failed:", error);
   const errMsg = error instanceof Error ? error.message : "Erreur inconnue";
-  res.status(500).json({ status: "error", message: `Échec du scan IA avec le modèle [${getModel(ollamaSettingsRef.current)}] : ${errMsg}` });
+  res.status(500).json({ status: "error", message: `Échec du scan IA : ${errMsg}` });
 }
 });
 router.put("/api/recipes/:id/save", async (req, res) => {
@@ -536,11 +536,9 @@ Antworten Sie auf Deutsch NUR mit dem reinen Text der Zubereitungsschritte.`
     G\xE9n\xE8re les \xE9tapes de pr\xE9paration d\xE9taill\xE9es pour la recette suivante : ${recipe.name}.
     Ingr\xE9dients : ${ingredients.map((i) => `${i.name} (${i.quantity_per_person}${i.unit})`).join(", ")}.
     R\xE9ponds en fran\xE7ais avec UNIQUEMENT la cha\xEEne de caract\xE8res des \xE9tapes de pr\xE9paration d\xE9taill\xE9es. Pas d'introduction.`;
-  const response = await ollama.generate({
-    model: getModel(ollamaSettingsRef.current),
-    prompt,
-  });
-  const prepSteps = response.response;
+  // Chantier 11 : porte unique.
+  const response = await generer({ prompt });
+  const prepSteps = response.texte;
   await db.run("UPDATE recipes SET preparation_steps = ? WHERE id = ?", [
     prepSteps,
     req.params.id,

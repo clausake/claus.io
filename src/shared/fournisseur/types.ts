@@ -81,7 +81,9 @@ export interface FournisseurLLM {
  *  Aucune ne porte un secret en clair: la clef vit dans le coffre, pas ici. */
 export interface ReglageFournisseur {
   /** Le moteur principal: `ollama` est le defaut (decide du 25/09). */
-  llm_choix?: "llamacpp" | "ollama" | "openai" | "mistral" | "anthropic"
+  // Chantier 11 : "vllm" (et tout serveur local OpenAI-compatible) rejoint
+  // la liste — le nom "llamacpp" reste accepté pour les réglages existants.
+  llm_choix?: "llamacpp" | "ollama" | "vllm" | "openai" | "mistral" | "anthropic"
               | "cohere" | "deepseek";
   llm_url?: string;
   llm_modele?: string;

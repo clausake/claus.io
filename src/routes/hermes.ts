@@ -20,7 +20,7 @@ import {
   cerveauHermes, construireConsigne, construireContexte,
   parseSuggestions, type PropositionHermes,
 } from "../services/hermes.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
 import crypto from "crypto";
 
 function currentUser(res: { locals: Record<string, unknown> }): SessionUser | undefined {
@@ -56,14 +56,11 @@ export default function createHermesRouter(db: Database, logAudit: AuditLogger) 
         texte = await cerveauFactice()(consigne);
         source = "factice";
       } else {
-        const response = await ollama.generate({
-          model: getModel(ollamaSettingsRef.current),
-          prompt: consigne,
-          format: "json",
-          options: { temperature: 0.2 },
-        });
-        texte = response.response;
-        source = getModel(ollamaSettingsRef.current);
+        // Chantier 11 : la porte UNIQUE de génération — le réglage llm_choix
+        // (ollama | llamacpp | vllm | fournisseur cloud) est effectif ICI.
+        const rep = await generer({ prompt: consigne, format: "json", temperature: 0.2 });
+        texte = rep.texte;
+        source = rep.source;
       }
 
       const { propositions, refusees } = parseSuggestions(texte);

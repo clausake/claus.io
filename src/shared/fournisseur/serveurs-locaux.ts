@@ -20,17 +20,18 @@
 
 import type { Modele } from "./types.js";
 
-/** Les trois emplacements mesures du contrat : Ollama 11434, llama.cpp 8080
- *  et 1234 (le second est le port d'usage de llama-server en deployment
- *  multi-modeles). Un serveur hors de ces ports n'est PAS devine. */
+/** Les emplacements mesures du contrat : Ollama 11434, llama.cpp 8080 et
+ *  1234, vLLM 8000 (port d'usage de `vllm serve`). Un serveur hors de ces
+ *  ports n'est PAS devine. */
 export const PORTS_USAGE = [
   { port: 11434, moteur: "ollama" as const },
   { port: 8080, moteur: "llamacpp" as const },
   { port: 1234, moteur: "llamacpp" as const },
+  { port: 8000, moteur: "vllm" as const },
 ];
 
 export interface ServeurLocal {
-  readonly moteur: "ollama" | "llamacpp";
+  readonly moteur: "ollama" | "llamacpp" | "vllm";
   readonly port: number;
   readonly urlBase: string;
   /** L'inventaire rendu par GET /v1/models. Vide si le serveur ne publie

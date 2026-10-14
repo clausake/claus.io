@@ -13,7 +13,8 @@ import {
   nombreALaCreation,
   texteALaCreation,
 } from "../shared/inventory-fields.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
 import type { AuditLogger } from "../services/audit.js";
 
@@ -655,12 +656,9 @@ Inventaire : ${inventoryContext}
 
 R\xE9ponds en ${langName}. Sois concis, professionnel et percutant. Pas de bla-bla inutile.
 Format de r\xE9ponse souhait\xE9 (texte brut, environ 100-150 mots).`;
-  const response = await ollama.generate({
-    model: getModel(ollamaSettingsRef.current),
-    prompt,
-    options: { temperature: 0.7 },
-  });
-  res.json({ analysis: response.response });
+  // Chantier 11 : porte unique.
+  const response = await generer({ prompt, temperature: 0.7 });
+  res.json({ analysis: response.texte });
 } catch (error) {
   console.error("Analysis API Error:", error);
   res.status(500).json({
