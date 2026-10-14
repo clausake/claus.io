@@ -101,7 +101,12 @@ jobs:
     name: e2e (playwright contrats + routes)
     runs-on: ubuntu-latest
     steps:
+      # lfs: true : le test guide-download juge le VRAI PDF (pas un pointeur
+      # LFS). Sans smudge, public/Executive_Guide.pdf est un fichier texte de
+      # 130 octets et la porte rougit — la lecon du contrat scelle 7cc8630e.
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -127,6 +132,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
