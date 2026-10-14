@@ -93,7 +93,7 @@
     "verify:assistant": "node test/banc/juge-assistant.mjs",
     "verify:ocr-moteur": "python3 scripts/juge-ocr.py paddle",
     "verify:ocr-moteur-mord": "python3 test/banc/juge-ocr-b.py",
-    "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts",
+    "verify:llm-fournisseur": "npx vitest run test/unit/fournisseur-blanc.test.ts test/unit/reglage-llm.test.ts test/unit/serveurs-locaux.test.ts test/unit/llm-porte.test.ts",
     "verify:livrable": "python3 scripts/probe-livrable-14.py",
     "verify:extraction": "python3 scripts/negative-test-extraction.py",
     "verify:langues-formats": "python3 scripts/mesurer-langues-formats.py",
@@ -110,7 +110,9 @@
     "verify:hermes": "node scripts/verify-hermes.mjs",
     "verify:hermes-mord": "python3 scripts/negative-test-hermes.py",
     "verify:types": "python3 scripts/verify-types.py",
-    "verify:types-mord": "python3 scripts/negative-test-types.py"
+    "verify:types-mord": "python3 scripts/negative-test-types.py",
+    "verify:llm-porte": "npx vitest run test/unit/llm-porte.test.ts",
+    "verify:llm-porte-mord": "python3 scripts/negative-test-llm-porte.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",
