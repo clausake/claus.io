@@ -867,3 +867,45 @@ revient), bundle < 620 ko.
 `:any` dans src/ : 152 (composants) + 7 (lib/App/data) = **159 → 0**.
 Sept commits poussés (10a → 10f), chaque fichier validé par les portes
 avant le suivant.
+
+
+## Chantier 11 — PORTE UNIQUE de génération LLM : le réglage devient effectif (14/10)
+
+### La décision jouée
+
+Le Sprint 15 avait construit la couche fournisseur (liste blanche 5 cloud,
+sonde, transport injecté) mais les 12 routes métier appelaient
+`ollama.generate()` DIRECTEMENT : le choix `llm_choix` des Réglages n'était
+effectif qu'au DIAGNOSTIC (bouton Tester), jamais à la GÉNÉRATION. Le chef qui
+choisissait Mistral générait encore sur Ollama sans le savoir — le réglage
+mensonger est pire que l'absence de réglage.
+
+### Ce qui a été écrit
+
+- `src/shared/llm.ts` (porte unique) : `generer(DemandeGeneration)` lit
+  `llm_choix` et dispatch — "ollama" (API native, vision, repli Tesseract),
+  "llamacpp"/"vllm"/"openai-compatible" (adaptateur /v1/chat/completions
+  UNIQUE : vLLM, llama.cpp-server, SGLang, LM Studio parlent tous cette API),
+  fournisseur cloud de la liste blanche (base VERROUILLÉE par la liste,
+  clef lue dans l'environnement SEULEMENT — dérivée du nom : OPENAI_API_KEY...).
+- Erreurs NOMMÉES (LlmInjoignable : URL_ABSENTE, CLEF_ABSENTE, CLEF_REFUSEE,
+  HTTP_xxx, generation muette) — jamais un 200 muet.
+- vLLM (port 8000) rejoint PORTS_USAGE : détection auto au premier démarrage.
+- 12 routes métier branchées : ai, hermes, recipes, documents, haccp, menu,
+  inventory, antiwaste (+ health rend la cible active dans son message).
+- La vision (images) supportée sur les DEUX voies : Ollama images[] natif,
+  OpenAI-compatible messages[] multi-parties. Repli Tesseract conservé.
+
+### Le piège du chantier
+
+La VISION n'est pas uniforme : l'API OpenAI porte les images via
+messages[].content multi-parties, Ollama via generate.images[]. L'adaptateur
+unique masque cette différence — la route métier ne doit JAMAIS savoir.
+
+### Vérifié le 14/10
+
+tsc 0, vitest 158/158 (test ports mis à jour : 4 ports dont vLLM),
+build 483.60 ko, verify:routes 46/46, verify:recipes 24/24,
+verify:reception vert, verify:types 0 :any, verify:haccp 10/10,
+verify:hermes vert. Le README reste vrai : Ollama par défaut, aucune donnée
+cloud tant que le chef ne choisit pas un fournisseur de la liste.
