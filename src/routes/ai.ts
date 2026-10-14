@@ -2,7 +2,8 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import { blocHistorique, CONSIGNE_GABARIT } from "../shared/recette-chat.js";
 import type { AuditLogger } from "../services/audit.js";
 
@@ -22,8 +23,8 @@ try {
           : ollamaSettingsRef.current.language === "it"
             ? "Italian"
             : "English";
-  const response = await ollama.generate({
-    model: getModel(ollamaSettingsRef.current),
+  // Chantier 11 : porte unique — le choix llm_choix est effectif ici.
+  const response = await generer({
     prompt:
       ollamaSettingsRef.current.language === "it" ? `DIRETTIVA: Sei un assistente culinario esperto. Operi IN ITALIANO.\nUtente: "${message}"\nSe aggiunge al carrello, rispondi JSON:\n{"intent":"add_to_cart","item":"nome","quantity":1,"unit":"kg","response":"Messaggio"}\nAltrimenti:\n{"intent":"general_advice","response":"Risposta"}\nSOLO JSON.` : ollamaSettingsRef.current.language === "es"
         ? `DIRECTIVA: Eres un asistente culinario experto. Operas EN ESPA\xD1OL.
@@ -78,7 +79,7 @@ NUR JSON.`
     R\xE9ponds UNIQUEMENT en JSON.`,
     format: "json",
   });
-  const result = safeJsonParse(response.response);
+  const result = safeJsonParse(response.texte);
   await logAudit(req, res, { route: "/api/voice", action: "voice" });
   res.json(result);
 } catch (error) {
@@ -109,8 +110,8 @@ try {
           : ollamaSettingsRef.current.language === "it"
             ? "Italian"
             : "English";
-  const response = await ollama.generate({
-    model: getModel(ollamaSettingsRef.current),
+  // Chantier 11 : porte unique — le choix llm_choix est effectif ici.
+  const response = await generer({
     prompt:
       bloc +
       (ollamaSettingsRef.current.language === "es"
@@ -135,10 +136,10 @@ try {
       // en fiche » n'aurait rien a pre-remplir. null = formule vide, jamais
       // de devinette cote UI.
       "\n" + CONSIGNE_GABARIT,
-    options: { temperature: 0.7 },
+    temperature: 0.7,
   });
   await logAudit(req, res, { route: "/api/ai/chat", action: "chat" });
-  res.json({ response: response.response });
+  res.json({ response: response.texte });
 } catch (error) {
   console.error("Chat API Error:", error);
   res.status(500).json({

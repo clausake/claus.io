@@ -7,7 +7,8 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
-import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import { uploadsDir } from "../services/paths.js";
 import { settingsPath } from "../services/settings.js";
 import { requireString, optionalString } from "../middleware/validate.js";
@@ -108,7 +109,6 @@ try {
     fs.writeFileSync(filepath, file.buffer);
     imageUrl = "/uploads/" + filename;
   }
-  const targetModel = getModel(ollamaSettingsRef.current);
   const isEnForDlc = ollamaSettingsRef.current.language === "en";
   const isEsForDlc = ollamaSettingsRef.current.language === "es";
   const isDeForDlc = ollamaSettingsRef.current.language === "de";
@@ -162,8 +162,9 @@ Verlassen Sie die Menge NIEMALS bei 0, wenn das Gewicht sichtbar ist.`
   if (pdfText) {
     dlcPrompt += "\n\n--- CONTENU EXTRAIT DU PDF ---\n" + pdfText;
   }
-  const responseTextRaw = await generateWithOllama(dlcPrompt, base64Image, "json", 0.1);
-  let responseText = responseTextRaw || "{}";
+  // Chantier 11 : porte unique (vision + repli Tesseract conservés).
+  const repLlm = await generer({ prompt: dlcPrompt, image: base64Image, format: "json", temperature: 0.1 });
+  let responseText = repLlm.texte || "{}";
   let cleanResponse = responseText;
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (jsonMatch) cleanResponse = jsonMatch[0];
@@ -202,12 +203,12 @@ Verlassen Sie die Menge NIEMALS bei 0, wenn das Gewicht sichtbar ist.`
     console.error("[OLLAMA] Parsing failed. Raw response:", responseText, parseError);
     res.status(500).json({
       status: "error",
-      message: `Format JSON invalide retourn\xE9 par l'IA [${getModel(ollamaSettingsRef.current)}] - ou Erreur Interne: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+      message: `Format JSON invalide retourn\xE9 par l'IA  - ou Erreur Interne: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
     });
   }
 } catch (error) {
   const errMsg = error instanceof Error ? error.message : "Erreur system";
-  res.status(500).json({ status: "error", message: `Erreur d'Ollama [${getModel(ollamaSettingsRef.current)}]: ${errMsg}` });
+  res.status(500).json({ status: "error", message: `Erreur du moteur IA : ${errMsg}` });
 }
 });
 

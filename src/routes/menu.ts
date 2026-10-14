@@ -6,7 +6,8 @@ import path from "path";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse, LlmResponse } from "../shared/util.js";
 import { upload } from "../shared/upload.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import { uploadsDir } from "../services/paths.js";
 import { STANDARD_QUANTITIES_PROMPT, STANDARD_QUANTITIES_ES_PROMPT, STANDARD_QUANTITIES_DE_PROMPT, STANDARD_QUANTITIES_IT_PROMPT, STANDARD_QUANTITIES_ENG_PROMPT } from "../prompts/menuPrompts.js";
 import type { AuditLogger } from "../services/audit.js";
@@ -65,7 +66,6 @@ try {
     }
   }
 
-  const targetModel = getModel(ollamaSettingsRef.current);
   const langMap = { fr: "FRANÇAIS", es: "ESPAÑOL", de: "DEUTSCH", it: "ITALIANO", en: "ENGLISH" };
   const langName = langMap[ollamaSettingsRef.current.language as keyof typeof langMap] || "ENGLISH";
   let prompt =
@@ -169,16 +169,15 @@ recette: "Recipe Name", categorie: "Kategorie", ingredients: [{name: "Name", qua
   if (pdfText) {
     prompt += "\n\n--- CONTENU EXTRAIT DU PDF ---\n" + pdfText;
   }
-  const response = await ollama.generate({
-    model: targetModel,
-    system: `CRITICAL MANDATE: You MUST output all actual content (dish names, ingredients, steps, allergens) in ${langName}. Do NOT use French unless ${langName} is FRANÇAIS. The JSON keys must remain as specified. NO EXCEPTIONS.`,
+  // Chantier 11 : porte unique (system + image supportés quel que soit le serveur).
+  const response = await generer({
     prompt,
-    images: isImage ? [base64Image] : undefined,
-
+    system: `CRITICAL MANDATE: You MUST output all actual content (dish names, ingredients, steps, allergens) in ${langName}. Do NOT use French unless ${langName} is FRANÇAIS. The JSON keys must remain as specified. NO EXCEPTIONS.`,
+    image: isImage ? base64Image : null,
     format: "json",
-    options: { temperature: 0.2 },
+    temperature: 0.2,
   });
-  let cleanResponse = response.response;
+  let cleanResponse = response.texte;
   const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
   if (jsonMatch) cleanResponse = jsonMatch[0];
   const parsedData = safeJsonParse(cleanResponse) as LlmResponse & { fiches_techniques?: Array<Record<string, unknown>> };

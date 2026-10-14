@@ -9,7 +9,8 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse, calculatePricePerRef, prixOuNul, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
-import { generateWithOllama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import {
   jugerLignesDeDocument,
   lireTexteDeLigne,
@@ -659,7 +660,6 @@ IMPORTANT :
 - Si tu vois un prix au kilo, extrais la quantit\xE9 totale factur\xE9e.
 3. V\xC9RIFICATION : Un document avec un en-t\xEAte de fournisseur et un r\xE9capitulatif de TVA est obligatoirement une FACTURE ou un Bon de Livraison.
 YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDOWN \`\`\`json. DO NOT EXPLAIN.`;
-  const targetModel = getModel(ollamaSettingsRef.current);
   promptText += "\nYOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDOWN ```json. DO NOT EXPLAIN.";
   
   // @ts-ignore
@@ -668,8 +668,9 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDO
     promptText += "\n\n--- CONTENU EXTRAIT DU PDF ---\n" + req.pdfText;
   }
   
-  const cleanResponseRaw = await generateWithOllama(promptText, imageBuffer, "json", 0.1);
-  let cleanResponse = cleanResponseRaw || "{}";
+  // Chantier 11 : porte unique (vision + repli Tesseract conservés).
+  const repLlm = await generer({ prompt: promptText, image: imageBuffer, format: "json", temperature: 0.1 });
+  let cleanResponse = repLlm.texte || "{}";
   const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
   if (jsonMatch) cleanResponse = jsonMatch[0];
   
@@ -708,7 +709,7 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDO
     console.error('[OLLAMA/DB/JSON] Processing failed. Error:', parseError, '\nRaw response:', cleanResponse);
     res.status(500).json({
       status: 'error',
-      message: `Erreur lors du traitement des données [${getModel(ollamaSettingsRef.current)}].`,
+      message: `Erreur lors du traitement des données.`,
       errorDetails: parseError instanceof Error ? parseError.message : String(parseError)
     });
   }
@@ -717,7 +718,7 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDO
   const errMsg = error instanceof Error ? error.message : "Erreur de connexion à l'IA.";
   res
     .status(500)
-    .json({ status: "error", message: `Erreur d'extraction IA [${getModel(ollamaSettingsRef.current)}] : ${errMsg}` });
+    .json({ status: "error", message: `Erreur d'extraction IA : ${errMsg}` });
 }
 });
 
@@ -863,14 +864,14 @@ IMPORTANT :
 3. VÉRIFICATION : Un document avec un en-tête de fournisseur et un récapitulatif de TVA est obligatoirement une FACTURE ou un Bon de Livraison.
 YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
   
-  const targetModel = getModel(ollamaSettingsRef.current);
   promptText += "\nYOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE. DO NOT ADD MARKDOWN ```json. DO NOT EXPLAIN.";
   
   if (pdfText) {
     promptText += "\n\n--- CONTENU EXTRAIT DU PDF ---\n" + pdfText;
   }
-  const cleanResponseRaw = await generateWithOllama(promptText, imageBuffer, "json", 0.1);
-  let cleanResponse = cleanResponseRaw || "{}";
+  // Chantier 11 : porte unique (vision + repli Tesseract conservés).
+  const repLlm = await generer({ prompt: promptText, image: imageBuffer, format: "json", temperature: 0.1 });
+  let cleanResponse = repLlm.texte || "{}";
   const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
   if (jsonMatch) cleanResponse = jsonMatch[0];
   try {
@@ -896,7 +897,7 @@ YOU MUST RESPOND STRICTLY AND EXCLUSIVELY WITH RAW JSON ALONE.`;
 } catch (e) {
   console.error(e);
   const errMsg = e instanceof Error ? e.message : "Erreur de connexion avec l'IA Ollama.";
-  res.status(500).json({ status: "error", message: `L'extraction du brouillon a échoué [${getModel(ollamaSettingsRef.current)}] : ${errMsg}` });
+  res.status(500).json({ status: "error", message: `L'extraction du brouillon a échoué : ${errMsg}` });
 }
 });
 
