@@ -909,3 +909,54 @@ build 483.60 ko, verify:routes 46/46, verify:recipes 24/24,
 verify:reception vert, verify:types 0 :any, verify:haccp 10/10,
 verify:hermes vert. Le README reste vrai : Ollama par défaut, aucune donnée
 cloud tant que le chef ne choisit pas un fournisseur de la liste.
+
+
+## Chantier 12 — Juges de la porte unique LLM : la morsure du réglage effectif (14/10)
+
+### La décision jouée
+
+Le chantier 11 a écrit la porte (src/shared/llm.ts) mais n'avait AUCUN juge
+dédié : si une future évolution réintroduisait le défaut historique (le
+dispatch qui ignore `llm_choix`), aucune porte ne rougirait — le réglage
+redeviendrait mensonger en silence. Un chantier sans juge est un chantier
+à moitié fait.
+
+### Ce qui a été écrit
+
+- `test/unit/llm-porte.test.ts` (12 règles, transport réseau mocké — la
+  règle du transport injecté) :
+  1. llm_choix ABSENT = Ollama par défaut (nommé dans l'erreur)
+  2. llamacpp sans URL = URL_ABSENTE, ZÉRO appel réseau
+  3. llamacpp avec URL = POST /v1/chat/completions reçu (corps + modèle)
+  4. vLLM licite (port 8000)
+  5. cloud hors liste = HORS_LISTE_BLANCHE, zéro appel (rien n'a fui)
+  6. cloud sans clef ENV = CLEF_ABSENTE
+  7. clef en header Bearer + base VERROUILLÉE par la liste blanche
+  7b. l'URL saisie ne peut PAS remplacer la base (anti evil-proxy)
+  8. réponse muette = erreur nommée (jamais un vide rendu)
+  9. vision multi-parties (image_url base64)
+  10. MORSURE du contrat : deux réglages différents = deux serveurs appelés
+  11. reglageActuel() jamais undefined
+
+- `scripts/negative-test-llm-porte.py` (la morsure) : réintroduit le défaut
+  historique DANS la porte (le dispatch force Ollama sans lire le réglage),
+  exige que le test 10 ROUGISSE, restaure avec garde ARBRE_SALE. Le motif de
+  mutation est l'ANCRE `export async function generer(...)` — l'ancre unique
+  comptée avant mutation.
+
+- `run-all-gates.py` : verify:llm-porte + verify:llm-porte-mord au lot DEFAUT.
+  84 portes désormais (82 + 2).
+
+### Le piège du chantier
+
+La morsure d'une PORTE DE COMPORTEMENT (pas un compteur de texte) exige de
+muter le CODE, pas une ligne : la mutation réécrit `generer()` pour forcer
+Ollama. Le juge qui rougit doit être le test de contrat SPÉCIFIQUE (le n°10),
+pas « n'importe quel test cassé » — un test qui casse pour une raison
+indifférente n'est pas une morsure, c'est du bruit.
+
+### Vérifié le 14/10
+
+tsc 0, vitest 170/170 (158 + 12), build 483.60 ko, verify:llm-porte 12/12,
+verify:llm-porte-mord MORSURE OK (arbre restauré), verify:all 84 portes
+0 rouge. CI GitHub verte sur 53653f2 (chantier 11 suite).

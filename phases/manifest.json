@@ -1,7 +1,7 @@
 {
   "original_octets": 145533,
-  "original_sha256": "133ac130760ec7c19f4473690a7870b9cea21c1c5888e617d9756b41397f4fec",
-  "chaud_octets": 51677,
+  "original_sha256": "4f24ae584cee567eedd1a6ea93633228738ab89dd8e56a1fda528037bdb7ddf0",
+  "chaud_octets": 54025,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
@@ -172,17 +172,17 @@
       "sha256": "13082f4056c3b80790768d2a8d1cf8313fae5500954581c4324b2a9d793c2fd7"
     }
   ],
-  "lignes_chaud": 911,
-  "tokens_approx_chaud": 12483,
+  "lignes_chaud": 962,
+  "tokens_approx_chaud": 13042,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 11 (porte unique de generation LLM) ajoute au chaud : src/shared/llm.ts (dispatch llm_choix: ollama | llamacpp | vllm | cloud liste blanche, clef ENV, erreurs nommees), vLLM port 8000 a la detection auto, 12 routes metier branchees ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-14T17:17:02.373354",
+    "motif": "chantier 12 (juges de la porte unique LLM) ajoute au chaud : test unitaire llm-porte 12 regles (dispatch, erreurs nommees, base verrouillee, vision, morsure du reglage effectif) + negative-test-llm-porte + 2 portes au lot DEFAUT (84 total) ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-14T21:36:30.450152",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantiers 10a-10f (zero :any UI) ajoutes au chaud : interfaces Recipe/CartItem/StaffMember/Sensor/HaccpLog/PurchaseOrder/Document/Optimisation, types partages exportes (UploadResult), guards optionnels, Object.keys sur Record ; 159 :any -> 0 dans src/ ; ancre recalculee par la boucle du juge",
-    "date": "2026-10-13T21:11:22.905716",
+    "motif": "chantier 11 (porte unique de generation LLM) ajoute au chaud : src/shared/llm.ts (dispatch llm_choix: ollama | llamacpp | vllm | cloud liste blanche, clef ENV, erreurs nommees), vLLM port 8000 a la detection auto, 12 routes metier branchees ; ancre recalculee par la boucle du juge, jamais recopiee",
+    "date": "2026-10-14T17:17:02.373354",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
