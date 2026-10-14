@@ -37,6 +37,8 @@ jobs:
         run: npm run verify:types
       - name: verify:types-mord (la porte rougit si un :any revient)
         run: npm run verify:types-mord
+      - name: verify:ocr-modeles (empreintes des poids embarques)
+        run: npm run verify:ocr-modeles
 
   build:
     name: build (vite, seuil bundle)
