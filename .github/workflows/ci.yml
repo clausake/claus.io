@@ -139,6 +139,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Chromium requis : verify:reception (spec avec fixture page) lance un
+      # navigateur reel. Les jobs GitHub sont isoles — l'installation du job
+      # e2e ne se partage pas. --with-deps pose les bibliotheques systeme.
+      - name: playwright install (chromium)
+        run: npx playwright install --with-deps chromium
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
