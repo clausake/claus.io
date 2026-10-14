@@ -142,6 +142,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # dist/ requis : verify:http (en-tetes de cache sur les assets),
+      # verify:bundle (lit dist/assets) et verify:reception (spec qui juge
+      # l'UI embarquee) refusent de tourner sans build — meme contrat que le
+      # poste local ("lancer npm run build avant ce script").
+      - name: build (prealable au lot complet)
+        run: npm run build
       - name: verify:all (le lot complet, verdict LU)
         run: npm run verify:all
       - name: resume portes
