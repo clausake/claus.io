@@ -79,16 +79,17 @@ const OLLAMA = { status: 200, corps: { data: [{ id: "qwen3:8b" }] } };
 const CPP8080 = { status: 200, corps: { models: ["mistral-7b"] } };
 const CPP1234 = { status: 200, corps: { data: [] } };
 
+// Chantier 11 : vLLM (port 8000) rejoint les ports du contrat.
 verifier("les ports d'usage sont ceux du contrat",
-  JSON.stringify(PORTS_USAGE.map((p) => p.port)) === JSON.stringify([11434, 8080, 1234]));
+  JSON.stringify(PORTS_USAGE.map((p) => p.port)) === JSON.stringify([11434, 8080, 1234, 8000]));
 
 const c1 = await jouer({ "11434": OLLAMA, "8080": MOURIR, "1234": MOURIR });
 verifier("ollama seul : 1 trouve, modele rendu, message nul",
   c1.serveurs.length === 1 && c1.serveurs[0].moteur === "ollama"
   && c1.serveurs[0].modeles[0]?.nom === "qwen3:8b" && c1.etat.message === null);
 
-const c2 = await jouer({ "11434": OLLAMA, "8080": CPP8080, "1234": CPP1234 });
-verifier("les trois trouves, dans l'ordre des ports d'usage",
+const c2 = await jouer({ "11434": OLLAMA, "8080": CPP8080, "1234": CPP1234, "8000": MOURIR });
+verifier("les trois trouves, dans l'ordre des ports d'usage (8000 muet = absent)",
   JSON.stringify(c2.serveurs.map((s) => s.port)) === JSON.stringify([11434, 8080, 1234]));
 
 const c3 = await jouer({ "11434": MOURIR, "8080": { status: 404, corps: {} }, "1234": MOURIR });
