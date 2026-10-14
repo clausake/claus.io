@@ -2,7 +2,8 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
-import { ollama, getModel, ollamaSettingsRef } from "../shared/ollama.js";
+import { generer } from "../shared/llm.js";
+import { ollamaSettingsRef } from "../shared/ollama.js";
 import type { AuditLogger } from "../services/audit.js";
 
 export default function createRouter(db: Database, logAudit: AuditLogger) {
@@ -154,13 +155,10 @@ R\xE9ponds UNIQUEMENT en JSON avec ce format en ${langName} :
   }
 ]
 }`;
-  const response = await ollama.generate({
-    model: getModel(ollamaSettingsRef.current),
-    prompt,
-    format: "json",
-  });
+  // Chantier 11 : porte unique.
+  const response = await generer({ prompt, format: "json" });
   await logAudit(req, res, { route: "/api/anti-waste/generate", action: "generate" });
-  res.json(safeJsonParse(response.response));
+  res.json(safeJsonParse(response.texte));
 } catch (error) {
   console.error("Anti-waste generation error:", error);
   res.status(500).json({ error: "Failed to generate anti-waste recipes" });

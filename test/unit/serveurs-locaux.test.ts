@@ -25,10 +25,11 @@ const ok = (corps: unknown): (() => Promise<Rep>) =>
   async () => ({ status: 200, json: async () => corps });
 
 describe("detecterServeursLocaux (Tache 8)", () => {
-  it("les trois ports d'usage sont ceux du contrat (11434, 8080, 1234)", () => {
+  it("les ports d'usage sont ceux du contrat (11434, 8080, 1234, 8000=vLLM)", () => {
     // tri NUMERIQUE: .sort() sans comparateur trie en chaines et "11434"
     // passe avant "1234" (faute mesuree a l'ecriture de ce test).
-    expect(PORTS_USAGE.map((p) => p.port).sort((a, b) => a - b)).toEqual([1234, 8080, 11434]);
+    // Chantier 11 : vLLM (port 8000) rejoint la detection auto.
+    expect(PORTS_USAGE.map((p) => p.port).sort((a, b) => a - b)).toEqual([1234, 8000, 8080, 11434]);
   });
 
   it("un serveur vivant est TROUVE avec ses modeles", async () => {

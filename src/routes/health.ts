@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 import { getOllamaHost } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef, type OllamaModelInfo } from "../shared/ollama.js";
+import { cibleActuelle } from "../shared/llm.js";
 import { perf } from "../services/perf.js";
 
 const router = Router();
@@ -22,6 +23,8 @@ router.get("/health", async (_req, res) => {
 const lang = ollamaSettingsRef.current.language || "fr";
 const model = getModel(ollamaSettingsRef.current);
 const host = getOllamaHost(ollamaSettingsRef.current);
+// Chantier 11 : le health nomme la CIBLE ACTIVE (pas toujours Ollama).
+const cible = cibleActuelle();
 
 const messages = {
   ok: {
