@@ -8,7 +8,17 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 
-<p align="center"><img src="public/screenshot-dashboard.png" alt="Tableau de bord claus.io — food cost et labor cost" width="800"></p>
+<p align="center"><img src="public/screenshot-dashboard.png" alt="Tableau de bord claus.io — valeur du stock, alertes, courbes de coûts, répartition par catégorie" width="840"></p>
+
+*Tableau de bord : valeur du stock en direct, alertes critiques, courbes de coûts sur 7 jours, répartition par catégorie.*
+
+## Vidéo de présentation
+
+https://github.com/user-attachments/assets/REPLACEME
+
+*Démonstration complète : navigation entre les modules, génération de fiches par IA, scan de factures, HACCP.*
+
+*(La vidéo est embarquée dans le dépôt : [`public/demo-clausio.webm`](./public/demo-clausio.webm))*
 
 ## Fonctionnalités
 
