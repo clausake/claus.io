@@ -50,6 +50,14 @@ export default function App() {
   // la consignation ne vient que de /api/assistant/consigner, qui exige
   // l'epreuve reussie). La decision est prise par le SERVEUR, pas par un
   // drapeau local que l'on pourrait vider.
+  //
+  // ⚠ ORDRE DES ECRANS (defaut mesure le 15/10, parcours reel sur mobile) :
+  // l'assistant etait rendu AVANT l'AuthGate — l'operateur faisait les trois
+  // etapes SANS compte, et la consignation finale (POST, donc gate session)
+  // echouait en 401 sous un message generique « CONSIGNATION_IMPROUVABLE ».
+  // Le parcours correct : identite D'ABORD (creation de compte maître),
+  // PUIS l'assistant equipe l'app — la consignation est alors signee par la
+  // session qui existe. L'assistant est donc rendu DANS l'AuthGate.
   const [assistantRequis, setAssistantRequis] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -291,9 +299,15 @@ export default function App() {
   }
 
   // L'assistant de premier demarrage (Tache 10) : tant que le serveur dit que
-  // l'epreuve n'est pas consignée, c'est LUI qui tient l'ecran.
+  // l'epreuve n'est pas consignée, c'est LUI qui tient l'ecran — DANS la
+  // session (voir le commentaire de la declaration d'assistantRequis : la
+  // consignation est un POST, la gate session exige une identite).
   if (assistantRequis === true) {
-    return <Assistant t={t} onTermine={() => setAssistantRequis(false)} />;
+    return (
+      <AuthGate onUser={setUser} logoutSignal={logoutSignal}>
+        <Assistant t={t} onTermine={() => setAssistantRequis(false)} />
+      </AuthGate>
+    );
   }
 
   return (
