@@ -11,9 +11,7 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     scannedDocAlt: "Document scanné",
     enlargedDocAlt: "Document agrandi",
     sourceAlt: "Source",
-    exLicense: "Ex: XXXX-XXXX-XXXX",
     exLlama: "ex: llama3.2",
-    licenseKeyPlaceholder: "XXXX-XXXX-XXXX",
     exTerreAzur: "Ex: TerreAzur",
     docDesignationEx: "Désignation sur document (ex: Tomates Grappe)",
     prix: "Prix",
@@ -49,21 +47,15 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
       "Les fiches techniques sont disponibles dans l'onglet 'Fiches Techniques'.",
     creativeMenusGenerated: "Menus Créatifs Générés",
 
-    trialEndedTitle: "Période d'Essai Terminée",
 
-    enterActivationKey: "Entrer la clé d'activation",
 
-    clausIsActivated: "Le système est activé sur ce poste.",
 
-    loadingLicense: "Chargement de la licence...",
 
-    machineIdSupport: "Identifiant Machine (à communiquer au support)",
 
     activeAIModel: "Modèle IA Actif",
 
     activeAIModelDesc: "Modèle utilisé pour toutes les analyses IA locales.",
 
-    machineId: "Machine ID",
 
     activeEngine: "Moteur Actif",
 
@@ -502,10 +494,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traditionalCooking: "Cuisine Bistro Chic",
     aiAnalysisActive: "IA Analyse Active",
     fourWeekCycle: "Cycle 4 Semaines",
-    freeTrial: "Essai Gratuit",
-    trialDaysLeft: "Il vous reste {days} jours d'essai.",
-    configTrialDesc: "Il vous reste {days} jours d'essai pour tester claus.io.",
-    trialExpired: "Essai Terminé",
     days: "jours",
     landingTitle: "claus.io",
     landingSubtitle:
@@ -824,31 +812,23 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
 
     sourceAlt: "Source",
 
-    exLicense: "e.g., XXXX-XXXX-XXXX",
 
     exLlama: "e.g., llama3.2",
 
-    licenseKeyPlaceholder: "XXXX-XXXX-XXXX",
 
     exTerreAzur: "e.g., Sysco",
 
     docDesignationEx: "Name on document (e.g., Vine Tomatoes)",
 
-    trialEndedTitle: "Trial Period Ended",
 
-    enterActivationKey: "Enter activation key",
 
-    clausIsActivated: "The system is activated on this device.",
 
-    loadingLicense: "Loading license...",
 
-    machineIdSupport: "Machine ID (to be communicated to support)",
 
     activeAIModel: "Active AI Model",
 
     activeAIModelDesc: "Model used for all local AI analyses.",
 
-    machineId: "Machine ID",
 
     activeEngine: "Active Engine",
 
@@ -1330,10 +1310,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traditionalCooking: "Traditional Cooking",
     aiAnalysisActive: "AI Analysis Active",
     fourWeekCycle: "4-Week Cycle",
-    freeTrial: "Free Trial",
-    trialDaysLeft: "You have {days} days left in your trial.",
-    configTrialDesc: "You have {days} trial days left to test claus.io.",
-    trialExpired: "Trial Expired",
     days: "days",
     landingTitle: "Management Software",
     landingSubtitle:
@@ -1642,20 +1618,12 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     scannedDocAlt: "Gescanntes Dokument",
     enlargedDocAlt: "Vergrößertes Dokument",
     sourceAlt: "Quelle",
-    exLicense: "z. B. XXXX-XXXX-XXXX",
     exLlama: "z. B. llama3.2",
-    licenseKeyPlaceholder: "XXXX-XXXX-XXXX",
     exTerreAzur: "z. B. Sysco",
     docDesignationEx: "Bezeichnung auf Dokument (z. B. Rispentomaten)",
-    trialEndedTitle: "Testzeitraum abgelaufen",
-    enterActivationKey: "Aktivierungsschlüssel eingeben",
-    clausIsActivated: "claus.io ist auf diesem Gerät aktiviert.",
 
-    loadingLicense: "Lizenz wird geladen...",
-    machineIdSupport: "Maschinen-ID (dem Support mitzuteilen)",
     activeAIModel: "Aktives KI-Modell",
     activeAIModelDesc: "Modell für alle lokalen KI-Analysen.",
-    machineId: "Maschinen-ID",
     activeEngine: "Aktive Engine",
     mode01: "Modus 01",
     mode02: "Modus 02",
@@ -1955,10 +1923,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traditionalCooking: "Traditionelle Küche",
     aiAnalysisActive: "KI-Analyse aktiv",
     fourWeekCycle: "4-Wochen-Zyklus",
-    freeTrial: "Kostenlose Testversion",
-    trialDaysLeft: "Sie haben noch {days} Tage Testzeitraum.",
-    configTrialDesc: "Sie haben noch {days} Tage Testzeit für claus.io.",
-    trialExpired: "Testzeit abgelaufen",
     days: "Tage",
     landingTitle: "Management-Software",
     landingSubtitle:
@@ -2493,21 +2457,13 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     scannedDocAlt: "Documento escaneado",
     enlargedDocAlt: "Documento ampliado",
     sourceAlt: "Fuente",
-    exLicense: "Ej: XXXX-XXXX-XXXX",
     exLlama: "Ej: llama3.2",
-    licenseKeyPlaceholder: "XXXX-XXXX-XXXX",
     exTerreAzur: "Ej: Sysco",
     docDesignationEx: "Nombre en el documento (Ej: Tomates en rama)",
-    trialEndedTitle: "Período de prueba finalizado",
-    enterActivationKey: "Introduzca la clave de activación",
-    clausIsActivated: "El sistema está activado en este dispositivo.",
 
-    loadingLicense: "Cargando licencia...",
-    machineIdSupport: "ID de la máquina (comunicar al soporte)",
     activeAIModel: "Modelo de IA Activo",
     activeAIModelDesc:
       "Modelo utilizado para todos los análisis de IA locales.",
-    machineId: "ID de Máquina",
     activeEngine: "Motor Activo",
     mode01: "Modo 01",
     mode02: "Modo 02",
@@ -2625,7 +2581,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     noBatchInStock: "Ningún lote en stock.",
     packagingIntact: "Embalaje Intacto",
     history: "Historial",
-    configTrialDesc: "Le quedan {days} días de prueba para probar el sistema.",
     activate: "Activar",
 
     documentDetails: "Detalles del Documento",
@@ -2915,9 +2870,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traditionalCooking: "Cocina Tradicional",
     aiAnalysisActive: "Análisis IA",
     fourWeekCycle: "Ciclo de 4 semanas",
-    freeTrial: "Prueba gratuita",
-    trialDaysLeft: "Te quedan {days} días de prueba.",
-    trialExpired: "Prueba Expirada",
     days: "días",
     landingTitle: "Software de Gestión",
     landingSubtitle: "Su sistema inteligente para la alta cocina.",
@@ -3216,20 +3168,12 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     scannedDocAlt: "Documento scansionato",
     enlargedDocAlt: "Documento ingrandito",
     sourceAlt: "Fonte",
-    exLicense: "Es: XXXX-XXXX-XXXX",
     exLlama: "Es: llama3.2",
-    licenseKeyPlaceholder: "XXXX-XXXX-XXXX",
     exTerreAzur: "Es: Sysco",
     docDesignationEx: "Nome sul documento (es: Pomodori a grappolo)",
-    trialEndedTitle: "Periodo di prova terminato",
-    enterActivationKey: "Inserisci la chiave di attivazione",
-    clausIsActivated: "Il sistema è attivato su questo dispositivo.",
 
-    loadingLicense: "Caricamento licenza...",
-    machineIdSupport: "ID Macchina (da comunicare al supporto)",
     activeAIModel: "Modello IA Attivo",
     activeAIModelDesc: "Modello utilizzato per tutte le analisi IA locali.",
-    machineId: "ID Macchina",
     activeEngine: "Motore Attivo",
     mode01: "Modalità 01",
     mode02: "Modalità 02",
@@ -3676,10 +3620,6 @@ export const TRANSLATIONS: Record<string, Record<string, string>> = {
     traditionalCooking: "Cucina Bistrot Chic",
     aiAnalysisActive: "Analisi IA Attiva",
     fourWeekCycle: "Ciclo di 4 Settimane",
-    freeTrial: "Prova Gratuita",
-    trialDaysLeft: "Ti rimangono {days} giorni di prova.",
-    configTrialDesc: "Ti restano {days} giorni di prova per testare il sistema.",
-    trialExpired: "Prova Terminata",
     days: "giorni",
     landingTitle: "Software di Gestione",
     landingSubtitle:

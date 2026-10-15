@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Zap, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles, Lock,
+  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
 } from "lucide-react";
 import * as motionSlim from "motion/react-m";
 import { NavItem } from "./views";
@@ -13,13 +13,12 @@ interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
-  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked?: boolean } | null;
   user: Utilisateur | null;
 }
 
 export function Sidebar({
   t, activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen,
-  isMobile, trialStatus, user,
+  isMobile, user,
 }: SidebarProps) {
   return (
     <>
@@ -218,35 +217,6 @@ export function Sidebar({
               />
             </div>
         </nav>
-
-        {trialStatus &&
-          !trialStatus.isExpired &&
-          !trialStatus.isUnlocked &&
-          isSidebarOpen && (
-            <div className="p-4 mx-4 mb-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-              <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1 flex items-center">
-                <Zap className="w-3 h-3 mr-1" />
-                {t.freeTrial || "Essai Gratuit"}
-              </p>
-              <p className="text-xs text-amber-500/80 font-medium">
-                {(
-                  t.trialDaysLeft || "Il vous reste {days} jours d'essai."
-                ).replace("{days}", trialStatus.daysLeft.toString())}
-              </p>
-            </div>
-          )}
-
-        {trialStatus &&
-          trialStatus.isExpired &&
-          !trialStatus.isUnlocked &&
-          isSidebarOpen && (
-            <div className="p-4 mx-4 mb-2 bg-red-500/10 border border-red-500/20 rounded-2xl">
-              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1 flex items-center">
-                <Lock className="w-3 h-3 mr-1" />
-                {t.trialExpired || "Essai Terminé"}
-              </p>
-            </div>
-          )}
 
         <div className="p-4 border-t border-white/5 space-y-1">
           {user?.role === "maitre" && (
