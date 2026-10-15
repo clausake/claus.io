@@ -46,6 +46,9 @@ export type ConstructionCible =
 export function cibleDuReglage(r: ReglageLlmBrut): ConstructionCible {
   const choix = (r.llm_choix ?? "").trim();
   const modele = (r.llm_modele ?? "").trim() || null;
+  // La voie « sans IA » : rien à sonder — un défaut NOMMÉ (le panneau
+  // Intelligence affichera l'état « sans IA »), pas une supposition d'URL.
+  if (choix === "sans") return { defaut: "IA_DESACTIVEE" };
   if (choix === "ollama") {
     const base = (r.llm_url ?? "").trim() || DEFAUT_OLLAMA;
     return { cible: { nom: "reglage", style: "ollama", base, modele } };
