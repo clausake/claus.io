@@ -289,7 +289,7 @@ const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
     // Header
     doc.setFontSize(22);
     doc.setTextColor(34, 197, 94);
-    doc.text(`RESTAURATION IO`, 14, 22);
+    doc.text(`claus.io`, 14, 22);
     
     doc.setFontSize(16);
     doc.setTextColor(40, 40, 40);

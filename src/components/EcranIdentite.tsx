@@ -36,7 +36,7 @@ export default function EcranIdentite({ setup, occupe, erreur, soumettre }: Prop
           <p className="text-sm text-slate-400 mb-8 font-light">
             {setup
               ? "Creez le premier compte de l'etablissement : il devient maitre."
-              : "RESTAURATION IO — identifiez-vous pour acceder a la cuisine."}
+              : "claus.io — identifiez-vous pour acceder a la cuisine."}
           </p>
 
           <form
@@ -131,7 +131,7 @@ export default function EcranIdentite({ setup, occupe, erreur, soumettre }: Prop
       </div>
 
       <div className="absolute bottom-10 text-slate-500 text-sm font-medium tracking-wider uppercase font-mono">
-        RESTAURATION IO Intelligent System
+        claus.io — Intelligent Kitchen System
       </div>
     </div>
   );
