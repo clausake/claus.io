@@ -86,6 +86,14 @@ export async function generer(d: DemandeGeneration): Promise<ReponseLlm> {
   const choix = (r.llm_choix ?? "ollama").trim().toLowerCase();
   const temperature = d.temperature ?? 0.2;
 
+  // 0. La voie « sans IA » (choisie au premier démarrage) : l'app est complète
+  //    en saisie manuelle — toute route qui arrive ici doit recevoir une erreur
+  //    NOMMÉE (jamais un 500 nu, jamais un silence), et l'UI affiche son
+  //    message « IA désactivée ».
+  if (choix === "sans") {
+    throw new LlmInjoignable("sans IA", "IA_DESACTIVEE");
+  }
+
   // 1. Ollama : le défaut, l'API native, la vision, le repli Tesseract.
   if (choix === "ollama" || choix === "") {
     const modele = getModel(ollamaSettingsRef.current);
@@ -213,6 +221,7 @@ async function repliTesseract(imageBase64: string): Promise<string> {
 export function cibleActuelle(): string {
   const r = reglageActuel();
   const choix = (r.llm_choix ?? "ollama").trim().toLowerCase();
+  if (choix === "sans") return "Sans IA (saisie manuelle)";
   if (choix === "ollama") return `Ollama (${(r.ollama_url ?? DEFAUT_OLLAMA)})`;
   if (choix === "llamacpp" || choix === "openai-compatible" || choix === "vllm") {
     return `${choix} (${r.llm_url ?? "URL non configurée"})`;

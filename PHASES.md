@@ -1220,3 +1220,57 @@ le parent passe null).
 tsc rc=0, vitest 170/170, build OK, verify:ui-tabs 13/13, verify:csp-inline
 rc=0 (morsure rc=1), verify:http TOUT PASS (la CSP n'a pas casse les en-tetes),
 e2e routes+reception 45/45.
+
+## Chantier 17 — « Continuer sans IA » : l'assistant n'est plus une porte d'IA obligatoire (15/10)
+
+### La demande du client
+
+Sur le parcours réel (mobile, tunnel) : « C'est quoi cette lecture de facture ?
+Quelle utilité logique ? Le logiciel doit être accessible sans IA. » Reponse :
+l'épreuve OCR sert (mesurer les capacités réelles de la machine avant de compter
+dessus), mais elle était présentée comme UN PREREQUIS — en contradiction avec le
+contrat produit « l'app est complète en saisie manuelle ». Une machine sans
+moteur restait bloquée à l'écran 3.
+
+### Ce qui a été écrit
+
+- Assistant.tsx : un bouton « Continuer sans IA » à l'écran du moteur, séparé
+  visuellement (le contrat : un choix à part entière, pas un échec de
+  détection). Il saute clef ET épreuve (rien à juger sans moteur) et mène à un
+  écran de confirmation explicite (« le test de lecture s'y trouve aussi »).
+- src/services/assistant.ts : `consignerDemarrage("sans")` consigne le
+  démarrage SANS épreuve (`install_termine_le` + `fournisseur_choisi: "sans"`
+  + `llm_choix: "sans"`). Le contrat « sans épreuve reussie, rien n'est
+  consigné » ne concerne que l'IA : on ne consigne pas une intelligence
+  qu'on n'a pas équipée.
+- src/shared/llm.ts : `generer()` avec `llm_choix=sans` jette
+  `LlmInjoignable("sans IA", "IA_DESACTIVEE")` — nommé, jamais un appel.
+  `cibleActuelle()` rend « Sans IA (saisie manuelle) ».
+- src/routes/ai.ts : IA_DESACTIVEE rend 503 avec un message clair dans la
+  langue de l'app (« IA désactivée : l'application fonctionne en mode
+  manuel... ») — pas un « bug technique » : l'opérateur a CHOISI ce mode.
+- src/shared/fournisseur/{types,reglage-llm}.ts : `sans` rejoint les valeurs
+  licites de `llm_choix` ; la sonde rend le défaut nommé IA_DESACTIVEE.
+- SettingsView.tsx : la 4e carte « Sans IA » au panneau Intelligence (la voie
+  est activable/révocable ici à tout moment).
+- test/unit/llm-porte.test.ts : morsure « 2 bis » — generer() avec `sans`
+  jette IA_DESACTIVEE et n'appelle RIEN (urlsJouees vide).
+- test/e2e/sans-ia-contract.spec.ts : le parcours de bout en bout AVEC auth
+  active — landing, création de compte, bouton « Continuer sans IA », aucune
+  épreuve demandée, « Terminer » armé, consignation écrite (fournisseur "sans"),
+  sidebar rendue.
+
+### Le piège du chantier — un corps de réponse ne se lit qu'une fois
+
+La première version de `terminer()` lisait le corps DEUX fois (le défaut, puis
+`ok`) : un second `res.json()` sur la même Response jette « body already
+read », le catch le taisait, et un SUCCÈS était rendu en erreur générique
+« CONSIGNATION_IMPROUVABLE » — mesuré par le spec (CONSIGNER_REP: 200, écran
+inchangé). Réparé : un seul `res.json()`, le succès jugé d'abord, le défaut
+nommé par statut (401/412) puis par corps.
+
+### Vérifié le 15/10
+
+tsc rc=0, vitest 171/171 (morsure 2 bis comprise), build OK, verify:ui-tabs
+13/13, e2e routes+reception+sans-ia 45/45, parcours curl : consigner "sans"
+sans épreuve -> 200 ok:true, chat en mode sans -> 503 message clair.

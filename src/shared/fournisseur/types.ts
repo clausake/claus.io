@@ -83,8 +83,10 @@ export interface ReglageFournisseur {
   /** Le moteur principal: `ollama` est le defaut (decide du 25/09). */
   // Chantier 11 : "vllm" (et tout serveur local OpenAI-compatible) rejoint
   // la liste — le nom "llamacpp" reste accepté pour les réglages existants.
+  // "sans" (15/10) : la voie sans IA choisie au premier démarrage — l'app est
+  // complète en saisie manuelle, `generer()` refuse avec IA_DESACTIVEE.
   llm_choix?: "llamacpp" | "ollama" | "vllm" | "openai" | "mistral" | "anthropic"
-              | "cohere" | "deepseek";
+              | "cohere" | "deepseek" | "sans";
   llm_url?: string;
   llm_modele?: string;
   /** Le secours en ligne, en dernier recours seulement. */

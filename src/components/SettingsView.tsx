@@ -8,6 +8,7 @@ import {
   Download,
   Globe,
   Menu as MenuIcon,
+  PencilLine,
   Play,
   Server,
   Settings,
@@ -52,8 +53,12 @@ export function SettingsView({
   // Panneau « Intelligence » (Sprint 15, Tâche 9). Le choix, l'URL et le
   // modèle sont les champs `llm_*` du contrat (ReglageFournisseur) ; ils
   // rentrent dans `settings` par setSettings, persistés par /api/settings.
-  const [choixIa, setChoixIa] = React.useState<"local" | "ollama" | "en-ligne">(
-    settings?.llm_choix === "ollama"
+  // « sans » (15/10) : la voie sans IA — l'état initial la montre comme un
+  // choix explicite (pas « local » par défaut), activable ici à tout moment.
+  const [choixIa, setChoixIa] = React.useState<"sans" | "local" | "ollama" | "en-ligne">(
+    settings?.llm_choix === "sans"
+      ? "sans"
+      : settings?.llm_choix === "ollama"
       ? "ollama"
       : settings?.llm_choix && settings.llm_choix !== "llamacpp"
         ? "en-ligne"
@@ -61,7 +66,7 @@ export function SettingsView({
   );
   const [fournisseurIa, setFournisseurIa] = React.useState<string>(
     settings?.llm_choix && settings.llm_choix !== "ollama" &&
-    settings.llm_choix !== "llamacpp"
+    settings.llm_choix !== "llamacpp" && settings.llm_choix !== "sans"
       ? String(settings.llm_choix)
       : "",
   );
@@ -106,7 +111,9 @@ export function SettingsView({
         ? "ollama"
         : choixIa === "en-ligne"
           ? fournisseurIa || FOURNISSEURS_BLANCS[0].nom.toLowerCase()
-          : "llamacpp",
+          : choixIa === "sans"
+            ? "sans"
+            : "llamacpp",
     llm_url: urlIa.trim(),
     llm_modele: modeleIa.trim(),
   });
@@ -152,7 +159,8 @@ export function SettingsView({
     if (!settings?.llm_choix) return;
     setUrlIa(settings.llm_url ?? "");
     setModeleIa(settings.llm_modele ?? "");
-    if (settings.llm_choix === "ollama") setChoixIa("ollama");
+    if (settings.llm_choix === "sans") setChoixIa("sans");
+    else if (settings.llm_choix === "ollama") setChoixIa("ollama");
     else if (settings.llm_choix === "llamacpp") setChoixIa("local");
     else {
       setChoixIa("en-ligne");
@@ -821,6 +829,18 @@ export function SettingsView({
                 </span>
                 <span className="block text-[10px] text-slate-500 mt-2 font-mono">
                   {t.intelligenceEnLigneAide || "Un fournisseur de la liste blanche, validé."}
+                </span>
+              </button>
+              <button
+                onClick={() => { setChoixIa("sans"); setVerdictIa(null); }}
+                className={`p-4 rounded-xl border text-left transition-all ${choixIa === "sans" ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/30"}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-white">
+                  <PencilLine className="w-4 h-4 text-slate-400" />
+                  {t.intelligenceSansIa || "Sans IA"}
+                </span>
+                <span className="block text-[10px] text-slate-500 mt-2 font-mono">
+                  {t.intelligenceSansIaAide || "Saisie manuelle complète — activable ici à tout moment."}
                 </span>
               </button>
             </div>

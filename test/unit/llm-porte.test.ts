@@ -77,6 +77,13 @@ describe("generer() — la porte unique de génération (chantier 11)", () => {
     expect(urlsJouees).toHaveLength(0); // rien n'a été appelé nulle part
   });
 
+  it("2 bis. voie « sans IA » = IA_DESACTIVEE (choix du premier démarrage — l'app est complète en saisie manuelle)", async () => {
+    poserReglage({ llm_choix: "sans" });
+    await expect(generer({ prompt: "salut" })).rejects.toThrow(/IA_DESACTIVEE/);
+    await expect(generer({ prompt: "salut" })).rejects.toThrow(/sans IA/);
+    expect(urlsJouees).toHaveLength(0); // rien n'a été appelé nulle part
+  });
+
   it("3. llamacpp AVEC URL = POST /v1/chat/completions reçu par le serveur", async () => {
     poserReglage({ llm_choix: "llamacpp", llm_url: "http://127.0.0.1:8080", llm_modele: "mistral-7b" });
     monterFauxServeur({ status: 200, body: REPO });

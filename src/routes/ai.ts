@@ -2,7 +2,17 @@
 import { Router } from "express";
 import type { Database } from "sqlite";
 import { safeJsonParse } from "../shared/util.js";
-import { generer } from "../shared/llm.js";
+import { generer, LlmInjoignable } from "../shared/llm.js";
+
+/** La reponse quand l'IA est DESACTIVEE (voie « sans IA » du premier
+ *  démarrage) : un message clair, pas un « bug technique » — l'opérateur a
+ *  CHOISI ce mode, ce n'est pas une panne. 503 = service volontairement non
+ *  configuré. Contrat « jamais 500 nu » : l'erreur est nommée. */
+const iaDesactivee = (langue: string) =>
+  langue === "es" ? "IA desactivada: la aplicación funciona en modo manual."
+  : langue === "it" ? "IA disattivata: l'applicazione funziona in modalità manuale."
+  : langue === "de" ? "KI deaktiviert: die App funktioniert im manuellen Modus."
+  : "IA désactivée : l'application fonctionne en mode manuel (saisie manuelle complète). Vous pouvez activer l'IA dans Réglages.";
 import { ollamaSettingsRef } from "../shared/ollama.js";
 import { blocHistorique, CONSIGNE_GABARIT } from "../shared/recette-chat.js";
 import type { AuditLogger } from "../services/audit.js";
@@ -83,6 +93,10 @@ NUR JSON.`
   await logAudit(req, res, { route: "/api/voice", action: "voice" });
   res.json(result);
 } catch (error) {
+  if (error instanceof LlmInjoignable && error.motif === "IA_DESACTIVEE") {
+    res.status(503).json({ intent: "error", response: iaDesactivee(ollamaSettingsRef.current.language ?? "fr") });
+    return;
+  }
   console.error("Voice API Error:", error);
   res.status(500).json({
     intent: "error",
@@ -141,6 +155,10 @@ try {
   await logAudit(req, res, { route: "/api/ai/chat", action: "chat" });
   res.json({ response: response.texte });
 } catch (error) {
+  if (error instanceof LlmInjoignable && error.motif === "IA_DESACTIVEE") {
+    res.status(503).json({ response: iaDesactivee(ollamaSettingsRef.current.language ?? "fr") });
+    return;
+  }
   console.error("Chat API Error:", error);
   res.status(500).json({
     response:
