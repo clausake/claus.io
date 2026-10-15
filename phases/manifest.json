@@ -1,6 +1,6 @@
 {
-  "original_octets": 268428,
-  "original_sha256": "61501a61459baca3b7ab35a64fb6e912c8ba3b59fb2bf1f1ce21e4abeed99fd0",
+  "original_octets": 270908,
+  "original_sha256": "36fd3454b2bfe3137ffde9f07d82c8718069c6f8a9be70ce092623c621cb59cf",
   "chaud_octets": 54025,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 13042,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 17 consigne : la voie « sans IA » au premier demarrage (bouton, consignation sans epreuve, generer() nomme IA_DESACTIVEE, 4e carte Reglages, morsure llm-porte 2 bis, e2e sans-ia-contract) + le piege du double res.json() ; ancre recalculee par la boucle du juge (segments() + sha256), jamais recopiee",
-    "date": "2026-10-15T21:17:19.646593",
+    "motif": "chantier 18 consigne : le doublon « Chat Culinaire » retire de la sidebar (deux entrees vers le meme onglet = deux onglets actifs), le chat reste dans Ingenierie des Menus ; defaut mobile du chat ecrase a 0 px corrige ; ui-tabs passe a 12 onglets + jugement anti-doublon permanent ; ancre recalculee par la boucle du juge (segments() + sha256), jamais recopiee",
+    "date": "2026-10-15T21:56:47.104479",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 16 consigne : banc UI des 13 onglets (verify:ui-tabs) + porte CSP inline (verify:csp-inline) + deux defauts trouves : garde-fou inline bloque par helmet (mort en prod) et onglet Fiches en ecran vide (AnimatePresence importe de react) ; reparations et morsures faites ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-    "date": "2026-10-15T18:21:47.303874",
+    "motif": "chantier 17 consigne : la voie « sans IA » au premier demarrage (bouton, consignation sans epreuve, generer() nomme IA_DESACTIVEE, 4e carte Reglages, morsure llm-porte 2 bis, e2e sans-ia-contract) + le piege du double res.json() ; ancre recalculee par la boucle du juge (segments() + sha256), jamais recopiee",
+    "date": "2026-10-15T21:17:19.646593",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
