@@ -1085,3 +1085,26 @@ n'est pas un défaut du README.
 Troisième leçon : à `width="840"` les libellés de la barre latérale sont
 minuscules (9 px) — ce qui peut faire croire qu'ils manquent. L'image passe à
 1200 px.
+
+### 15/10 — CI rouge sur verify:sse : un controle qui jugeait la PREMIERE frame du tampon
+CI a rougi `verify:sse` (job gates : PORTES=84 ROUGES=1) alors que la porte etait
+verte sur le poste : `ECHEC ajout de capteur pousse une liste contenant le
+nouveau`, SANS detail — donc `waitFor("sensors")` avait bien rendu une frame,
+mais une frame sans le nouveau capteur.
+Cause etablie par lecture puis reproduction : `haccp.ts`
+(POST /api/haccp/iot-sensors) fait `res.json()` PUIS `publishList(...)`
+(res.json l.277, diffusion l.280-285). Un 200 ne garantit donc pas que la frame
+est partie. Sur un runner lent, la frame des deux enregistrements d'amorcage
+(l.155-156) arrive APRES l'attache du flux et reste au tampon ; `waitFor` (qui
+rend des qu'une frame de ce nom existe) la rendait immediatement et jugeait la
+mauvaise liste — faux rouge, produit en faute pour rien.
+Reproduction a volonte : copie de la porte + un capteur temoin enregistre apres
+l'attache du flux -> ancienne logique ECHEC / nouvelle PASS, 2 frames 'sensors'
+dont la 1re sans 'newcomer'.
+Remede : le point 5 juge la PROPRIETE (« une frame 'sensors' contenant
+'newcomer' arrive en 4 s ») et non l'existence d'une frame. Le point 4 passe au
+meme regime (`waitCount` au-dessus du niveau de reference, on ne juge que la
+frame posterieure au post) : le minuteur publie 'stale' toutes les 25 s, donc une
+frame anterieure au post pouvait etre jugee a sa place.
+Falsifiabilite (morsure) : `publishList` neutralise -> ECHEC sur le seul point 5
+avec `frames 'sensors' recues=0`, rc=1 ; restaure -> TOUT PASS rc=0 (2 runs).
