@@ -126,7 +126,7 @@ jobs:
 
   # ── Lot 5 : lot complet des portes (le meme verdict que le poste) ────────
   gates:
-    name: gates (84 portes, run-all-gates)
+    name: gates (86 portes, run-all-gates)
     runs-on: ubuntu-latest
     needs: [types, build, vitest, journal]
     timeout-minutes: 60
