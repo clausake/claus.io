@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Zap, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
+  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Zap, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles, Lock,
 } from "lucide-react";
 import * as motionSlim from "motion/react-m";
 import { NavItem } from "./views";
@@ -13,7 +13,7 @@ interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
-  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked: boolean } | null;
+  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked?: boolean } | null;
   user: Utilisateur | null;
 }
 
