@@ -88,13 +88,16 @@ test.afterAll(async () => {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });
 
+// 12 onglets depuis le Sprint 17 : « Chat Culinaire » n'est plus une entree de
+// sidebar (il vivait DEJA dans Ingenierie des Menus — deux entrees pointaient
+// le meme onglet, deux onglets actifs a la fois).
 const ONGLETS = [
   "Tableau de bord", "Inventaire", "Ingénierie", "Fiches", "Plan Production",
   "Achats", "Documents", "Gestion du Personnel", "Traçabilité", "Anti-Gaspillage",
-  "Chat", "Flotte", "Studio",
+  "Flotte", "Studio",
 ];
 
-test.describe("banc UI/UX — les 13 onglets", () => {
+test.describe("banc UI/UX — les onglets (12 + anti-doublon)", () => {
   for (const nom of ONGLETS) {
     test(`onglet ${nom} : rendu + console propre + focus visible`, async ({ page }) => {
       const erreurs: string[] = [];
@@ -140,4 +143,27 @@ test.describe("banc UI/UX — les 13 onglets", () => {
       expect(erreurs, `console propre sur ${nom}: ${erreurs.slice(0,2).join(" | ")}`).toEqual([]);
     });
   }
+
+test("sidebar : pas de doublon de navigation (un seul chemin par onglet)", async ({ page }) => {
+    await page.goto(BASE + "/");
+    await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+    for (let i = 0; i < 10; i++) {
+      const premier = page.locator("button").first();
+      if (!/Acc[ée]der/i.test((await premier.textContent().catch(() => "")) || "")) break;
+      await premier.click({ timeout: 8_000 }).catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(1_000);
+    // « Chat Culinaire » ne doit PLUS exister comme entree de sidebar : le chat
+    // vit dans Ingenierie des Menus. Deux entrees vers le meme onglet = deux
+    // onglets actifs affiches en meme temps (le defaut rapporte le 15/10).
+    const chatCulinaire = await page.getByRole("button", { name: /chat culinaire/i }).count();
+    expect(chatCulinaire, "l'entree « Chat Culinaire » est retiree de la sidebar").toBe(0);
+    // et l'atelier (le chat) est bien rendu DANS Ingenierie des Menus :
+    await page.getByRole("button", { name: /ing[ée]nierie/i }).first().click();
+    await page.waitForTimeout(1_500);
+    // le chat s'affiche (l'atelier n'est plus ecrase par les cartes sur mobile)
+    const atelier = await page.getByText(/assistant|chat/i).first().isVisible().catch(() => false);
+    expect(atelier, "le chat culinaire est visible dans Ingenierie des Menus").toBe(true);
+});
 });

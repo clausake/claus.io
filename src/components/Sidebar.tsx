@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  BookOpen, ChefHat, ClipboardList, LayoutDashboard, MessageSquare, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
+  BookOpen, ChefHat, ClipboardList, LayoutDashboard, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
 } from "lucide-react";
 import * as motionSlim from "motion/react-m";
 import { NavItem } from "./views";
@@ -181,20 +181,12 @@ export function Sidebar({
                   {t.intelligence}
                 </p>
               )}
-              <NavItem
-                icon={<MessageSquare className="w-6 h-6" />}
-                label={t.chat}
-                isActive={activeTab === "menus"}
-                onClick={() => {
-                  // Sprint 16 : le chat culinaire est DESORMAIS dans
-                  // l'onglet Ingenierie des Menus (la « diversite » generee
-                  // est annulee, l'echange est l'atelier). L'entree de
-                  // menu mene la.
-                  setActiveTab("menus");
-                  if (window.innerWidth < 768) setIsSidebarOpen(false);
-                }}
-                isOpen={isSidebarOpen}
-              />
+              {/* Sprint 17 : l'entree « Chat Culinaire » est RETIREE — le chat
+                  vit dans Ingenierie des Menus (il y est rendu), et deux entrees
+                  de sidebar pointant le MEME onglet affichaient deux onglets
+                  actifs a la fois (defaut mesure le 15/10 sur le parcours
+                  reel). Une section « Intelligence artificielle » avec deux
+                  entrees vers le meme endroit n'est pas une navigation. */}
               <NavItem
                 icon={<Bot className="w-6 h-6" />}
                 label={t.robots}
