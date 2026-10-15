@@ -1108,3 +1108,48 @@ frame posterieure au post) : le minuteur publie 'stale' toutes les 25 s, donc un
 frame anterieure au post pouvait etre jugee a sa place.
 Falsifiabilite (morsure) : `publishList` neutralise -> ECHEC sur le seul point 5
 avec `frames 'sensors' recues=0`, rc=1 ; restaure -> TOUT PASS rc=0 (2 runs).
+
+## Chantier 15 — Découpage de FichesTechniques.tsx, 2e passe : les deux vues extraites (15/10)
+
+### La décision jouée
+
+Le fond de liste (AGENTS.md:123) pointait FichesTechniques.tsx à 1620 lignes —
+le chantier 8 l'avait laissée à 1550, les chantiers 10a/10b l'avaient fait
+remonter (typage des callbacks). Le fichier portait DEUX responsabilités de
+rendu de plus que le state : la grille du mode « categories » et la vue
+« livre » A-Z.
+
+### La cartographie (mesurée avant de couper)
+
+- bloc A (l.762-1130, 369 l.) : grille des fiches du dossier (mode categories).
+- bloc B (l.1133-1574, 442 l.) : barre A-Z + fiches sauvegardées (mode book).
+- Deps énumérées par grep du bloc, puis RE-ENUMÉRÉES par les erreurs tsc (le
+  premier scan en avait raté : X, addIngredient, removeIngredient, ALPHABET,
+  saveRecipe — les symboles dans des callbacks multi-lignes).
+
+### Ce qui a été écrit
+
+- `src/components/FichesGrilleCategories.tsx` (462 l.) et
+  `src/components/FichesVueLivre.tsx` (542 l.) : JSX déplacé OCTET POUR OCTET,
+  zéro state propre, handlers du parent passés tels quels, ALPHABET copié
+  (constante locale).
+- FichesTechniques.tsx : 1620 -> 853 lignes (-767), le state reste ENTIER chez
+  le parent, le ternaire `!selectedCategory` aussi.
+
+### Le piège du chantier — les interfaces ne se copient pas, elles se déduisent
+
+Les interfaces `Recipe`/`RecipeIngredient` de FichesTechniques ne compilent pas
+telles quelles dans les composants extraits : le JSX déplacé traite `recipe.id`,
+`recipe.ingredients` et `recipe.source_image_url` comme PRÉSENTS, ce que le
+parent tolérait par le narrow du ternaire `!selectedCategory` (une prop
+`string | null` ne traverse pas la frontière d'un composant : TS ne narrow pas
+à travers les enfants). Interfaces des extraits resserrées au contrat réel des
+recettes de la base (id: string, ingredients: RecipeIngredient[],
+source_image_url?: string) + sondes tsc pour trancher (la sonde posée dans le
+composant d'origine rougit TS2538/TS2322 : le narrow venait bien du ternaire).
+
+### Vérifié le 15/10
+
+tsc rc=0 (mesuré direct, sans pipe), vitest 170/170, build 488813 o (IDENTIQUE
+à l'octet près), e2e routes+recipes+reception 69/69, verify:all rc=0
+(PORTES=84 ROUGES=0).
