@@ -1274,3 +1274,50 @@ nommé par statut (401/412) puis par corps.
 tsc rc=0, vitest 171/171 (morsure 2 bis comprise), build OK, verify:ui-tabs
 13/13, e2e routes+reception+sans-ia 45/45, parcours curl : consigner "sans"
 sans épreuve -> 200 ok:true, chat en mode sans -> 503 message clair.
+
+## Chantier 18 — Le doublon « Chat Culinaire » : un seul chemin par onglet (15/10)
+
+### La demande du client
+
+« Je ne comprends la logique : 2 onglets affichés en même temps. J'ai demandé
+que le chat soit présent en Ingénierie Menu, donc il va disparaître comme
+onglet. En Ingénierie Menu sera donc ce chat avec IA, la possibilité de
+peaufiner des recettes et l'option de les sauvegarder. »
+
+### La mesure (le défaut était réel)
+
+La sidebar contenait DEUX entrées vers le MÊME onglet : « Ingénierie des
+Menus » (section Opérations, l.97) et « Chat Culinaire » (section Intelligence
+artificielle, l.186) — toutes deux `setActiveTab("menus")`. Résultat visible :
+deux onglets actifs affichés en même temps (les deux surlignés en vert sur la
+capture du client). Le chat était DÉJÀ rendu dans MenuAnalysis (l.458,
+`vue="chat"` par défaut) — l'entrée autonome était un doublon pur.
+
+### Ce qui a été écrit
+
+- Sidebar.tsx : l'entrée « Chat Culinaire » est RETIRÉE (avec le commentaire du
+  pourquoi) ; l'import MessageSquare devenu inutile est retiré.
+- MenuAnalysis.tsx : le défaut mobile trouvé au passage — la colonne du chat
+  (`flex-1`) était ÉCRASÉE à 0 px par les cartes sur petit écran (le conteneur
+  `flex` en ligne sans flex-col) : l'atelier était invisible sur téléphone.
+  Réparé : `flex-col lg:flex-row`, hauteur minimum 520 px du chat en mobile,
+  overflow-y en mobile ; titre resserré (text-2xl md:text-3xl, p-4 md:p-8).
+- lazy-views.ts : l'export lazy autonome CulinaryChat retiré (MenuAnalysis
+  l'importe directement — un seul chemin).
+- ui-tabs.spec.ts : la liste passe à 12 onglets + un NOUVEAU jugement
+  permanent : « pas de doublon de navigation » (l'entrée Chat Culinaire doit
+  être absente de la sidebar, et le chat doit être visible DANS Ingénierie des
+  Menus).
+
+### Le piège du chantier — un commentaire JSX n'est pas le premier élément d'un ternaire
+
+Le commentaire `{/* ... */}` placé juste après `{vue === "chat" ? (` cassait la
+compilation (TS1005) : un commentaire JSX est un NŒUD, il ne peut pas précéder
+l'expression d'un ternaire. Déplacé avant le `{vue === ...}`. (Deuxième leçon
+du même chantier : reconstruire un bloc de spec par script a tronqué les
+fermetures — la relecture tsc + le run ont attrapé les deux.)
+
+### Vérifié le 15/10
+
+tsc rc=0, vitest 171/171, build OK, ui-tabs 13/13 (12 onglets + anti-doublon),
+e2e routes+reception+sans-ia 46/46.

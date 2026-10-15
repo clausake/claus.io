@@ -19,11 +19,10 @@ export const QualityControl = lazy(() =>
   import("./QualityControl").then(m => ({ default: m.QualityControl })));
 export const SettingsView = lazy(() =>
   import("./SettingsView").then(m => ({ default: m.SettingsView })));
-export const CulinaryChat = lazy(() =>
-  import("./CulinaryChat").then(m => ({ default: m.CulinaryChat })));
-// Sprint 16 : CulinaryChat est maintenant importé DIRECTEMENT par MenuAnalysis
-// (l'atelier vit dans l'onglet Ingenierie des Menus). Cette exportation lazy
-// garde le chunk isolé, mais l'écran du chat en onglet autonome est retiré.
+// Sprint 17 : CulinaryChat est importé DIRECTEMENT par MenuAnalysis (l'atelier
+// vit dans Ingenierie des Menus) — plus d'export lazy autonome : l'onglet
+// « Chat Culinaire » de la sidebar est retiré (deux entrees pointaient le meme
+// onglet, deux onglets actifs a la fois).
 
 export const RobotManagement = lazy(() =>
   import("./RobotManagement").then(m => ({ default: m.RobotManagement })));

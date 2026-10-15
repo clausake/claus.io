@@ -421,9 +421,9 @@ export function MenuAnalysis({
       <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-        <div className="flex justify-between items-center mb-6 relative z-10 p-8 pb-4">
+        <div className="flex justify-between items-center mb-6 relative z-10 p-4 md:p-8 pb-4">
           <div>
-            <h2 className="text-3xl font-black text-white tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
               {t.menuEngineering || "Ingénierie des Menus"}
             </h2>
             <p className="text-slate-500 mt-1">
@@ -451,10 +451,14 @@ export function MenuAnalysis({
           </div>
         </div>
 
+        {/* Mobile : les deux blocs s'EMPILENT (le chat d'abord, une hauteur
+            minimum sinon il est ecrase a 0 px par les cartes — defaut mesure
+            sur le parcours reel 15/10 : l'atelier invisible sur telephone).
+            Desktop (lg) : cote a cote comme avant. */}
         {vue === "chat" ? (
-          <div className="flex-1 flex overflow-hidden px-8 pb-8 gap-6">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden px-4 lg:px-8 pb-8 gap-6">
             {/* Le chat culinaire : l'atelier ou le chef affine ses recettes. */}
-            <div className="flex-1 min-w-0 rounded-3xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
+            <div className="flex-1 min-w-0 min-h-[520px] lg:min-h-0 rounded-3xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
               <CulinaryChat t={t} settings={settings} onProposition={handleProposition} />
             </div>
 
