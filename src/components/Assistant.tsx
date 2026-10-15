@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Brain, Cpu, Server, Globe, KeyRound, FlaskConical, Check, ArrowRight } from "lucide-react";
+import { Brain, Cpu, Server, Globe, KeyRound, FlaskConical, Check, ArrowRight, PencilLine } from "lucide-react";
 
 // L'assistant de premier demarrage (Sprint 15, Tache 10).
 //
 // Trois ecrans, dans l'ordre du contrat :
 //   1. le MOTEUR  — les serveurs detectes (la tache 8), ou les trois voies de
-//      recours si rien n'est trouve ;
+//      recours si rien n'est trouve — OU la voie « sans IA » (contrat produit :
+//      l'app est complete en saisie manuelle, l'IA n'est jamais un prerequis) ;
 //   2. la CLEF    — seulement si « en ligne » est choisi ; la clef part dans
 //      le coffre du systeme (/api/clef -> safeStorage), jamais dans settings,
 //      jamais rendue par un GET ;
 //   3. l'EPREUVE  — la piece du banc lue par l'OCR SEUL (le LLM ne complete
 //      rien). Sans epreuve reussie, rien n'est consigne : le bouton de fin
-//      reste désarmé tant que le verdict n'est pas vert.
+//      reste desarme tant que le verdict n'est pas vert. La voie « sans IA »
+//      saute l'epreuve : il n'y a rien a juger sans moteur.
 //
 // L'UI ne rejoue AUCUNE regle : elle appelle /api/assistant/etat,
 // /api/assistant/epreuve et /api/assistant/consigner, et rend ce qu'on lui
@@ -36,7 +38,7 @@ export function Assistant({
   const [ecran, setEcran] = useState(0);
   const [serveurs, setServeurs] = useState<Serveur[]>([]);
   const [aucunMoteur, setAucunMoteur] = useState(false);
-  const [choix, setChoix] = useState<"llamacpp" | "ollama" | string>("");
+  const [choix, setChoix] = useState<"llamacpp" | "ollama" | "sans" | string>("");
   const [clef, setClef] = useState("");
   const [clefRangee, setClefRangee] = useState<{ presente: boolean; chiffre: boolean } | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
@@ -44,6 +46,9 @@ export function Assistant({
   const [erreurConsignation, setErreurConsignation] = useState<string | null>(null);
 
   const enLigne = choix !== "" && choix !== "ollama" && choix !== "llamacpp";
+  // La voie « sans IA » (contrat produit : le logiciel est complet en saisie
+  // manuelle) : un choix à part entière, pas un échec de détection.
+  const sansIa = choix === "sans";
 
   useEffect(() => {
     fetch("/api/llm/detecter")
@@ -59,7 +64,8 @@ export function Assistant({
     setChoix(c);
     setVerdict(null);
     setClefRangee(null);
-    setEcran(c !== "ollama" && c !== "llamacpp" ? 1 : 1);
+    // « sans IA » : pas de clef, pas d'épreuve — directement la consignation.
+    setEcran(c === "sans" ? 2 : 1);
   };
 
   const rangerLaClef = async () => {
@@ -100,28 +106,23 @@ export function Assistant({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fournisseur: choix }),
     });
-    // La gate session repond 401 AVANT de lire le corps JSON : parser le JSON
-    // d'un 401 (HTML/texte) jetterait une exception silencieuse. Le defaut est
-    // nomme d'apres le STATUT d'abord, le corps ensuite.
+    // Le corps n'est lu qu'UNE fois (un second res.json() sur la meme Response
+    // jette « body already read » — la faute du 15/10 : le succes etait rendu
+    // en erreur generique). Le verdict est nomme d'apres le STATUT d'abord
+    // (la gate session repond 401 sans JSON), le corps ensuite.
     const defautParStatut: Record<number, string> = {
       401: "SESSION_REQUISE — créez votre compte / connectez-vous, puis terminez à nouveau",
       412: "EPREUVE_NON_ACQUISE — rejouez l'épreuve de lecture",
     };
-    let defaut = defautParStatut[res.status];
-    if (!defaut) {
-      try {
-        const data = await res.json();
-        defaut = data?.defaut ?? data?.error ?? "CONSIGNATION_IMPROUVABLE";
-      } catch {
-        defaut = `CONSIGNATION_IMPOSSIBLE (HTTP ${res.status})`;
-      }
-    }
-    if (res.ok) {
-      let ok = true;
-      try { ok = (await res.json())?.ok === true; } catch { ok = false; }
-      if (ok) { onTermine(); return; }
-    }
-    setErreurConsignation(defaut);
+    let corps: { ok?: boolean; defaut?: string; error?: string } | null = null;
+    try { corps = await res.json(); } catch { corps = null; }
+    if (res.ok && corps?.ok === true) { onTermine(); return; }
+    setErreurConsignation(
+      defautParStatut[res.status]
+        ?? corps?.defaut
+        ?? corps?.error
+        ?? `CONSIGNATION_IMPOSSIBLE (HTTP ${res.status})`,
+    );
   };
 
   return (
@@ -189,6 +190,24 @@ export function Assistant({
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
+            </div>
+            {/* La voie « sans IA » : un choix à part entière, séparé visuellement
+                des moteurs (le contrat produit : l'app est complète en saisie
+                manuelle — l'IA n'est jamais un prérequis). */}
+            <div className="pt-4 mt-2 border-t border-white/10">
+              <button
+                onClick={() => choisir("sans")}
+                className={`w-full text-left p-4 rounded-xl border transition-all ${sansIa ? "border-emerald-500 bg-emerald-500/10" : "border-white/10 hover:border-white/25"}`}
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-white">
+                  <PencilLine className="w-4 h-4 text-slate-400" />
+                  {t.assistantSansIa || "Continuer sans IA"}
+                </span>
+                <span className="block text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  {t.assistantSansIaDesc
+                    || "L'application est complète en saisie manuelle : inventaire, fiches, production, HACCP, achats. L'IA (lecture de factures, chat) pourra être activée plus tard dans les Réglages."}
+                </span>
+              </button>
             </div>
             <div className="flex justify-end pt-2">
               <button
@@ -261,6 +280,19 @@ export function Assistant({
 
         {ecran === 2 && (
           <div className="space-y-4">
+            {sansIa ? (
+              <>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <PencilLine className="w-4 h-4 text-slate-400" />
+                  {t.assistantSansIaTitre || "Mode sans IA — saisie manuelle"}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {t.assistantSansIaConfirm
+                    || "Aucun moteur configuré : tout se saisit à la main. Vous pourrez activer l'IA à tout moment dans Réglages (le test de lecture de facture s'y trouve aussi)."}
+                </p>
+              </>
+            ) : (
+              <>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <FlaskConical className="w-4 h-4 text-emerald-400" />
               {t.assistantEcran3 || "L'épreuve : l'application lit-elle une facture ?"}
@@ -285,18 +317,20 @@ export function Assistant({
                   : `${t.assistantEpreuveRouge || "Épreuve échouée"} — ${verdict.defaut ?? `${verdict.score}${verdict.manquants.length ? " · " + t.assistantManquants + ": " + verdict.manquants.join(", ") : ""}`}`}
               </div>
             )}
+              </>
+            )}
             {erreurConsignation && (
               <p className="text-xs font-bold text-rose-400">{erreurConsignation}</p>
             )}
             <div className="flex justify-between pt-2">
-              <button onClick={() => setEcran(enLigne ? 1 : 0)}
+              <button onClick={() => setEcran(sansIa ? 0 : (enLigne ? 1 : 0))}
                 className="px-5 py-2.5 rounded-xl border border-white/10 text-slate-400 text-xs font-bold">
                 {t.assistantRetour || "Retour"}
               </button>
               <button
-                disabled={!verdict?.reussi || epreuveEnCours}
+                disabled={!sansIa && (!verdict?.reussi || epreuveEnCours)}
                 onClick={terminer}
-                title={!verdict?.reussi ? (t.assistantBloque || "L'épreuve doit réussir avant de terminer.") : undefined}
+                title={!sansIa && !verdict?.reussi ? (t.assistantBloque || "L'épreuve doit réussir avant de terminer.") : undefined}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold"
               >
                 <Check className="w-3.5 h-3.5" />

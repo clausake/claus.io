@@ -151,6 +151,18 @@ export function consignerDemarrage(fournisseur: string):
   // vide cacherait la vraie faute a l'opérateur.
   if (typeof fournisseur !== "string" || fournisseur.trim() === "")
     return { ok: false, defaut: "FOURNISSEUR_ABSENT" };
+  // La voie « sans IA » (contrat produit : le logiciel est complet en saisie
+  // manuelle) : on consigne un demarrage SANS intelligence equipee, donc
+  // SANS epreuve — l'epreuve juge la lecture OCR, il n'y a rien a juger quand
+  // on n'a pas de moteur. Le choix reste revocable dans les Reglages.
+  if (fournisseur.trim().toLowerCase() === "sans") {
+    updateSettings({
+      install_termine_le: new Date().toISOString(),
+      fournisseur_choisi: "sans",
+      llm_choix: "sans",
+    });
+    return { ok: true, etat: etatAssistant() };
+  }
   if (epreuveDuJour === null) return { ok: false, defaut: "EPREUVE_NON_ACQUISE" };
   updateSettings({
     install_termine_le: epreuveDuJour.le,
