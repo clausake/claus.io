@@ -186,17 +186,41 @@ check("re-emission identique quand meme diffusee (jamais avalee)", dupArrived, `
 
 // 4. le canal stale est publie (liste vide = aucun muet) et ne fausse pas un
 //    capteur fraichement actif.
+//    ⚠ Meme piege qu'au point 5 : le minuteur de maintenance publie 'stale'
+//    toutes les 25 s, donc une frame ANTERIEURE au post peut deja etre au
+//    tampon — la juger validerait la propriete sans l'avoir mise a l'epreuve.
+//    On attend le passage STRICT au-dessus du niveau de reference, et on ne
+//    juge que la frame qui a suivi le post.
+const staleAvant = stream.count("stale");
 await post("/api/haccp/webhook/iot-report", { id: "stale-c", token: tokenOther, temperature: 5.1 });
-const stale = await stream.waitFor("stale", 60_000);
+const staleArrive = await stream.waitCount("stale", staleAvant, 60_000);
+const stale = staleArrive ? stream.events.filter((e) => e.event === "stale").slice(-1) : null;
 check("canal 'stale' emis et de forme tableau", !!stale && Array.isArray(stale[stale.length - 1].data), stale ? JSON.stringify(stale[stale.length - 1].data) : "aucun");
 const flatStale = stale ? stale.flatMap((s) => s.data) : [];
 check("un capteur qui vient de poster n'est PAS declare muet", !flatStale.some((s) => s && (s.id === "stale-c" || s.id === "sse-live")), JSON.stringify(flatStale));
 
 // 5. ajout de capteur => nouvelle liste poussee contenant le nouveau.
+//    ⚠ On juge la PROPRIETE, pas l'existence d'une frame. waitFor rend la
+//    premiere frame 'sensors' DEJA au tampon, et celle-la ne peut pas porter le
+//    nouveau : c'est un faux rouge. Mesure du 15/10 (CI rouge, poste vert) :
+//    haccp.ts fait res.json() PUIS publishList() — un 200 ne garantit donc pas
+//    que la frame est partie. Sur un runner lent, la frame des enregistrements
+//    d'amorcage (l.155-156) arrive apres l'attache du flux et reste au tampon ;
+//    waitFor la rendait immediatement => ECHEC sans que le produit soit en
+//    faute. Reproduit a volonte par sonde (ancienne logique ECHEC / nouvelle
+//    PASS, 2 frames 'sensors' dont la 1re sans 'newcomer').
+//    La porte reste falsifiable : si l'ajout ne pousse plus la liste, l'attente
+//    expire en 4 s et elle rougit (morsure faite en commentant publishList).
 await post("/api/haccp/iot-sensors", { id: "newcomer", name: "Congelateur Sud", type: "ambient", equipment_type: "Froid" });
-const listGot = await stream.waitFor("sensors", 4000);
-const sawNew = listGot ? listGot[listGot.length - 1].data.some((s) => s.id === "newcomer") : false;
-check("ajout de capteur pousse une liste contenant le nouveau", !!sawNew, listGot ? "" : "aucun");
+const listeAvecNouveau = await (async () => {
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    if (stream.events.some((e) => e.event === "sensors" && Array.isArray(e.data) && e.data.some((s) => s.id === "newcomer"))) return true;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return false;
+})();
+check("ajout de capteur pousse une liste contenant le nouveau", listeAvecNouveau, `frames 'sensors' recues=${stream.count("sensors")}`);
 
 stream.close();
 child.kill("SIGTERM");
