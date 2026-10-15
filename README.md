@@ -8,22 +8,26 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 
-<p align="center"><img src="public/screenshot.png" alt="claus.io" width="800"></p>
+<p align="center"><img src="public/screenshot-dashboard.png" alt="Tableau de bord claus.io — food cost et labor cost" width="800"></p>
 
 ## Fonctionnalités
 
-| Module | Ce qu'il fait |
-|---|---|
-| **Ingenierie des Menus** | Discutez avec l'assistant culinaire IA : il crée des fiches techniques complètes (ingrédients, quantités, étapes, allergènes) que le chef valide avant enregistrement |
-| **Fiches Techniques** | Le livre de recettes par cartes (Entrée / Plat / Dessert), scan de menus papier par IA (OCR), export PDF |
-| **Analyse de Menu** | Photo d'un menu → fiches techniques pré-remplies (le chef édite tout à 100 % avant de sauver) |
-| **Inventaire** | Suivi des stocks, seuils d'alerte, import CSV, audit des écarts |
-| **Achats** | Panier de production consolidé par fournisseur, bons de commande PDF, réceptions, comparaison de prix, mercuriales |
-| **HACCP** | Journal de conformité : températures IoT en temps réel (SSE), DLC, lots, nettoyage, preuves sanitaires, export PDF réglementaire |
-| **Plan de Production** | Recalcul automatique des quantités par nombre de couverts |
-| **Anti-gaspillage** | Suggestions de recettes par l'IA sur les stocks critiques |
-| **Planification** | Planning hebdomadaire du personnel, calcul des heures et du coût |
-| **Epicure Studio** | Analyse aromatique : embeddings d'ingrédients, substitutions, accords |
+**Le logiciel est complet sans IA** : chaque module fonctionne en saisie manuelle (CRUD SQLite direct). L'IA est un assistant optionnel — elle pré-remplit, suggère, analyse ; le chef valide toujours. Un restaurant peut utiliser claus.io des années sans jamais configurer un moteur IA.
+
+| Module | Ce qu'il fait | Sans IA |
+|---|---|---|
+| **Ingenierie des Menus** | Discutez avec l'assistant culinaire IA : il crée des fiches techniques complètes (ingrédients, quantités, étapes, allergènes) que le chef valide avant enregistrement | Création manuelle de fiches complète |
+| **Hermes (suggestions)** | Surveille l'établissement (ruptures, DLC, températures) et propose des actions que l'humain applique de sa main | Désactivable (`COOKDRIVE_AGENT_OFF=1`) — boîte de suggestions fermée, tout le reste fonctionne |
+| **Fiches Techniques & Food Cost** | Le livre de recettes par cartes (Entrée / Plat / Dessert), scan de menus papier par IA (OCR), export PDF — chaque fiche porte son coût matière par portion (food cost) | CRUD complet + export PDF (l'OCR n'est qu'un raccourci de saisie) |
+| **Analyse de Menu** | Photo d'un menu → fiches techniques pré-remplies (le chef édite tout à 100 % avant de sauver) | Module IA pur — les fiches restent créables manuellement |
+| **Inventaire** | Suivi des stocks, seuils d'alerte, import CSV, audit des écarts | 100 % sans IA (import CSV inclus) |
+| **Achats** | Panier de production consolidé par fournisseur, bons de commande PDF, réceptions, comparaison de prix, mercuriales | 100 % sans IA |
+| **HACCP** | Journal de conformité : températures IoT en temps réel (SSE), DLC, lots, nettoyage, preuves sanitaires, export PDF réglementaire | 100 % sans IA (saisie manuelle ou capteurs IoT) |
+| **Plan de Production** | Recalcul automatique des quantités par nombre de couverts | 100 % sans IA (calcul arithmétique) |
+| **Anti-gaspillage** | Suggestions de recettes par l'IA sur les stocks critiques | Module IA pur — l'inventaire reste complet |
+| **Planification & Staff Management** | Planning hebdomadaire du personnel, taux horaire par poste, calcul automatique des heures travaillées et du coût de main-d'œuvre (labor cost), consolidé au dashboard | 100 % sans IA |
+| **Dashboard** | Courbes quotidiennes **food cost** (achats fournisseurs) et **labor cost** (planning × taux horaires), valeur du stock, alertes en temps réel | 100 % sans IA |
+| **Epicure Studio** | Analyse aromatique : embeddings d'ingrédients, substitutions, accords | Analyse locale (embeddings, pas un LLM) |
 
 ## Intelligence : 100 % local par défaut, multi-moteurs
 
@@ -49,7 +53,7 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 ## Prérequis
 
 - **Node.js >= 22**
-- **Python 3.12** (pour le lot des 84 portes de qualité)
+- **Python 3.12** (pour le lot des portes de qualité)
 - **Ollama** + un modèle (`ollama pull llama3.1`) — ou un autre serveur local
 
 ## Installation
@@ -78,23 +82,13 @@ npm run build:mac     # macOS (DMG)
 npm run build:linux   # Linux (AppImage, deb)
 ```
 
-## Qualité : 84 portes, 0 rouge
+## Qualité
 
-Le projet est jugé par **84 portes automatiques** (lot `npm run verify:all`), exécutées à chaque push par la CI GitHub Actions :
-
-- **Types** : `tsc --noEmit` 0 erreur + **zéro `:any`** (seuil 0, morsure prouve que la porte rougit)
-- **Tests** : 170 tests unitaires (vitest)
-- **e2e** : 46 routes en contrats Playwright (serveur isolé par spec)
-- **Sécurité** : sessions, rate-limit, garde d'instance, audit trail (+ morsures)
-- **Contrats métier** : recipes, purchasing, inventory, HACCP, documents, dashboard, KPI
-- **LLM** : porte unique de génération (le réglage est effectif — morsure incluse), fournisseurs, serveurs locaux
-- **Journal** : vérification anti-perte cryptographique du journal des phases (SHA-256)
-
-Chaque porte a une **morsure** (test négatif) qui prouve qu'elle peut rougir : *« un PASS qui ne peut pas devenir FAIL n'est pas une mesure »*.
+Le projet est jugé par **84 portes automatiques** exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 170 tests unitaires, 46 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail), contrats métier, et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
 
 ```bash
-npm run verify:all            # le lot complet (verdict lu, jamais inféré)
-python3 scripts/lire-gates.py # qui est rouge (jamais grepper test/gates.out)
+npm run verify:all            # le lot complet
+python3 scripts/lire-gates.py # qui est rouge
 ```
 
 ## Données

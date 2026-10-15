@@ -21,7 +21,7 @@ export function LandingPage({ onEnter, t }: { onEnter: () => void; t: Record<str
         </div>
         <h1 className="text-5xl md:text-7xl font-serif font-bold text-white mb-6 tracking-tight">
           {t.landingTitle || "LOGICIEL DE GESTION"}{" "}
-          <span className="text-emerald-400">RESTAURATION IO</span>
+          <span className="text-emerald-400">claus.io</span>
         </h1>
         <p className="text-xl md:text-2xl text-slate-400 mb-12 font-light leading-relaxed">
           {t.landingSubtitle ||
@@ -40,7 +40,7 @@ export function LandingPage({ onEnter, t }: { onEnter: () => void; t: Record<str
       </div>
 
       <div className="absolute bottom-10 text-slate-500 text-sm font-medium tracking-wider uppercase font-mono">
-        RESTAURATION IO Intelligent System
+        claus.io — Intelligent Kitchen System
       </div>
     </div>
   );
