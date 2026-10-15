@@ -1,4 +1,5 @@
-import React, { AnimatePresence } from "react";
+import React from "react";
+import { AnimatePresence } from "motion/react";
 import {
   AlertTriangle, Bookmark, CheckCircle2, ChefHat, ClipboardList, Download,
   Maximize2, Minimize2, Plus, RefreshCw, Save, Sparkles, Trash2, Users, X,
@@ -44,7 +45,8 @@ interface Optimisation {
 
 export interface RecipeModalProps {
   /** La recette affichee (state du parent) — null = modal ferme. */
-  selectedRecipeForModal: Recipe;
+  /** Null tant qu'aucune fiche n'est ouverte : le parent rend ce modal inconditionnellement. */
+  selectedRecipeForModal: Recipe | null;
   setSelectedRecipeForModal: React.Dispatch<React.SetStateAction<Recipe | null>>;
   recipes: Recipe[];
   inventory: RecipeIngredient[];
@@ -94,7 +96,12 @@ export function RecipeModal({
   t,
   exportSingleRecipeToPDF,
 }: RecipeModalProps) {
-  const rid = selectedRecipeForModal.id || "";
+  // ⚠ Le parent rend ce modal INCONDITIONNELLEMENT : selectedRecipeForModal
+  // vaut null tant qu'aucune fiche n'est ouverte (state useState<any|null>(null)).
+  // La lecture de .id hors garde ici etait un CRASH au montage de l'onglet
+  // Fiches (TypeError reading 'id', mesuré en production le 15/10 : l'onglet
+  // rendait un écran vide). Le garde null doit rester AVANT toute lecture.
+  const rid = selectedRecipeForModal?.id || "";
   return (
       <AnimatePresence>
         {selectedRecipeForModal && (

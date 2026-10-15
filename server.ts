@@ -61,7 +61,29 @@ async function startServer() {
   // helmet() : headers de sécurité. `host: false` (via cast) désactive le header
   // "Host" qui bloquerait les requêtes passant par un tunnel/proxy (trycloudflare,
   // Tailscale, reverse proxy) — le Host externe doit être accepté.
-  app.use(helmet({ host: false } as Parameters<typeof helmet>[0]));
+  //
+  // contentSecurityPolicy : helmet pose par défaut `script-src 'self'`, ce qui
+  // BLOQUAIT le script inline de dist/index.html (l'écran de secours affiché
+  // quand React ne monte pas — #root vide). Mesuré le 15/10 (banc UI Playwright,
+  // production réelle) : `Refused to execute inline script… directive
+  // 'script-src 'self''` sur CHAQUE chargement — le garde-fou était mort depuis
+  // l'arrivée de helmet, et personne ne le voyait (aucune porte ne juge le
+  // navigateur). Réparation : autoriser CE script précis par son hash SHA-256
+  // (`'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='`, calculé sur le
+  // corps du <script> de dist/index.html). Pas d'`unsafe-inline` : la CSP reste
+  // stricte pour tout le reste. Si le script inline change, la porte
+  // verify:livrable... le recalcule — voir scripts/verify-csp-inline.py.
+  app.use(
+    helmet({
+      host: false,
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          scriptSrc: ["'self'", "'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='"],
+        },
+      },
+    } as Parameters<typeof helmet>[0]),
+  );
   app.use(express.json({ limit: "10mb" }));
   // Compression HTTP (gzip). L'audit relevait que `compression` etait absent de
   // package.json : le chunk index (676 kB, 218 kB gzip) partait en texte brut sur

@@ -34,6 +34,11 @@ DEFAUT = ["verify:split",
           # DEFAUT, elle n'est jouee que si un agent y pense: une porte que
           # personne n'appelle n'est pas une porte.
           "verify:sse", "verify:perf", "verify:http", "verify:bundle",
+          # le garde-fou inline de dist/index.html doit rester autorise par la
+          # CSP (mort en production mesuree le 15/10, reparée par hash) : sans
+          # cette porte, un changement du script inline le tue en silence.
+          "verify:csp-inline",
+          "verify:ui-tabs",
           "verify:ratelimit", "verify:ci", "verify:indices",
           "verify:instance-guard", "verify:instance-mord",
           "verify:purchasing", "verify:forecast", "verify:forecast-mord",
