@@ -1153,3 +1153,70 @@ composant d'origine rougit TS2538/TS2322 : le narrow venait bien du ternaire).
 tsc rc=0 (mesuré direct, sans pipe), vitest 170/170, build 488813 o (IDENTIQUE
 à l'octet près), e2e routes+recipes+reception 69/69, verify:all rc=0
 (PORTES=84 ROUGES=0).
+
+## Chantier 16 — Audit UI/UX : le banc des 13 onglets a trouve deux defauts invisibles (15/10)
+
+### La demande
+
+Le client demande : « l'interface UI/UX, tu l'as verifiee ? » Reponse honnete
+avant ce chantier : NON — les portes jugeaient des routes et des panneaux cibles
+(reception, recipes, dashboard), jamais l'integralite de la navigation. Un
+onglet entier pouvait etre vide sans qu'aucune porte rougit. C'est exactement
+ce qui s'etait produit (le defaut 2 ci-dessous).
+
+### Le banc (ce qui a ete ecrit)
+
+- `test/e2e/ui-tabs.spec.ts` : spec Playwright qui demarre SON serveur en
+  production (port libre, NODE_ENV=production obligatoire — en dev la CSP bloque
+  react-refresh et la page est blanche, lecon de reception-view.spec.ts), seme
+  des articles reels, passe la landing comme un utilisateur, puis ouvre LES 13
+  ONGLETS de la sidebar et juge pour chacun : du contenu rendu (>80 caracteres)
+  + une console PROPRE (zero pageerror, zero erreur console).
+- Portes nouvelles (regle 6 : package.json + DEFAUT) :
+  - `verify:ui-tabs` — le banc ci-dessus (13/13).
+  - `verify:csp-inline` — le hash du script inline de dist/index.html doit etre
+    autorise par la CSP de server.ts (morsure faite : modifier le script ->
+    rc=1 avec le hash a reporter, restaurer -> rc=0).
+- server.ts : la CSP autorise desormais le script inline par SON hash
+  (`'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='`) — pas
+  d'`unsafe-inline`, la CSP reste stricte pour tout le reste.
+
+### Defaut 1 (trouve par le banc) — le garde-fou « ecran de secours » etait mort
+
+dist/index.html embarque un script inline qui affiche un ecran de secours quand
+React ne monte pas (#root vide). La CSP de helmet (`script-src 'self'`) le
+bloquait : `Refused to execute inline script` sur CHAQUE chargement en
+production. Le garde-fou etait mort depuis l'arrivee de helmet, sans qu'aucune
+porte ne le voie — aucune ne jugeait le navigateur. Repare par hash + porte
+verify:csp-inline pour que le silence soit impossible.
+
+### Defaut 2 (trouve par le banc) — l'onglet Fiches rendait un ECRAN VIDE
+
+Mesure : cliquer « Fiches Techniques » => React #130 (element type undefined),
+l'ecran restait vide, l'app entiement perdue. Bissection par neutralisation
+(grille -> crash persiste ; vue livre -> crash persiste ; RecipeModal -> plus de
+crash) : `RecipeModal.tsx:1` importait `AnimatePresence` de **react** (ou il
+n'existe pas) au lieu de **motion/react**. Le composant valait `undefined` des
+le premier rendu du modal. Introduit au chantier 8 (08/10, extraction du modal)
+et MASQUE ensuite par le bug de la sidebar non rendue (chantier 13) : l'onglet
+etait injoignable, donc le crash etait latent. La reparation de la sidebar
+(b30bc79) l'a rendu VISIBLE — et aucune porte ne l'a vu jusqu'au banc.
+Repare : import de motion/react + `selectedRecipeForModal?.id` (garde null, la
+prop etant typee `Recipe | null` — le type mentait : `Recipe` non-null alors que
+le parent passe null).
+
+### Lecons
+
+- `tsc` ne peut pas attraper `import { X } from "react"` quand X n'existe pas :
+  l'import est `any` (noImplicitAny: false) et l'element JSX `undefined` — seul
+  le navigateur rougit. La porte `verify:ui-tabs` est LE capteur.
+- Un defaut latent se revele par la reparation d'un autre defaut : le banc doit
+  exister AVANT, pas apres.
+- La CSP de helmet s'applique aussi aux scripts inline legitimes : tout script
+  inline nouveau doit passer par verify:csp-inline.
+
+### Vérifié le 15/10
+
+tsc rc=0, vitest 170/170, build OK, verify:ui-tabs 13/13, verify:csp-inline
+rc=0 (morsure rc=1), verify:http TOUT PASS (la CSP n'a pas casse les en-tetes),
+e2e routes+reception 45/45.

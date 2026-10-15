@@ -1,6 +1,6 @@
 {
-  "original_octets": 261633,
-  "original_sha256": "3adfa5e4781c385fe431781ebf8d84ea96c49d0aae6fb0a9195784d1891a666c",
+  "original_octets": 265302,
+  "original_sha256": "f3d564d25e25be15db4407377f837e82b61405348393b4d64b425b5102837145",
   "chaud_octets": 54025,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 13042,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 15 consigne (FichesTechniques 1620 -> 853, deux vues extraites octet pour octet, bundle identique, interfaces resserrees au contrat base, narrow du ternaire documente) ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-    "date": "2026-10-15T15:55:12.064480",
+    "motif": "chantier 16 consigne : banc UI des 13 onglets (verify:ui-tabs) + porte CSP inline (verify:csp-inline) + deux defauts trouves : garde-fou inline bloque par helmet (mort en prod) et onglet Fiches en ecran vide (AnimatePresence importe de react) ; reparations et morsures faites ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-10-15T18:21:47.303874",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "faux rouge de verify:sse en CI consigne (waitFor rendait la PREMIERE frame 'sensors' du tampon, emise avant l'ajout car la route repond AVANT de diffuser ; points 4 et 5 passes a un jugement de PROPRIETE, morsure faite) ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-    "date": "2026-10-15T13:48:22.259361",
+    "motif": "chantier 15 consigne (FichesTechniques 1620 -> 853, deux vues extraites octet pour octet, bundle identique, interfaces resserrees au contrat base, narrow du ternaire documente) ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-10-15T15:55:12.064480",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
