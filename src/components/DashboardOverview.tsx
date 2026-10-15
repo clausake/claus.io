@@ -534,7 +534,7 @@ export function DashboardOverview({ t, settings }: { t: Record<string, string>; 
                       </span>
                     </div>
                     <span className="text-xs font-mono font-bold text-white">
-                      {item.value}
+                      {Number(Number(item.value).toFixed(2)).toLocaleString()}
                     </span>
                   </div>
                 );
