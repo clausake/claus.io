@@ -23,7 +23,7 @@ import type { AuditLogger } from "../services/audit.js";
 
 // Les routes cibles QUE LE PRODUIT CONNAIT. Une suggestion qui en vise une
 // autre est refusee a la CREATION (l'agent ne peut pas pre-remplir un POST
-// vers /api/unlock ou /api/users : la boite n'est pas une voie de contournement
+// vers /api/users ou /api/admin : la boite n'est pas une voie de contournement
 // de la gate §8). Le verbe d'application est toujours POST — les routes
 // cibles d'ecriture du produit le sont deja, sauf PUT/DELETE que l'on exprime
 // via leur payload {"__method": ...} rejoue en interne.

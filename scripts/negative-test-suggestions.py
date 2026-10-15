@@ -4,7 +4,7 @@
 que verify:suggestions peut ROUGIR.
 
 La mutation : on ouvre la liste blanche ROUTES_CIBLES de
-src/routes/suggestions.ts (elle n'existe plus — un POST vers /api/unlock ou
+src/routes/suggestions.ts (elle n'existe plus — un POST vers /api/users ou
 n'importe quoi passerait, la boite redevient une voie de contournement de la
 gate §8). La porte doit rougir sur A4c. Puis RESTAURATION par git checkout
 (garde ARBRE_SALE : on refuse de muter un arbre non propre).
@@ -36,7 +36,7 @@ def main():
         return 1
 
     # Mutation : le CHECK de la liste blanche est NEUTRALISE a la creation —
-    # une action_route inventee (/api/unlock...) n'est plus refusee et la
+    # une action_route inventee (/api/users...) n'est plus refusee et la
     # boite redevient une voie de contournement de la gate §8. A4c doit
     # rougir (la creation passe en 201 au lieu de 400 ROUTE_INCONNUE).
     # `if (false)` : syntaxiquement valide, sémantiquement mort.

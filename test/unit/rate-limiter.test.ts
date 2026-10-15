@@ -18,9 +18,10 @@ describe("rate-limit : classement par categorie de surface", () => {
   });
 
   it("reserve le budget le plus etroit a la surface d'authentification", () => {
-    // L'invariant de securite : unlock est plus strict que n'importe quel POST
-    // metier, sinon le brute-force de cle de licence coute moins cher qu'une saisie.
-    expect(bucketFor(req("POST", "/api/unlock"))).toBe("auth");
+    // L'invariant de securite : la connexion est plus stricte que n'importe
+    // quel POST metier, sinon le brute-force de mot de passe coute moins cher
+    // qu'une saisie.
+    expect(bucketFor(req("POST", "/api/auth/login"))).toBe("auth");
     expect(BUDGETS.auth.limit).toBeLessThan(BUDGETS.mutate.limit);
   });
 
@@ -32,11 +33,10 @@ describe("rate-limit : classement par categorie de surface", () => {
     expect(bucketFor(req("GET", "/api/epicure/recommendations"))).toBe("read");
   });
 
-  it("ne compte ni le flux SSE ni le statut de licence", () => {
+  it("ne compte pas le flux SSE", () => {
     // Le SSE est une connexion unique volontairement longue : la compter
     // punirait le client qui reste simplement branche sur ses capteurs.
     expect(bucketFor(req("GET", "/api/sensors/stream"))).toBe(null);
-    expect(bucketFor(req("GET", "/api/trial-status"))).toBe(null);
     expect(isExempt("/api/sensors/stream")).toBe(true);
   });
 

@@ -1,6 +1,6 @@
 {
-  "original_octets": 253341,
-  "original_sha256": "173aee67b5183454083fcd6e64e02088449dd4d13ce1c53a3ca3b8ae9730df48",
+  "original_octets": 256435,
+  "original_sha256": "25e6fede05bc6ddadeeedf1d3e752379e4005879235a4770f63a1165d32ae941",
   "chaud_octets": 54025,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 13042,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 13 (la barre laterale des onglets n'etait PLUS RENDUE depuis l'extraction du chantier 9 : Sidebar.tsx extrait, jamais re-rendu ; app navigable seulement par Alt+1.. ; + Lock non importe dans Sidebar, + arrondi 2 decimales des valeurs par categorie) ajoute au chaud ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
-    "date": "2026-10-15T11:25:50.922378",
+    "motif": "chantier 14 (retrait COMPLET de la licence d'essai et des cles RSA : suppression de src/routes/licensing.ts, src/middleware/license.ts, scripts/sign-license.cjs ; nettoyage db/init, server.ts, rate-limiter, App, Sidebar, SettingsView, 60 lignes de traductions ; portes qui jugeaient le dispositif reecrites, pas supprimees) ajoute au chaud ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-10-15T12:37:43.693732",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 12 (juges de la porte unique LLM) ajoute au chaud : test unitaire llm-porte 12 regles (dispatch, erreurs nommees, base verrouillee, vision, morsure du reglage effectif) + negative-test-llm-porte + 2 portes au lot DEFAUT (84 total) ; ancre recalculee par la boucle du juge, jamais recopiee",
-    "date": "2026-10-14T21:36:30.450152",
+    "motif": "chantier 13 (la barre laterale des onglets n'etait PLUS RENDUE depuis l'extraction du chantier 9 : Sidebar.tsx extrait, jamais re-rendu ; app navigable seulement par Alt+1.. ; + Lock non importe dans Sidebar, + arrondi 2 decimales des valeurs par categorie) ajoute au chaud ; ancre recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
+    "date": "2026-10-15T11:25:50.922378",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }

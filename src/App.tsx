@@ -11,7 +11,6 @@ import {
   FileText,
   FlaskConical,
   LayoutDashboard,
-  Lock,
   MessageSquare,
   PackageSearch,
   Search,
@@ -22,7 +21,6 @@ import {
   Thermometer,
   Users,
   X,
-  Zap,
 
   Menu as MenuIcon} from "lucide-react";
 import {
@@ -77,14 +75,6 @@ export default function App() {
   const [manualPurchaseIds, setManualPurchaseIds] = useState<Set<string>>(
     new Set(),
   );
-  const [trialStatus, setTrialStatus] = useState<{
-    isExpired: boolean;
-    daysLeft: number;
-    isUnlocked?: boolean;
-    machineId?: string;
-  } | null>(null);
-  const [unlockKey, setUnlockKey] = useState("");
-  const [unlockError, setUnlockError] = useState("");
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error";
@@ -112,31 +102,6 @@ export default function App() {
     window.addEventListener("resize", checkMobileStatus);
     return () => window.removeEventListener("resize", checkMobileStatus);
   }, []);
-
-  useEffect(() => {
-    fetch("/api/trial-status")
-      .then((res) => res.json())
-      .then((data) => setTrialStatus(data))
-      .catch(console.error);
-  }, []);
-
-  const handleUnlock = async () => {
-    setUnlockError("");
-    try {
-      const res = await fetch("/api/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: unlockKey }),
-      });
-      if (res.ok) {
-        setTrialStatus((prev) => (prev ? { ...prev, isUnlocked: true } : null));
-      } else {
-        setUnlockError("Clé d'activation invalide.");
-      }
-    } catch (e) {
-      setUnlockError("Erreur de connexion.");
-    }
-  };
 
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
@@ -313,62 +278,6 @@ export default function App() {
     }
   };
 
-  if (trialStatus?.isExpired && !trialStatus?.isUnlocked) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8">
-        <div className="bg-black border border-amber-500/20 max-w-lg w-full p-10 rounded-3xl shadow-2xl shadow-amber-500/5 text-center">
-          <div className="w-20 h-20 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center mb-6">
-            <Lock className="w-10 h-10 text-amber-500" />
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-widest uppercase mb-4">
-            {t.trialEndedTitle || "Période d'Essai Terminée"}
-          </h1>
-          <p className="text-slate-400 mb-8 leading-relaxed">
-            Votre période d'essai de 30 jours a expiré. Pour continuer à
-            profiter de toutes les fonctionnalités en local, veuillez activer
-            votre licence.
-          </p>
-
-          <div className="mb-8 p-4 bg-black border border-slate-800 rounded-xl">
-            <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">
-              {t.machineIdSupport ||
-                "Identifiant Machine (à communiquer au support)"}
-            </p>
-            <p className="text-2xl font-mono font-bold text-amber-400 tracking-widest">
-              {trialStatus.machineId}
-            </p>
-          </div>
-
-          <div className="mb-8 text-left">
-            <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-bold">
-              {t.enterActivationKey || "Entrer la clé d'activation"}
-            </label>
-            <input
-              type="text"
-              value={unlockKey}
-              onChange={(e) => setUnlockKey(e.target.value.toUpperCase())}
-              placeholder={t.exLicense || "Ex: XXXX-XXXX-XXXX"}
-              className="w-full bg-[#0a0a0a] border border-slate-800 focus:border-amber-500/50 text-white rounded-xl px-4 py-3 font-mono tracking-widest outline-none transition-colors uppercase"
-            />
-            {unlockError && (
-              <p className="text-red-500 text-sm mt-2 font-medium">
-                {unlockError}
-              </p>
-            )}
-          </div>
-
-          <button
-            onClick={handleUnlock}
-            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(217,119,6,0.3)] border border-amber-400/30 flex items-center justify-center"
-          >
-            <Zap className="w-5 h-5 mr-3" />
-            Débloquer le logiciel
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (!isSettingsLoaded) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
@@ -408,7 +317,6 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         isMobile={isMobile}
-        trialStatus={trialStatus}
         user={user}
       />
 
@@ -785,8 +693,6 @@ export default function App() {
                 settings={settings}
                 setSettings={setSettings}
                 t={t}
-                trialStatus={trialStatus}
-                setTrialStatus={setTrialStatus}
               />
             </div>
           )}

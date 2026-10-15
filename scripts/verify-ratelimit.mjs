@@ -1,7 +1,7 @@
 // Verification terrain du rate-limit par categorie (chemin HTTP reel).
 // Prouve les DEUX directions de l'invariant :
 //   A. le polling legitime (lectures repetees) ne declenche PLUS de 429 global ;
-//   B. le brute-force de cle de licence (/api/unlock) est rattrape vite.
+//   B. le brute-force de la connexion (/api/auth/login) est rattrape vite.
 // Usage: node scripts/verify-ratelimit.mjs
 import { spawn } from "node:child_process";
 import { join } from "node:path";
@@ -99,15 +99,15 @@ const rlAll = rlHeaders.join(" | ");
 check("en-tete RateLimit present sur une lecture", rlHeaders.length > 0, rlAll || "aucun");
 check("budget read announced = 600, taggue par categorie", /600/.test(rlAll) && /read/.test(rlAll), rlAll);
 
-// --- B. brute-force unlock : le budget auth (20) doit rattraper vite ---
+// --- B. brute-force de la connexion : le budget auth (20) doit rattraper vite ---
 let first429auth = -1;
 for (let i = 1; i <= 40; i++) {
-  const r = await fetch(`${BASE}/api/unlock`, {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: "fausse-" + i }),
+  const r = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "faux-" + i, password: "faux-" + i }),
   });
   if (r.status === 429) { first429auth = i; break; }
 }
-check("brute-force unlock rattrape par le budget auth (<25 tentatives)",
+check("brute-force login rattrape par le budget auth (<25 tentatives)",
   first429auth > 0 && first429auth < 25, first429auth > 0 ? "429 a la " + first429auth : "jamais");
 
 // --- C. une mutations legitime (POST inventaire) n'est pas comptee comme read ---

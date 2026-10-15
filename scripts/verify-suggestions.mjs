@@ -8,7 +8,7 @@
 //   A3  POST /api/suggestions avec session staff -> 403 STAFF_LECTURE_SEULE
 //   A4  la creation refuse type/priorite hors enum, titre blanc, route
 //       cible hors liste blanche (400 NOMME — on ne rejoue pas un payload
-//       invente vers /api/unlock ou /api/users)
+//       invente vers /api/users ou /api/admin)
 //   A5  la suggestion est RELUE en base (statut nouveau, action pre-remplie)
 //   B1  l'agent NE PEUT PAS appliquer ni rejeter (403 MAITRE_REQUIS) —
 //       il propose, il ne tranche pas
@@ -182,7 +182,7 @@ try {
   check("A4a type hors enum -> 400", a4a.status === 400 && a4a.json?.error === "TYPE_INVALIDE", `status=${a4a.status}`);
   const a4b = await call("POST", "/api/suggestions", { type: "stock", titre: "   ", action_route: "/api/haccp/cleaning" });
   check("A4b titre blanc -> 400", a4b.status === 400 && a4b.json?.error === "TITRE_INVALIDE", `status=${a4b.status}`);
-  const a4c = await call("POST", "/api/suggestions", { type: "stock", titre: "x", action_route: "/api/unlock" });
+  const a4c = await call("POST", "/api/suggestions", { type: "stock", titre: "x", action_route: "/api/users" });
   check("A4c route hors liste blanche -> 400", a4c.status === 400 && a4c.json?.error === "ROUTE_INCONNUE", `status=${a4c.status} error=${a4c.json?.error}`);
 
   // A5 relue en base

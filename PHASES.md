@@ -1013,3 +1013,55 @@ verify:reception 1/1, verify:dashboard 7/7, verify:bundle TOUT PASS,
 verify:split OK. Capture : `aside` présent, 13 onglets lus dans le DOM,
 « Tableau de bord » ×2 (nav + en-tête), 0 erreur de page, aucune valeur
 flottante non arrondie.
+
+## Chantier 14 — La licence d'essai et les clés RSA sont RETIRÉES (15/10)
+
+### La décision jouée
+claus.io est publié sous EUPL-1.2 pour un usage professionnel GRATUIT. Le produit
+gardait pourtant tout le dispositif d'essai : au bout de 30 jours,
+`licenseMiddleware` refusait en 403 `TRIAL_EXPIRED` TOUTE mutation tant qu'une clé
+RSA signée par l'éditeur n'était pas posée, et la sidebar affichait « Essai
+Gratuit — Il vous reste {days} jours ». Un logiciel libre qui bloque ses écritures
+derrière une clé de l'éditeur contredit à la fois sa licence et son README.
+Décision du client : retirer ENTIÈREMENT (pas neutraliser).
+
+### Fichiers SUPPRIMÉS
+- `src/routes/licensing.ts` (GET /api/trial-status, POST /api/unlock)
+- `src/middleware/license.ts` (le blocage 403 des mutations)
+- `scripts/sign-license.cjs` (générateur de clés ; la clé privée restait chez l'éditeur)
+
+### Ce qui a été nettoyé
+- `src/db/init.ts` : `LicenseState`, `verifyLicenseKey()`, la clé publique RSA en
+  dur, la table `app_license`, le machineId (dérivé des MAC) et l'`install_date`.
+  `initDatabase()` ne rend plus d'état `license`.
+- `server.ts` : les deux imports, `app.use("/api", licenseMiddleware(...))` et
+  `licensingRouterFactory(...)`.
+- `src/middleware/api-rate-limiter.ts` : la règle `path === "/api/unlock" → auth`
+  et l'exemption `/api/trial-status`.
+- `src/App.tsx` : états trial/unlock, le fetch `/api/trial-status`, `handleUnlock()`
+  et l'écran plein « Période d'Essai Terminée » (2616 octets).
+- `src/components/Sidebar.tsx` : les deux bandeaux (Essai Gratuit / Essai Terminé)
+  et la prop `trialStatus`.
+- `src/components/SettingsView.tsx` : la « Section Licence » (2926 octets),
+  `fetchLicense()`, `handleUnlock()`.
+- `src/data/translations.ts` : 12 clés × 5 langues = 60 lignes (trialEndedTitle,
+  freeTrial, trialDaysLeft, trialExpired, machineId, machineIdSupport,
+  licenseKeyPlaceholder, enterActivationKey, exLicense, configTrialDesc,
+  clausIsActivated, loadingLicense).
+
+### Le piège du chantier — les portes qui jugeaient le dispositif retiré
+Trois portes mesuraient la licence elle-même et auraient rendu « vert » un lot
+AMPUTÉ de sa mesure si on les avait supprimées sans les réécrire : le brute-force
+de `/api/unlock` (verify:ratelimit), l'exemption `/api/trial-status` (unitaire du
+rate-limiter, verify:http, gzip e2e) et deux tests e2e du routeur. Le brute-force
+est DÉPLACÉ sur la seule surface de brute-force qui reste (`/api/auth/login`,
+bucket auth 20/15 min) — l'invariant « la connexion est plus stricte qu'un POST
+métier » survit ; les petits GET de remplacement sont `/api/auth/etat` ; l'exemple
+de route hors liste blanche passe de `/api/unlock` à `/api/users`
+(`test/e2e/routes.spec.ts` 46 → 44 tests).
+
+### Vérifié le 15/10
+tsc 0, vitest 170/170, build 488.81 ko (< 620), verify:routes 44/44,
+verify:http TOUT PASS, verify:ratelimit rc=0, verify:suggestions TOUT VERT,
+verify:suggestions-mord rc=0 (arbre propre), verify:auth rc=0,
+verify:dashboard 7/7, verify:reception rc=0, verify:bundle rc=0.
