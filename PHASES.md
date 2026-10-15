@@ -1065,3 +1065,23 @@ tsc 0, vitest 170/170, build 488.81 ko (< 620), verify:routes 44/44,
 verify:http TOUT PASS, verify:ratelimit rc=0, verify:suggestions TOUT VERT,
 verify:suggestions-mord rc=0 (arbre propre), verify:auth rc=0,
 verify:dashboard 7/7, verify:reception rc=0, verify:bundle rc=0.
+
+### Piège du 15/10 — « le screenshot est sans les onglets » alors que le FICHIER est bon
+Rapporté DEUX fois. Mesures : l'URL du README (`github.com/.../raw/main/public/…`)
+répond 302 vers `media.githubusercontent.com` et sert bien le nouveau fichier
+(217746 octets, 1680x1080, sha256 `4361c020…` == fichier local), et la page
+rendue pointe dessus. Le défaut n'était donc pas le fichier mais la COPIE EN
+CACHE du lecteur : une image est servie avec `cache-control: max-age=300`, donc
+un navigateur qui a ouvert le README avant la recapture continue de montrer
+l'ancien PNG au MÊME chemin. Remède déterministe : le `src` porte
+`?v=2026-10-15` — GitHub PRÉSERVE la chaîne de requête (vérifié par l'API
+`/markdown` : `src="public/screenshot-dashboard.png?v=2026-10-15"`), donc l'URL
+change et le cache ne peut plus servir l'ancienne image. À faire évoluer à
+chaque recapture.
+Deuxième leçon : l'image est stockée en **git LFS** (`public/*.png`), donc
+`raw.githubusercontent.com` rend un POINTEUR de 131 octets — c'est la redirection
+de `/raw/` vers `media.githubusercontent.com` qui rend le PNG. « raw est cassé »
+n'est pas un défaut du README.
+Troisième leçon : à `width="840"` les libellés de la barre latérale sont
+minuscules (9 px) — ce qui peut faire croire qu'ils manquent. L'image passe à
+1200 px.

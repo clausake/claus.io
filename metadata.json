@@ -1,6 +1,6 @@
 {
   "name": "claus.io",
-  "description": "Système expert open source en ingénierie de production alimentaire et Supply Chain Management (AGPL-3.0).",
+  "description": "Système expert open source en ingénierie de production alimentaire et Supply Chain Management (EUPL-1.2).",
   "requestFramePermissions": [
     "microphone",
     "camera"
