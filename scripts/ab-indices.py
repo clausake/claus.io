@@ -134,7 +134,7 @@ def seed(data_dir):
     c = sqlite3.connect(os.path.join(data_dir, "agent_culinaire.db"))
     cur = c.cursor()
     # ⚠ L'app ne remplit PAS la table inventory au demarrage (verifie dans
-    # src/db/init.ts : le seed d'init ne touche que app_license). Les 116
+    # src/db/init.ts : le seed d'init ne touche PAS inventory). Les 116
     # articles vus dans un run precedent venaient de mes propres POST, pas du
     # serveur. Le bench doit donc creer SES articles : sans eux, les jointures
     # "supplier_prices -> inventory" ne portent sur rien et le verdict d'index

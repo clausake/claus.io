@@ -7,7 +7,6 @@ import {
   Cpu,
   Download,
   Globe,
-  Lock,
   Menu as MenuIcon,
   Play,
   Server,
@@ -33,14 +32,10 @@ export function SettingsView({
   settings,
   setSettings,
   t,
-  trialStatus,
-  setTrialStatus,
 }: {
   settings: Record<string, unknown>;
   setSettings: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
   t: Record<string, string>;
-  trialStatus: { isExpired: boolean; daysLeft: number; isUnlocked: boolean; machineId?: string } | null;
-  setTrialStatus: React.Dispatch<React.SetStateAction<{ isExpired: boolean; daysLeft: number; isUnlocked: boolean } | null>>;
 }) {
   const toast = useToast();
   const [ollamaStatus, setOllamaStatus] = React.useState<
@@ -53,7 +48,6 @@ export function SettingsView({
     url: string;
   } | null>(null);
 
-  const [licenseKey, setLicenseKey] = React.useState("");
 
   // Panneau « Intelligence » (Sprint 15, Tâche 9). Le choix, l'URL et le
   // modèle sont les champs `llm_*` du contrat (ReglageFournisseur) ; ils
@@ -77,16 +71,6 @@ export function SettingsView({
   const [aucunMoteur, setAucunMoteur] = React.useState(false);
   const [verdictIa, setVerdictIa] = React.useState<any>(null);
   const [testIaEnCours, setTestIaEnCours] = React.useState(false);
-
-  const fetchLicense = async () => {
-    try {
-      const res = await fetch("/api/trial-status");
-      const data = await res.json();
-      setTrialStatus(data);
-    } catch (e) {
-      console.error("Error fetching license", e);
-    }
-  };
 
   // Les trois voies de l'IA (Tâche 8 livrait le moteur de recherche) :
   // /api/llm/detecter ne rend JAMAIS un tableau muet — si rien n'est trouvé,
@@ -158,7 +142,6 @@ export function SettingsView({
       }
     };
     fetchNetwork();
-    fetchLicense();
     checkOllama();
     detecterLesMoteurs();
   }, []);
@@ -176,25 +159,6 @@ export function SettingsView({
       setFournisseurIa(String(settings.llm_choix));
     }
   }, [settings?.llm_choix, settings?.llm_url, settings?.llm_modele]);
-
-  const handleUnlock = async () => {
-    try {
-      const res = await fetch("/api/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: licenseKey }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast("Licence activée avec succès !", "success");
-        fetchLicense();
-      } else {
-        toast("Clé invalide.", "error");
-      }
-    } catch (e) {
-      toast("Erreur serveur.", "error");
-    }
-  };
 
   const [availableModels, setAvailableModels] = React.useState<string[]>([
     "llama3.2",
@@ -957,71 +921,6 @@ export function SettingsView({
                 </span>
               )}
             </div>
-          </section>
-
-          {/* Section Licence */}
-          <section className="led-glow-container bg-black/40 border-emerald-500/20 shadow-none">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl mr-4">
-                <Lock className="w-5 h-5" />
-              </div>
-              {trialStatus?.isUnlocked
-                ? "Licence Activée"
-                : "Activation de la Licence"}
-            </h3>
-
-            {trialStatus ? (
-              <div className="space-y-6">
-                <div>
-                  <span className="text-xs text-slate-500 uppercase font-bold tracking-widest">
-                    {t.machineId || "Machine ID"}
-                  </span>
-                  <div className="font-mono text-emerald-400 text-lg bg-black/60 p-3 rounded-lg mt-1 border border-white/5">
-                    {trialStatus.machineId}
-                  </div>
-                </div>
-
-                {!trialStatus.isUnlocked ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-400">
-                      {t.configTrialDesc
-                        ? t.configTrialDesc.replace(
-                            "{days}",
-                            trialStatus.daysLeft.toString(),
-                          )
-                        : "Il vous reste " +
-                          trialStatus.daysLeft +
-                          " jours d'essai pour tester le système."}
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={licenseKey}
-                        onChange={(e) => setLicenseKey(e.target.value)}
-                        placeholder={
-                          t.licenseKeyPlaceholder || "XXXX-XXXX-XXXX"
-                        }
-                        className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white font-mono outline-none focus:border-emerald-500/50"
-                      />
-                      <button
-                        onClick={handleUnlock}
-                        className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all"
-                      >
-                        Activer
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-emerald-500/10 text-emerald-400 rounded-xl font-bold border border-emerald-500/20">
-                    {t.clausIsActivated || "Le système est activé sur ce poste."}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-slate-500 italic">
-                {t.loadingLicense || "Chargement de la licence..."}
-              </div>
-            )}
           </section>
 
           {/* Section Achats */}

@@ -1,5 +1,5 @@
 // Test e2e des routes critiques : démarre le serveur (USER_DATA_PATH isolé)
-// et vérifie le CRUD + le middleware de licence.
+// et vérifie le CRUD métier.
 import { test, expect } from "@playwright/test";
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
@@ -104,19 +104,6 @@ test("CRUD inventaire", async ({ request }) => {
   res = await request.get(`${BASE}/api/inventory`);
   const after = await res.json();
   expect(after.find((i: any) => i.id === item.id)).toBeFalsy();
-});
-
-test("GET /api/trial-status retourne l'état licence", async ({ request }) => {
-  const res = await request.get(`${BASE}/api/trial-status`);
-  expect(res.status()).toBe(200);
-  const body = await res.json();
-  expect(typeof body.isUnlocked).toBe("boolean");
-  expect(typeof body.machineId).toBe("string");
-});
-
-test("POST /api/unlock avec clé invalide → 401", async ({ request }) => {
-  const res = await request.post(`${BASE}/api/unlock`, { data: { key: "clé-faux" } });
-  expect(res.status()).toBe(401);
 });
 
 test("GET /api/suppliers + POST", async ({ request }) => {
@@ -764,7 +751,7 @@ test("compression: la reponse volumineuse est gzippee et decodable", async () =>
 
 test("compression: sous le seuil de 1 ko, pas de compression", async () => {
   const r = await new Promise<{ enc: string | undefined; len: number }>((resolve, reject) => {
-    const req = rawRequest(`${BASE}/api/trial-status`, { method: "GET", headers: { "Accept-Encoding": "gzip" } }, (res) => {
+    const req = rawRequest(`${BASE}/api/auth/etat`, { method: "GET", headers: { "Accept-Encoding": "gzip" } }, (res) => {
       let n = 0;
       res.on("data", (c: Buffer) => (n += c.length));
       res.on("end", () => resolve({ enc: res.headers["content-encoding"] as string | undefined, len: n }));

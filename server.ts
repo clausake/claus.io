@@ -14,8 +14,7 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 
-import { initDatabase, LicenseState } from "./src/db/init.js";
-import { licenseMiddleware } from "./src/middleware/license.js";
+import { initDatabase } from "./src/db/init.js";
 import { sessionMiddleware, sessionGate } from "./src/middleware/auth.js";
 import { createAuditLogger, setAuditDb } from "./src/services/audit.js";
 import cookieParser from "cookie-parser";
@@ -35,7 +34,6 @@ import inventoryRouter from "./src/routes/inventory.js";
 import suppliersRouter from "./src/routes/suppliers.js";
 import documentsRouter from "./src/routes/documents.js";
 import menuRouter from "./src/routes/menu.js";
-import licensingRouterFactory from "./src/routes/licensing.js";
 import haccpRouter from "./src/routes/haccp.js";
 import staffRouter from "./src/routes/staff.js";
 import searchRouter from "./src/routes/search.js";
@@ -119,13 +117,12 @@ async function startServer() {
 
   // Rate-limit par categorie de surface (read / mutate / delete / auth / ai).
   // L'ancien budget unique de 300/15 min faisait un 429 global sur le simple
-  // polling du tableau de bord HACCP (mesure : 429 a la 214e requete) tout en
-  // laissant 300 tentatives a /api/unlock. Voir src/middleware/api-rate-limiter.ts.
+  // polling du tableau de bord HACCP (mesure : 429 a la 214e requete). Voir
+  // src/middleware/api-rate-limiter.ts.
   app.use("/api", apiRateLimiter());
 
-  // --- Initialisation de la base + état licence ---
-  const { db, storageDir, license } = await initDatabase();
-  const licenseState: LicenseState = license;
+  // --- Initialisation de la base ---
+  const { db, storageDir } = await initDatabase();
 
   // Backup automatique horaire de la base SQLite (rotation 5 backups).
   startDbBackup(storageDir, path.join(storageDir, "agent_culinaire.db"));
@@ -136,16 +133,9 @@ async function startServer() {
   const onSettingsUpdate = () => { ollamaSettingsRef.current = settingsStore.value as OllamaSettings; };
 
   // Identite (chantier 1) : charge la session depuis le cookie, PUIS la gate
-  // juge. Ordre : session AVANT license — savoir QUI parle avant de decider de
-  // bloquer. La license couvre toujours 100 % des /api/* (elle reste posee
-  // avant tous les routeurs) ; /auth/* lui est exemptee (s'authentifier n'est
-  // pas un acte metier) et les GET restent ouverts des deux cotes.
+  // juge. Elle couvre 100 % des /api/* ; /auth/* en est exemptee
+  // (s'authentifier n'est pas un acte metier).
   app.use("/api", cookieParser(), sessionMiddleware(db), sessionGate());
-
-  // Middleware de licence — posé AVANT toutes les routes pour couvrir 100 % des
-  // routes /api/* (in-contournable). Bloque les mutations si trial expiré +
-  // non unlocké ; les GET restent autorisés.
-  app.use("/api", licenseMiddleware(db, licenseState));
 
   // Audit trail (chantier 2) : un SEUL logger, fabrique une fois, passe aux
   // routeurs. Toute mutation appelle logAudit(req, res, ...) — la tracabilite
@@ -166,7 +156,6 @@ async function startServer() {
   app.use(suppliersRouter(db, logAudit));
   app.use(documentsRouter(db, logAudit));
   app.use(menuRouter(db, logAudit));
-  app.use(licensingRouterFactory(db, licenseState, logAudit));
   app.use(haccpRouter(db, logAudit));
   app.use(staffRouter(db, logAudit));
   app.use(searchRouter(db, logAudit));

@@ -5,8 +5,8 @@
 // scripts/audit-perf.mjs : une simple tablette laissee sur l'onglet HACCP emet
 // ~29 req/min (capteurs 4 s + robots 5 s + alertes 30 s) et declenchait un 429
 // GLOBAL au bout de ~10 min, sans autre activite. Dans une cuisine, l'app
-// "mourait" pendant le service. A l'inverse, /api/unlock (surface de brute-force
-// de la cle de licence) disposait de 300 tentatives par fenetre : trop genereux.
+// "mourait" pendant le service. L'ancien budget unique laissait aussi 300
+// tentatives sur la surface d'authentification : trop genereux.
 //
 // Decision : un budget par categorie, chacun avec sa FENETRE et son compteur
 // (une instance de MemoryStore par categorie, donc aucune double comptabilite :
@@ -15,7 +15,7 @@
 //   read   : le polling temps reel est legitime, on le laisse respirer.
 //   mutate : l'humain ne saisit pas 150 ecritures en 5 min a la main.
 //   delete : suppression de masse accidentelle (tout effacer d'un onglet ouvert).
-//   auth   : la cle de licence se verifie par RSA, 20 tentatives / 15 min suffisent.
+//   auth   : surface de brute-force (login), 20 tentatives / 15 min suffisent.
 //   ai     : 1 appel = 1 generation Ollama (ou 1 launch Chromium) = couteux.
 //
 // Les en-tetes RateLimit sont ems par la lib en draft-8 : le seul format qui
@@ -39,9 +39,8 @@ export const BUDGETS: Record<Bucket, Budget> = {
 };
 
 // Les routes qui ne sont pas comptees : le flux SSE est une connexion unique
-// volontairement longue (1 requete = toute la duree de l'onglet ouvert) et le
-// statut de licence est lu a chaque rendu de l'ecran de deblocage.
-const EXEMPT_PREFIXES = ["/api/sensors/stream", "/api/trial-status"];
+// volontairement longue (1 requete = toute la duree de l'onglet ouvert).
+const EXEMPT_PREFIXES = ["/api/sensors/stream"];
 
 export function isExempt(path: string): boolean {
   return EXEMPT_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
@@ -65,7 +64,6 @@ export function bucketFor(req: Request): Bucket | null {
   if (isExempt(path)) return null;
 
   // L'authentification est verifiee AVANT la methode : c'est la surface sensible.
-  if (path === "/api/unlock") return "auth";
   // Identite (chantier 1) : login/logout/setup sont la surface brute-force
   // par excellence — le bucket auth (20/15 min) leur convient.
   if (path.startsWith("/api/auth/")) return "auth";

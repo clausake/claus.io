@@ -3,27 +3,18 @@ import path from "path";
 import fs from "fs";
 import sqlite3 from "sqlite3";
 import { open, Database } from "sqlite";
-import crypto from "crypto";
 
 // Init + migrations SQLite.
 // - Ouvre (ou crée) agent_culinaire.db dans storageDir,
 // - exécute la création des tables (CREATE TABLE IF NOT EXISTS),
 // - ajoute les colonnes manquantes (ensureColumn),
 // - seede l'inventaire initial (vocab_translations.json ou fallback),
-// - initialise machineId + install_date dans app_license,
 // - backup quotidien (rotation 5 jours).
-
-export interface LicenseState {
-  machineId: string;
-  finalInstallTime: string;
-  TRIAL_MS: number;
-}
 
 export interface DbInitResult {
   db: Database;
   storageDir: string;
   dbPath: string;
-  license: LicenseState;
 }
 
 export function resolveStorageDir(): string {
@@ -45,34 +36,6 @@ export function resolveStorageDir(): string {
 
 // (Le backup quotidien a été remplacé par le backup horaire de
 //  src/services/db-backup.ts — rotation 5, plus granulaire.)
-
-// Clé publique RSA de licence (Phase 0). La clé privée reste chez l'éditeur.
-const LICENSE_PUBLIC_KEY_PEM =
-  process.env.COOKDRIVE_LICENSE_PUBLIC_KEY ||
-  `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyLBV7Q1BWIDuObTtEMTc
-lAzPzzM+jJjFugnjbOZIb3fNWbPVbe/IX867u1eRjVyPrzKegL7aGQi2RSp49LH1
-n4d9ZpmXSXnOw0rYgYL6+QV1vE1ZNabgC1RawRwBi3iFWKplwdx8+AgMQ6erROrs
-m8hyb4T+F9VC3iGju8KxEzr5E4rv2VzsAeAj/foGsxBHO+Ezm6Eqgib6dNLsXLvf
-eYiVnxihbheM2EEEOjYikjD5xcCLzK/mev+pLweIWwdvxrtrmLhn9p7qRStFMQg1
-vusD+/E1vjvKS4UaCvUDOdOz4lUNx63ZygcPZR8BU2XMt35vGWoXo9Z48gkgS9fW
-uwIDAQAB
------END PUBLIC KEY-----`;
-
-// Vérifie une clé d'unlock signée (base64 du RSA signature de machineId).
-export function verifyLicenseKey(machineId: string, keyCandidate: string): boolean {
-  try {
-    const cryptoMod = crypto;
-    const normalized = keyCandidate.replace(/[^A-Za-z0-9+/=]/g, "");
-    const signature = Buffer.from(normalized, "base64");
-    if (signature.length === 0) return false;
-    const verifier = cryptoMod.createVerify("RSA-SHA256");
-    verifier.update(machineId);
-    return verifier.verify(LICENSE_PUBLIC_KEY_PEM, signature);
-  } catch (e) {
-    return false;
-  }
-}
 
 export async function initDatabase(): Promise<DbInitResult> {
   const storageDir = resolveStorageDir();
@@ -452,14 +415,10 @@ export async function initDatabase(): Promise<DbInitResult> {
     }
   }
 
-  // NOTE Phase 0 : l'ancienne logique "shadow files" a été supprimée.
-  // La date d'installation vit désormais uniquement dans SQLite (app_license).
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS app_license (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  `);
+  // NOTE Phase 0 : l'ancienne logique "shadow files" a été supprimée. La date
+  // d'installation et le machineId n'ont plus de raison d'être : la licence
+  // d'essai a été retirée au chantier 14 (claus.io est libre, EUPL-1.2, sans
+  // limite de temps ni clé d'activation).
 
   // Chantier 1 (audit 2026-10-02 §8) — identité. Trois profils : maitre (tout),
   // staff (lecture + saisies terrain), agent (lecture seule — Hermes n'ecrit
@@ -538,50 +497,5 @@ export async function initDatabase(): Promise<DbInitResult> {
     await db.exec("ALTER TABLE suppliers ADD COLUMN phone TEXT;");
   } catch (e) {}
 
-  let machineIdRow = await db.get(
-    "SELECT value FROM app_license WHERE key = 'machine_id'",
-  ) as { value: string } | undefined;
-  if (!machineIdRow) {
-    const cryptoMod = crypto;
-    const interfaces = os.networkInterfaces();
-    let macAddresses = "";
-    for (const key in interfaces) {
-      for (const iface of interfaces[key] || []) {
-        if (!iface.internal && iface.mac && iface.mac !== "00:00:00:00:00:00") {
-          macAddresses += iface.mac;
-        }
-      }
-    }
-    let newId: string;
-    if (macAddresses.length > 0) {
-      newId = cryptoMod.createHash("sha256").update(macAddresses).digest("hex").substring(0, 8).toUpperCase();
-    } else {
-      newId = cryptoMod.randomBytes(4).toString("hex").toUpperCase();
-    }
-    await db.run(
-      "INSERT INTO app_license (key, value) VALUES ('machine_id', ?)",
-      [newId],
-    );
-    machineIdRow = { value: newId };
-  }
-  const machineId = machineIdRow.value;
-
-  let dbLicense = await db.get(
-    "SELECT value FROM app_license WHERE key = 'install_date'",
-  ) as { value: string } | undefined;
-  let finalInstallTime: string;
-  if (dbLicense && !isNaN(parseInt(dbLicense.value))) {
-    finalInstallTime = dbLicense.value;
-  } else {
-    finalInstallTime = Date.now().toString();
-  }
-  if (!dbLicense || dbLicense.value !== finalInstallTime) {
-    await db.run(
-      "INSERT OR REPLACE INTO app_license (key, value) VALUES ('install_date', ?)",
-      [finalInstallTime],
-    );
-  }
-  const TRIAL_MS = 30 * 24 * 60 * 60 * 1e3; // 30 jours
-
-  return { db, storageDir, dbPath, license: { machineId, finalInstallTime, TRIAL_MS } };
+  return { db, storageDir, dbPath };
 }

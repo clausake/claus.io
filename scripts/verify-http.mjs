@@ -145,7 +145,7 @@ check("(1c) le corps gzip se decode en un JSON identique (le titre n'est pas men
   decodeOk, `items=${plain.body.toString("utf8").split("name").length - 1}`);
 
 // --- 2. le seuil de 1 ko est actif -------------------------------------
-const small = await raw("/api/trial-status", { "Accept-Encoding": "gzip" });
+const small = await raw("/api/auth/etat", { "Accept-Encoding": "gzip" });
 check("(2) petite reponse sous le seuil passee sans compression",
   small.headers["content-encoding"] === undefined && small.bytes > 0 && small.bytes < 1024,
   `encoding=${small.headers["content-encoding"]} bytes=${small.bytes}`);
