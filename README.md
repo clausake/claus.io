@@ -14,11 +14,11 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 
 ## Vidéo de présentation
 
-https://github.com/user-attachments/assets/REPLACEME
-
 *Démonstration complète : navigation entre les modules, génération de fiches par IA, scan de factures, HACCP.*
 
-*(La vidéo est embarquée dans le dépôt : [`public/demo-clausio.webm`](./public/demo-clausio.webm))*
+**▶ [Lire la vidéo de démonstration](./public/demo-clausio.webm)** — 6,4 Mo, WebM (rendu lecteur intégré sur github.com).
+
+*(Embarquée dans le dépôt : `public/demo-clausio.webm`.)*
 
 ## Fonctionnalités
 
