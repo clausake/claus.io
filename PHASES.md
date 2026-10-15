@@ -960,3 +960,56 @@ indifférente n'est pas une morsure, c'est du bruit.
 tsc 0, vitest 170/170 (158 + 12), build 483.60 ko, verify:llm-porte 12/12,
 verify:llm-porte-mord MORSURE OK (arbre restauré), verify:all 84 portes
 0 rouge. CI GitHub verte sur 53653f2 (chantier 11 suite).
+
+## Chantier 13 — La barre latérale des onglets n'était PLUS RENDUE depuis le chantier 9 (15/10)
+
+### Le défaut joué
+`src/components/Sidebar.tsx` a été EXTRAIT d'App.tsx au chantier 9 (`9a0f7fb`,
+« Sidebar extrait d'App.tsx (1030→781 l.) ») — mais jamais re-rendu : le
+`<aside>` supprimé n'a pas été remplacé par `<Sidebar ... />`. Mesures du 15/10 :
+`grep -n "Sidebar" src/App.tsx` ne rendait que 4 lignes, toutes `isSidebarOpen`
+(56, 398, 401, 432) ; `git show 9a0f7fb:src/App.tsx | grep Sidebar` ne rend
+aucune occurrence de `<Sidebar`. L'app a donc navigué des semaines par
+RACCOURCIS CLAVIER seulement (Alt+1..), sans aucun onglet visible.
+
+### Pourquoi aucune porte ne l'a vu
+Les specs e2e n'empruntent PAS la barre latérale : `reception-view.spec.ts:284`
+navigue par `Alt+6`, avec un commentaire qui dit « moins de dépendance à l'ordre
+des éléments de la sidebar » — alors que la sidebar n'existait pas. Une porte qui
+CONTOURNE un élément ne prouve pas cet élément.
+
+### Ce qui a été écrit
+- `src/App.tsx` : `<Sidebar … />` rendue à la place exacte du `<aside>` supprimé
+  (juste avant l'overlay mobile), + son import. 18 lignes ajoutées, 0 retirée.
+- `src/components/Sidebar.tsx` : `Lock` ajouté à l'import lucide-react (il était
+  UTILISÉ ligne 245 mais jamais importé — voir le piège) ; `isUnlocked` rendu
+  optionnel (il l'est dans App.tsx : `isUnlocked?: boolean`).
+- `src/components/DashboardOverview.tsx` : la valeur par catégorie est arrondie à
+  2 décimales (`195.95000000000002` → `195,95`).
+- `public/screenshot-dashboard.png` : recapturée avec les 13 onglets visibles.
+
+### Le piège du chantier — tsc est AVEUGLE aux noms qui collisionnent avec le DOM
+`<Lock />` non importé et `npx tsc --noEmit` rendait **rc=0** : `Lock` est une
+**interface de `lib.dom.d.ts`**, donc le nom EXISTE pour le vérificateur de types ;
+à l'exécution c'est un `ReferenceError`. Latent car la bannière « Essai Terminé »
+ne se rend que si l'essai a expiré. Contrôle mesuré : une sonde `<ZzzUndefined />`
+ROUGIT (rc=2) — l'aveuglement ne porte donc que sur les collisions de noms
+(Lock, Text, …), pas sur tout JSX. Deuxième leçon : `echo "rc=$?"` APRÈS un pipe
+rend le rc du pipe (`head`), pas celui de tsc — le premier « tsc rc=0 » de ce
+chantier était cette faute, remesurée sur fichier.
+
+### Le piège de la capture — le contrat des champs, pas l'intuition
+Deux recaptures montraient un stock à **0** parce que le semis envoyait
+`min_stock` / `price` : le contrat est
+`{name, quantity, unit, category, minStock, unit_price}` (`src/routes/inventory.ts:95,99`).
+Idem factures : `/api/documents` refuse en 400 NOMMÉ toute ligne sans
+`original_name` (`ligne_sans_designation`). Équipe : `/api/staff` attend
+`schedule: {"<ISO>": [{start, end}]}` et le dashboard lit `staff_schedule` sur la
+date du jour (`src/routes/dashboard.ts:86`).
+
+### Vérifié le 15/10
+tsc 0, vitest 170/170, build 492.97 ko (< 620), verify:routes 46/46,
+verify:reception 1/1, verify:dashboard 7/7, verify:bundle TOUT PASS,
+verify:split OK. Capture : `aside` présent, 13 onglets lus dans le DOM,
+« Tableau de bord » ×2 (nav + en-tête), 0 erreur de page, aucune valeur
+flottante non arrondie.

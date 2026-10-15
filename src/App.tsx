@@ -35,6 +35,7 @@ import * as motionSlim from "motion/react-m";
 import { LandingPage, NavItem } from "./components/views";
 import { Assistant } from "./components/Assistant";
 import { AuthGate, type Utilisateur } from "./components/AuthGate";
+import { Sidebar } from "./components/Sidebar";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
 
@@ -393,6 +394,23 @@ export default function App() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-teal-500/10 blur-[100px] rounded-full pointer-events-none"></div>
 
+
+      {/* La barre laterale des onglets. ⚠ Elle a ete EXTRAITE d'App.tsx au
+          chantier 9 (9a0f7fb) mais jamais re-rendue : l'app a navigue pendant
+          des semaines uniquement par raccourcis clavier (Alt+1..), sans aucun
+          onglet visible. Les specs e2e ne l'ont pas vu parce qu'elles aussi
+          passent par Alt+6 (reception-view.spec.ts:284). Rendue ici, a la
+          place exacte du <aside> supprime (l'overlay mobile juste apres). */}
+      <Sidebar
+        t={t}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        isMobile={isMobile}
+        trialStatus={trialStatus}
+        user={user}
+      />
 
       {/* Overlay for mobile drawer */}
       {isSidebarOpen && (
