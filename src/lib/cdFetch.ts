@@ -6,8 +6,8 @@
 // l'operateur croit avoir enregistre ce qu'il n'a pas enregistre.
 //
 // Le 401 n'est intercepte QUE pour l'identite : un GET libre ne passe jamais
-// en 401 cote serveur (contrat license), donc l'evenement ne peut pas etre
-// leve par un simple refus de lecture.
+// en 401 cote serveur (la gate de session ne juge que les mutations), donc
+// l'evenement ne peut pas etre leve par un simple refus de lecture.
 export function cdFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   return fetch(input, init).then((res) => {
     if (res.status === 401) {

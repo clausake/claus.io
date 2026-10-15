@@ -2,7 +2,7 @@
 // l'origine : avec agent Hermes (lecture seule — il informe, l'humain clique)
 // et sans agent (saisie manuelle). Dans les deux cas il faut savoir QUI parle :
 // ces middlewares attachent la session a la requete et bloquent les mutations
-// non authentifiees. Les GET restent ouverts (contrat license : lecture libre),
+// non authentifiees. Les GET restent ouverts (lecture libre), et /api/auth/*
 // et /api/auth/* est exemptee (on ne peut pas exiger une session pour en
 // OBTENIR une). Le role `agent` est refuse sur TOUTE route mutable — sa seule
 // ecriture future sera sa table de suggestions (chantier 3).
@@ -43,7 +43,7 @@ export async function loadSession(
   return { id: row.id, username: row.username, role: row.role };
 }
 
-// La gate : GET libre (contrat license), /api/auth/* libre, sinon session
+// La gate : GET libre, /api/auth/* libre, sinon session
 // requise. Le role agent est refuse sur toute mutation — Hermes informe,
 // l'humain execute (§8). SEULES exceptions d'ecriture agent, posees par §8 :
 // sa table `suggestions` (chantier 3) et la lecture de son propre audit.

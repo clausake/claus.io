@@ -112,6 +112,7 @@ python3 scripts/lire-gates.py # qui est rouge
 Logiciel libre sous **[EUPL-1.2](./LICENSE)**.
 
 - **Usage** : gratuit pour tous, y compris professionnel (restaurants, traiteurs...)
+- **Aucune activation, aucune clé** : pas de période d'essai, pas de limite de temps — rien ne se bloque après un nombre de jours
 - **Modification** : libre ; toute version modifiée doit rester sous EUPL-1.2 et publier son code source (SaaS inclus)
 - **Revente du logiciel** : **interdite** — quiconque distribue claus.io (modifié ou non) doit partager l'intégralité de son code sous la même licence. Le logiciel ne peut pas devenir un produit payant fermé
 - **Services autour du logiciel** (installation, support, formation, hébergement) : possibles
