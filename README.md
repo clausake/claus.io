@@ -8,7 +8,14 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 
-<p align="center"><img src="public/screenshot-dashboard.png" alt="Tableau de bord claus.io — valeur du stock, alertes, courbes de coûts, répartition par catégorie" width="840"></p>
+<!-- Le « ?v= » n'est pas décoratif : l'URL brute d'une image est servie avec
+     cache-control max-age=300 et les navigateurs (et les proxys) gardent la
+     copie précédente du même chemin. Un lecteur qui avait ouvert le README
+     avant la recapture voit « sans les onglets » pendant que le fichier servi
+     est correct — mesuré le 15/10 (sha256 du fichier servi == fichier local,
+     1680x1080). Changer cette chaîne force une URL neuve, donc un vrai
+     téléchargement. La faire évoluer à chaque recapture. -->
+<p align="center"><img src="public/screenshot-dashboard.png?v=2026-10-15" alt="Tableau de bord claus.io — barre latérale des onglets (Tableau de bord, Inventaire &amp; Stock, Ingénierie des Menus, Fiches Techniques, Plan Production, Achats, Documents, Gestion du Personnel, Traçabilité HACCP, Anti-Gaspillage, Chat Culinaire, Flotte Robotique, Studio Epicure AI), valeur du stock, alertes critiques, coût main d'œuvre, courbes de coûts sur 7 jours, répartition du stock par catégorie" width="1200"></p>
 
 *Tableau de bord : valeur du stock en direct, alertes critiques, courbes de coûts sur 7 jours, répartition par catégorie.*
 
