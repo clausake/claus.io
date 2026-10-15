@@ -100,9 +100,28 @@ export function Assistant({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fournisseur: choix }),
     });
-    const data = await res.json();
-    if (res.ok && data.ok) onTermine();
-    else setErreurConsignation(data.defaut ?? "CONSIGNATION_IMPROUVABLE");
+    // La gate session repond 401 AVANT de lire le corps JSON : parser le JSON
+    // d'un 401 (HTML/texte) jetterait une exception silencieuse. Le defaut est
+    // nomme d'apres le STATUT d'abord, le corps ensuite.
+    const defautParStatut: Record<number, string> = {
+      401: "SESSION_REQUISE — créez votre compte / connectez-vous, puis terminez à nouveau",
+      412: "EPREUVE_NON_ACQUISE — rejouez l'épreuve de lecture",
+    };
+    let defaut = defautParStatut[res.status];
+    if (!defaut) {
+      try {
+        const data = await res.json();
+        defaut = data?.defaut ?? data?.error ?? "CONSIGNATION_IMPROUVABLE";
+      } catch {
+        defaut = `CONSIGNATION_IMPOSSIBLE (HTTP ${res.status})`;
+      }
+    }
+    if (res.ok) {
+      let ok = true;
+      try { ok = (await res.json())?.ok === true; } catch { ok = false; }
+      if (ok) { onTermine(); return; }
+    }
+    setErreurConsignation(defaut);
   };
 
   return (
