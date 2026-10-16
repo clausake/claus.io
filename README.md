@@ -87,7 +87,7 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64, .deb ARM64, NSIS Windows) sont attachées à la [release v0.1.0](https://github.com/clausake/claus.io/releases/tag/v0.1.0).
+**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64, .deb ARM64 pour Linux, et l'installeur NSIS Windows x64) sont attachées à la [release v0.1.0](https://github.com/clausake/claus.io/releases/tag/v0.1.0).
 
 **De source** (développeur) :
 

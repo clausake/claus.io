@@ -1,0 +1,59 @@
+# Installeur Windows x64 — compilé sur un vrai hôte Windows.
+#
+# Pourquoi ici et pas sur la machine locale : le cross-compile arm64->x64 est
+# impossible pour les modules natifs (node-gyp le refuse), et makensis casse
+# (EPIPE) depuis un hôte Linux. Sur hôte natif Windows, les deux étapes sont
+# ordinaires.
+#
+# Déclencheurs :
+#   - manuel (workflow_dispatch) pour la release en cours ;
+#   - à chaque tag v* pour les releases suivantes.
+# L'attache à la release utilise le tag v0.1.0 en dur tant que la version
+# courante du dépôt reste 0.1.0 ; le tag later porté par le déclencheur v*
+# devient la référence naturellement.
+
+name: windows-x64
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm run build:server
+
+      - name: electron-builder NSIS (x64, sans publication)
+        run: npx electron-builder -w --publish never
+
+      - name: à quelle release rattacher
+        id: rel
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: attacher l'installeur à la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          files: release/*.exe
