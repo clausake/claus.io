@@ -15,17 +15,21 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
      est correct — mesuré le 15/10 (sha256 du fichier servi == fichier local,
      1680x1080). Changer cette chaîne force une URL neuve, donc un vrai
      téléchargement. La faire évoluer à chaque recapture. -->
-<p align="center"><img src="public/screenshot-dashboard.png?v=2026-10-15" alt="Tableau de bord claus.io — barre latérale des onglets (Tableau de bord, Inventaire &amp; Stock, Ingénierie des Menus, Fiches Techniques, Plan Production, Achats, Documents, Gestion du Personnel, Traçabilité HACCP, Anti-Gaspillage, Chat Culinaire, Flotte Robotique, Studio Epicure AI), valeur du stock, alertes critiques, coût main d'œuvre, courbes de coûts sur 7 jours, répartition du stock par catégorie" width="1200"></p>
+<!-- La vidéo : GitHub SUPPRIME la balise <video> des README (mesuré par
+     l'API /markdown : "<video>" -> "<p dir=auto></p>"). La seule voie fiable
+     est un LIEN vers le .webm — sur github.com, ce lien s'ouvre dans le
+     lecteur intégré de la page blob. La miniature est la capture du tableau
+     de bord (image réelle du produit, pas une vignette fabriquée) : cliquer
+     joue la vidéo. -->
+<p align="center">
+  <a href="public/demo-clausio.webm">
+    <img src="public/screenshot-dashboard.png?v=2026-10-15" alt="Vidéo de démonstration claus.io — cliquer pour lire : navigation entre les modules, génération de fiches par IA, scan de factures, HACCP" width="1200">
+  </a>
+</p>
+<p align="center"><strong>▶ Cliquer pour lire la vidéo de démonstration</strong> — 6,4 Mo, WebM (lecteur intégré GitHub) · <a href="public/demo-clausio.webm">ouvrir directement</a></p>
 
-*Tableau de bord : valeur du stock en direct, alertes critiques, courbes de coûts sur 7 jours, répartition par catégorie.*
+*Tableau de bord (image extraite de la démonstration) : valeur du stock en direct, alertes critiques, courbes de coûts sur 7 jours, répartition par catégorie.*
 
-## Vidéo de présentation
-
-*Démonstration complète : navigation entre les modules, génération de fiches par IA, scan de factures, HACCP.*
-
-**▶ [Lire la vidéo de démonstration](./public/demo-clausio.webm)** — 6,4 Mo, WebM (rendu lecteur intégré sur github.com).
-
-*(Embarquée dans le dépôt : `public/demo-clausio.webm`.)*
 
 ## Fonctionnalités
 
