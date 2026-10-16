@@ -2,7 +2,7 @@
 
 **Système expert de gestion de cuisine professionnelle** — génération de menus par IA, HACCP, inventaire, achats fournisseurs, planification du personnel et analyse aromatique des ingrédients (moteur Epicure).
 
-Application de bureau **100 % locale** : vos données (fournisseurs, factures, stocks, températures) restent sur votre machine. **Aucune donnée n'est envoyée dans le cloud** — l'IA tourne sur votre propre ordinateur.
+Application de bureau **100 % locale** : vos données (fournisseurs, factures, stocks, températures) restent sur votre machine. **Aucune donnée n'est envoyée dans le cloud** — l'IA tourne sur votre propre ordinateur. **Plurilingue** : interface complète en français, anglais, allemand, espagnol et italien.
 
 [![CI](https://github.com/clausake/claus.io/actions/workflows/ci.yml/badge.svg)](https://github.com/clausake/claus.io/actions/workflows/ci.yml)
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](./LICENSE)
