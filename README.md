@@ -26,7 +26,15 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
     <img src="public/screenshot-dashboard.png?v=2026-10-15" alt="Vidéo de démonstration claus.io — cliquer pour lire : navigation entre les modules, génération de fiches par IA, scan de factures, HACCP" width="1200">
   </a>
 </p>
-<p align="center"><strong>▶ Cliquer pour lire la vidéo de démonstration</strong> — 6,4 Mo, WebM (lecteur intégré GitHub) · <a href="public/demo-clausio.webm">ouvrir directement</a></p>
+<!-- Un GIF se rend EN LECTURE AUTO dans les README (pas d'interaction).
+     Extrait de la vidéo 60s→93s : vitrine 3D Epicure, tableau de bord
+     (KPIs, analyse des coûts, répartition du stock), analyse des menus,
+     entrée en traçabilité HACCP. 8,4 Mo / 5 ips / 504 px. La vidéo complète
+     reste au-dessus (miniature cliquable) et ici (lien direct). -->
+<p align="center">
+  <img src="public/demo-clausio-anime.gif" alt="Aperçu animé de claus.io — vitrine 3D, tableau de bord (KPIs, analyse des coûts, répartition du stock), analyse des menus, traçabilité HACCP" width="504">
+</p>
+<p align="center"><strong>▶ Vidéo complète</strong> (miniature ci-dessus cliquable) — 6,4 Mo, WebM · <a href="public/demo-clausio.webm">ouvrir directement</a></p>
 
 *Tableau de bord (image extraite de la démonstration) : valeur du stock en direct, alertes critiques, courbes de coûts sur 7 jours, répartition par catégorie.*
 
