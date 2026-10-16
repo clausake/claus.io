@@ -35,6 +35,13 @@ jobs:
 
       - run: npm ci
 
+      # Bug npm #4828 : les dépendances optionnelles par-plateforme (rollup,
+      # esbuild) ne sont pas installées si le lockfile a été généré ailleurs.
+      # On installe nos petits binaires natifs Windows à plat sans toucher au
+      # lockfile (le poste local est Linux).
+      - name: native rollup/esbuild (npm bug #4828)
+        run: npm i --no-save @rollup/rollup-win32-x64-msvc @esbuild/win32-x64
+
       - run: npm run build
 
       - run: npm run build:server
