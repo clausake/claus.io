@@ -120,7 +120,7 @@ porte = porte rouge pour toujours, ou mensonge fige). Le `.orig` est juge contre
 - **Chantier 6 — Portes des deux modes** (a faire) : `verify:mode-manuel` (CRUD complet agent coupe) + `verify:mode-agent` (suggestion de bout en bout avec cerveau factice deterministe — JAMAIS de LLM reel en CI). Effort 1 j.
 - **Chantier 4 — Moteur de surveillance** (a faire) : regles -> suggestions : rupture imminente, stock mort, ecart inventaire, DLC proche, temperatures hors bornes HACCP, menus/anti-gaspillage (brancher epicure + antiwaste existants). Seuils configurables par le maitre. Effort ~1 sem.
 - **Chantier 5 — Hermes cerveau outille** (a faire) : contexte = schema + resume dashboard, interroge par API, produit des suggestions. Ollama local par defaut, Gemini optionnel. ai.ts voice/chat = portes d'entree. Effort 1-2 sem.
-- Fond de liste (non bloquant, remesure le 15/10 apres chantier 15) : FichesTechniques.tsx 853 lignes (grille + vue livre extraites), App.tsx 705, **0 `:any` dans `src/`**, bundle 488.81 ko (seuil 620). (La ligne precedente citait 2425 / 985 / 186 / 618 — perimee.)
+- Fond de liste (non bloquant, remesure le 16/10 apres chantiers 17-18) : FichesTechniques.tsx 853 lignes (grille + vue livre extraites), App.tsx 705, **0 `:any` dans `src/`**, bundle 490,26 ko (seuil 620). (La ligne precedente citait 2425 / 985 / 186 / 618 — perimee.)
 
 ### Envs de harnais (institution, a reutiliser)
 - `COOKDRIVE_AUTH_OFF=1` : desactive la gate session (routes.spec.ts juge le metier anonyme).
