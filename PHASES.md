@@ -1321,3 +1321,68 @@ fermetures — la relecture tsc + le run ont attrapé les deux.)
 
 tsc rc=0, vitest 171/171, build OK, ui-tabs 13/13 (12 onglets + anti-doublon),
 e2e routes+reception+sans-ia 46/46.
+
+## Chantier 19 — la vitrine publique : audit des promesses et la release v0.1.0 aux trois plateformes (16/10)
+
+### La decision jouee
+
+Mise en open source (chantiers 17-18 : historique unifie clausake, vitrine
+gh-pages portee du style portfolio). Vente interdite du reve : le client
+rappele que le portfolio datait des modifications — CHAQUE promesse de la
+landing re-jugee contre le code. Neuf corrections : accords mets-vins retire
+(rien dans le chat), valeurs nutritionnelles retirees (aucun code), pointages
+et competences retirees (le module fait plannings/roles/coits/cout main
+d'oeuvre/export CSV), « l'IA prepare les bons de commande en autonomie »
+remplace par la regle fondatrice (elle PROPOSE, l'humain APPLIQUE — 403 si
+l'IA ecrit), etc. Les reels affirmes : avoirs dans l'OCR (documents.ts), lot +
+etiquette de tracabilite a la reception, allergenes des fiches, quatre
+indicateurs de profitabilite, scan par appareil photo (capture=environment) —
+pousse c172d674 sur gh-pages.
+
+La release v0.1.0 prend les installeurs des TROIS plateformes :
+- Linux ARM64 (la machine du maitre) : AppImage + deb, compiles LOCALEMENT
+  et attachés (verifies octets servis).
+- Windows x64 et macOS Apple Silicon : IMPOSSIBLES a compiler depuis un hote
+  aarch64 Linux (node-gyp refuse le cross-compile natif ; makensis casse
+  EPIPE) — un workflow d'actions (build-windows.yml, 2 jobs) les compile sur
+  VRAIS hotes GitHub (windows-latest, macos-latest) et les attache a la
+  release ; ressert seul a chaque tag v*.
+
+### Ce qui a ete ecrit
+
+- `.github/workflows/build-windows.yml` : job build (NSIS x64 sur
+  windows-latest) + job build-mac (dmg Apple Silicon sur macos-latest) ;
+  attache beide a la release par le tag v0.1.0 tant que la version courante
+  reste 0.1.0. README note l'etat de non-signature (SmartScreen -> « Executer
+  quand meme » / Gatekeeper -> clic droit Ouvrir) — le client confirme le
+  meme regime pour Windows (pas de certificat).
+- Version package.json 1.0.0 -> 0.1.0 (alignee sur la release ; les noms
+  d'artefacts suivent).
+
+### Le piege du chantier — trois couches, chacune avec son nom
+
+1. npm bug #4828 : les dependances optionnelles par-plateforme (rollup,
+   esbuild) manquent si le lockfile fut genere ailleurs — installees a plat
+   en CI (--no-save, lockfile intact).
+2. electron-rebuild ne lit pas les noms de prebuilds NAPI modernes : argon2
+   0.45 livre `prebuilds/win32-x64/argon2.glibc.node`, le detecteur cherche
+   `node.napi.node` — sinon il retombe sur node-gyp et exige Visual Studio.
+   Remede : une copie renommee (NAPI s'execute tel quel sous Electron) ;
+   justifiee en commentaire dans le workflow. Le build local x64 --dir passe
+   rc=0 une fois le nom pose (binaire PE32+ verifies au type pour sqlite3 et
+   argon2).
+3. Le DELETE du tag v0.1.0 (voie de declenchement : le jeton n'a pas
+   Actions:write, le dispatch API refuse 403 ; le push du tag lance le
+   workflow) met la release au repos DRAFT — re-patch draft:false apres
+   chaque manipulation du tag. Le relachement des liens 404 -> 200 se cale
+   apres le rebind du tag.
+
+### Verifie le 16/10
+
+Release v0.1.0 : QUATRE assets, liens tous HTTP 200 a la taille exacte —
+claus.io.Setup.0.1.0.exe (287 Mo), claus.io-0.1.0-arm64.dmg (301 Mo),
+claus.io-0.1.0-arm64.AppImage (325 Mo), clausio_0.1.0_arm64.deb (251 Mo).
+CI sur 11951035 : 7 check-runs vertes (86 portes, e2e, types, build, journal,
+vitest 158, build Windows, build-mac). Landing servie : 0 promesse revee, la
+regle fondatrice lisible. Les codes faillibles restent en archive SHA :
+/tmp/opencode/sha-tag-v010-avant.txt (1c6aba6, avant reforge du tag).
