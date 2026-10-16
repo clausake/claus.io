@@ -42,6 +42,17 @@ jobs:
       - name: native rollup/esbuild (npm bug #4828)
         run: npm i --no-save @rollup/rollup-win32-x64-msvc @esbuild/win32-x64
 
+      # electron-rebuild ne reconnaît pas les noms de prébuilds NAPI modernes
+      # d'argon2 (0.45 livre « argon2.glibc.node », le détecteur cherche
+      # « node.napi.node ») : sans la copie, il retombe sur node-gyp et exige
+      # Visual Studio. La copie est device-independante : NAPI s'exécute tel
+      # quel sous Electron.
+      - name: argon2 — prébuild NAPI visible par electron-rebuild
+        shell: bash
+        run: |
+          cp node_modules/argon2/prebuilds/win32-x64/argon2.glibc.node \
+             node_modules/argon2/prebuilds/win32-x64/node.napi.node
+
       - run: npm run build
 
       - run: npm run build:server
