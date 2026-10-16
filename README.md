@@ -62,7 +62,7 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 
 Le choix se fait dans **Réglages → Intelligence** et est **effectif à la génération** (jugé par la CI — voir `src/shared/llm.ts` et sa morsure) :
 
-- **[Ollama](https://ollama.com)** (défaut) — API native, vision incluse, repli OCR Tesseract automatique
+- **Moteur d'inférence local** (par défaut) — vision incluse, repli OCR Tesseract automatique
 - **Serveurs locaux compatibles OpenAI** — llama.cpp-server, **vLLM** (port 8000 détecté automatiquement), SGLang, LM Studio (`/v1/chat/completions`)
 - **Fournisseurs cloud** (optionnel, liste blanche fermée) : OpenAI, Mistral, Anthropic, Cohere, DeepSeek — la clef d'API vit dans l'environnement (`OPENAI_API_KEY`...), jamais en base, jamais à l'écran ; l'URL de la liste ne peut pas être remplacée (anti evil-proxy)
 
@@ -83,7 +83,7 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 - **Node.js >= 22**
 - **Python 3.12** (pour le lot des portes de qualité)
-- **Ollama** + un modèle (`ollama pull llama3.1`) — ou un autre serveur local
+- **Un moteur IA local** de votre choix — ou aucun : le logiciel fonctionne sans IA
 
 ## Installation
 
