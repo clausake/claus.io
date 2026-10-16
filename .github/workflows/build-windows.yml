@@ -75,3 +75,48 @@ jobs:
         with:
           tag_name: ${{ steps.rel.outputs.tag }}
           files: release/*.exe
+
+  build-mac:
+    # Le .dmg ne se compile QUE sur une machine Apple (une règle de facto
+    # d'Apple sur les outils de création d'images disque macOS) : on passe
+    # par un runner GitHub Actions Apple Silicon (macOS 14/15 arm64).
+    # Sans certificat de développeur Apple : le .dmg est non signé, l'utilisateur
+    # devra confirmer à la main à la première ouverture (clic droit → Ouvrir).
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Le même bug npm #4828 que sous Windows : les paquets optionnels par
+      # plateforme (rollup, esbuild) manquent si le lockfile a été généré
+      # ailleurs. Le runner est Apple Silicon (darwin-arm64).
+      - name: native rollup/esbuild (npm bug #4828)
+        run: npm i --no-save @rollup/rollup-darwin-arm64 @esbuild/darwin-arm64
+
+      - run: npm run build
+
+      - run: npm run build:server
+
+      - name: electron-builder DMG (Apple Silicon, sans publication)
+        run: npx electron-builder -m --publish never
+
+      - name: à quelle release rattacher
+        id: rel
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: attacher l'installeur à la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          files: release/*.dmg
