@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>claus.io — Gestion de cuisine professionnelle · IA 100 % locale</title>
+    <meta name="description" content="Système expert de gestion de cuisine professionnelle : HACCP, inventaire, achats, fiches techniques, plan de production. IA 100 % locale (ou sans IA). Interface en français, anglais, allemand, espagnol, italien. Libre, EUPL-1.2.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            900: '#064e3b',
+                        },
+                        amber: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #030303;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .clip-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* --- GLASSMORPHISM & LED LIGHTING --- */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            isolation: isolate;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0.1), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .led-glow {
+            position: absolute;
+            inset: -2px;
+            background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, -20%), var(--led-color, rgba(16, 185, 129, 0.3)), transparent 40%);
+            z-index: -1;
+            border-radius: inherit;
+            filter: blur(20px);
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+        }
+
+        .glass-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--led-color-inner, rgba(16, 185, 129, 0.08)), transparent 40%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glass-card:hover .led-glow,
+        .glass-card.in-view .led-glow { opacity: 1; }
+        .glass-card:hover::after { opacity: 1; }
+        .glass-card:hover { border-color: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
+
+        /* --- ANIMATIONS AU SCROLL --- */
+        .reveal { opacity: 0; transform: translateY(50px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #030303; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+        /* --- SPATIAL CARD CAROUSEL --- */
+        .spatial-container {
+            perspective: 2000px;
+            transform-style: preserve-3d;
+            height: 500px;
+        }
+
+        .spatial-card {
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-origin: center center;
+            cursor: pointer;
+            box-shadow: -30px 40px 70px rgba(0,0,0,0.9), 0 0 50px var(--led-color-inner, rgba(16,185,129,0.15));
+            background-color: #050505;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 75%;
+        }
+
+        /* Vue isométrique — 4 niveaux de profondeur */
+        .c-1 { transform: rotateX(25deg) rotateY(-20deg) rotateZ(3deg) translateZ(150px) translateY(-60px) translateX(-60px); z-index: 4; }
+        .c-2 { transform: rotateX(25deg) rotateY(-20deg) rotateZ(3deg) translateZ(50px) translateY(-10px) translateX(-10px); z-index: 3; opacity: 0.85; }
+        .c-3 { transform: rotateX(25deg) rotateY(-20deg) rotateZ(3deg) translateZ(-50px) translateY(40px) translateX(40px); z-index: 2; opacity: 0.7; }
+        .c-4 { transform: rotateX(25deg) rotateY(-20deg) rotateZ(3deg) translateZ(-150px) translateY(90px) translateX(90px); z-index: 1; opacity: 0.55; }
+
+        .spatial-container:hover .spatial-card {
+            opacity: 0.3;
+            filter: blur(2px);
+            transform: rotateX(15deg) rotateY(-15deg);
+        }
+
+        .spatial-container:hover .c-1 { transform: rotateX(15deg) rotateY(-15deg) translateZ(150px) translateY(-100px) translateX(-100px); opacity: 0.6; }
+        .spatial-container:hover .c-2 { transform: rotateX(15deg) rotateY(-15deg) translateZ(50px) translateY(-50px) translateX(-50px); opacity: 0.6; }
+        .spatial-container:hover .c-3 { transform: rotateX(15deg) rotateY(-15deg) translateZ(-50px) translateY(0px) translateX(0px); opacity: 0.6; }
+        .spatial-container:hover .c-4 { transform: rotateX(15deg) rotateY(-15deg) translateZ(-150px) translateY(50px) translateX(50px); opacity: 0.6; }
+
+        .spatial-container .spatial-card:hover {
+            transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateZ(300px) translateY(0px) translateX(0px) scale(1.1) !important;
+            z-index: 50 !important;
+            opacity: 1 !important;
+            filter: blur(0px) !important;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.95), 0 0 80px var(--led-color, rgba(16,185,129,0.5));
+            border-color: var(--led-color, rgba(16,185,129,0.8));
+        }
+
+        /* Démo vidéo : l'overlay de lecture s'efface quand la vidéo tourne */
+        #demo-wrap.is-playing #demo-overlay { opacity: 0; pointer-events: none; }
+
+        @media (max-width: 900px) {
+            .spatial-container { height: 380px; }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+
+    <!-- Barre de navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-[#030303]/70 backdrop-blur-xl border-b border-white/5 px-6 py-4 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto flex justify-between items-center text-sm font-medium tracking-wide">
+            <a href="/" class="text-gray-400 hover:text-white transition-colors flex items-center gap-3 no-underline">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></div>
+                <span>claus.io</span>
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="https://clausake.github.io/claus.io/" class="text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 no-underline">claus.io</a>
+                <a href="https://github.com/clausake/claus.io" class="text-gray-400 hover:text-white transition-colors no-underline">Code source</a>
+                <a href="https://github.com/clausake/claus.io/releases" class="text-gray-400 hover:text-white transition-colors no-underline">v0.1.0</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Section Héros -->
+    <header class="relative pt-40 pb-36 px-6 overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#030303] to-[#030303] pointer-events-none"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto relative z-10 flex flex-col items-center text-center reveal">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card mb-8 border border-emerald-500/30">
+                <i data-feather="layout" class="text-emerald-400 w-4 h-4"></i>
+                <span class="text-xs uppercase tracking-widest text-emerald-100 font-bold">Gestion de cuisine professionnelle · Open source</span>
+            </div>
+
+            <h1 class="text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight max-w-4xl leading-tight">
+                <span class="clip-text bg-gradient-to-b from-white to-white/60">Gestion de Cuisine Pro</span><br/>
+                <span class="clip-text bg-gradient-to-r from-emerald-400 to-emerald-200">IA 100 % Locale</span>
+            </h1>
+
+            <p class="text-lg text-gray-400 mb-6 max-w-2xl leading-relaxed">
+                HACCP, inventaire, achats fournisseurs, fiches techniques, plan de production — et l'IA tourne sur votre propre ordinateur. Zéro cloud, autonomie totale, souveraineté des données.
+            </p>
+
+            <div class="inlinline-flex flex-wrap items-center justify-center gap-2 mb-12">
+                <span class="px-3 py-1 rounded-full glass-card border border-emerald-500/25 text-xs text-emerald-200">🌍 Interface en 5 langues · FR · EN · DE · ES · IT</span>
+                <span class="px-3 py-1 rounded-full glass-card border border-white/10 text-xs text-gray-300">EUPL-1.2</span>
+                <span class="px-3 py-1 rounded-full glass-card border border-white/10 text-xs text-gray-300">« Continuer sans IA » : un chemin de premier ordre</span>
+            </div>
+
+            <!-- Pile spatiale des modules -->
+            <div class="w-full max-w-5xl mx-auto h-[400px] md:h-[550px] spatial-container relative reveal delay-200 flex justify-center items-center mt-6">
+                <!-- Carte 1 -->
+                <div class="absolute w-[85%] md:w-[78%] spatial-card c-1 overflow-hidden bg-[#0a0a0a]" style="--led-color: rgba(16, 185, 129, 0.6); --led-color-inner: rgba(16, 185, 129, 0.15);">
+                    <img src="public/screenshots/tableau-de-bord.png" alt="1. Tableau de bord" class="w-full object-cover" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-8 flex items-center gap-4 z-20 pointer-events-none">
+                        <div class="w-11 h-11 bg-emerald-500/20 rounded-xl flex items-center justify-center border border-emerald-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                            <i data-feather="layout" class="text-emerald-400 w-5 h-5"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-white font-bold text-lg tracking-wide">1. Tableau de bord</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 2 -->
+                <div class="absolute w-[85%] md:w-[78%] spatial-card c-2 overflow-hidden bg-[#0a0a0a]" style="--led-color: rgba(59, 130, 246, 0.6); --led-color-inner: rgba(59, 130, 246, 0.15);">
+                    <img src="public/screenshots/fiches-techniques.png" alt="2. Fiches Techniques" class="w-full object-cover" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-8 flex items-center gap-4 z-20 pointer-events-none">
+                        <div class="w-11 h-11 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                            <i data-feather="book-open" class="text-blue-400 w-5 h-5"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-white font-bold text-lg tracking-wide">2. Fiches Techniques</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 3 -->
+                <div class="absolute w-[85%] md:w-[78%] spatial-card c-3 overflow-hidden bg-[#0a0a0a]" style="--led-color: rgba(245, 158, 11, 0.6); --led-color-inner: rgba(245, 158, 11, 0.15);">
+                    <img src="public/screenshots/chat-culinaire.png" alt="3. Chat Culinaire" class="w-full object-cover" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-8 flex items-center gap-4 z-20 pointer-events-none">
+                        <div class="w-11 h-11 bg-amber-500/20 rounded-xl flex items-center justify-center border border-amber-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                            <i data-feather="message-square" class="text-amber-400 w-5 h-5"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-white font-bold text-lg tracking-wide">3. Chat Culinaire</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte 4 -->
+                <div class="absolute w-[85%] md:w-[78%] spatial-card c-4 overflow-hidden bg-[#0a0a0a]" style="--led-color: rgba(16, 185, 129, 0.6); --led-color-inner: rgba(16, 185, 129, 0.15);">
+                    <img src="public/screenshots/tracabilite-haccp.png" alt="4. Traçabilité HACCP" class="w-full object-cover" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-8 flex items-center gap-4 z-20 pointer-events-none">
+                        <div class="w-11 h-11 bg-emerald-500/20 rounded-xl flex items-center justify-center border border-emerald-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                            <i data-feather="shield" class="text-emerald-400 w-5 h-5"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-white font-bold text-lg tracking-wide">4. Traçabilité HACCP</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vidéo de démonstration sous cadre vitré -->
+            <div class="w-full max-w-[1000px] mx-auto mt-24 md:mt-32 relative z-30 reveal delay-200" style="perspective:1200px">
+                <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-emerald-500/20 blur-[150px] rounded-full w-full max-w-[1000px] h-96 pointer-events-none"></div>
+                <div id="demo-wrap" class="relative w-full group">
+                    <div class="glass-card rounded-[2.8rem] w-full relative z-10 border-emerald-500/10 hover:border-emerald-500/30 transition-colors duration-500">
+                        <div class="p-2 md:p-5 relative rounded-[inherit]">
+                            <div id="demo-overlay" class="absolute inset-x-2 md:inset-x-5 top-2 md:top-5 bottom-2 md:bottom-5 z-20 flex items-center justify-center rounded-[2rem] bg-black/10 cursor-pointer group/overlay transition-all duration-300">
+                                <div class="w-20 h-20 md:w-24 md:h-24 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/50 group-hover/overlay:bg-emerald-500/40 group-hover/overlay:scale-110 transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                                    <svg class="w-10 h-10 md:w-12 md:h-12 text-emerald-400 ml-2" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            </div>
+                            <video id="demo-video" poster="public/screenshot-dashboard.png" loop muted playsinline preload="auto" class="w-full aspect-video object-contain bg-black/50 rounded-[2rem] shadow-[0_0_40px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_80px_rgba(16,185,129,0.3)] transition-all duration-700 cursor-pointer"><source src="public/demo-clausio.webm" type="video/webm"></video>
+                            <button id="demo-sound" type="button" aria-label="Activer le son" class="absolute top-4 right-4 md:top-8 md:right-8 z-50 flex items-center gap-2 p-2 px-3 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full text-white border border-white/20 transition-all duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 shadow-xl">
+                                <span id="demo-sound-label" class="text-[8px] md:hidden font-bold uppercase tracking-wider text-emerald-400 animate-pulse">Activer le son</span>
+                                <i id="demo-sound-icon" data-feather="volume-x" class="w-4 h-4 text-emerald-400"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-gray-500 text-xs mt-12 animate-pulse flex items-center justify-center gap-2 font-mono uppercase tracking-widest">
+                <i data-feather="mouse-pointer" class="w-4 h-4 text-emerald-400"></i> Survol de la pile pour &#233;carter et visualiser &#183; D&#233;mo vid&#233;o : cliquez pour lire
+            </p>
+        </div>
+    </header>
+
+    <main>
+    <!-- Section : Modules de production -->
+    <section class="py-24 px-6 relative z-10 border-t border-white/5">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-20 reveal">
+                <h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Modules de Production : <span class="text-emerald-400">Le Contrôle Absolu</span></h2>
+                <div class="w-24 h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent rounded-full mx-auto"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="message-square" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Chat Culinaire</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Un second de cuisine IA, à l'atelier de l'Ingénierie des Menus : la recette se discute et s'affine au fil de la conversation, et la fiche prête part dans Fiches Techniques en un geste. Se coupe proprement : « Continuer sans IA ».</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-100 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="camera" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Saisie par Photo</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Extraction du contenu d'un cliché de facture, bon de livraison ou avoir (OCR 100 % local) — la validation de réception crée le lot et son étiquette de traçabilité.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-200 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="book-open" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Fiches Techniques Intelligentes</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Création, modélisation et ajustement des recettes. Coût de revient suivi à la virgule près, allergènes documentés et affichés clairement à l'écran.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-300 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="pie-chart" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Maîtrise du Food-Cost & Marges</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Les courbes de coûts sur sept jours suivent la tendance, et l'ingénierie des menus classe chaque plat en quatre indicateurs de profitabilité — la décision reste une validation de votre main.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="shield" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Traçabilité & HACCP</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Digitalisation des plans de maîtrise sanitaire : relevés de températures, relevés de réception, et étiquettes de lot créées automatiquement à chaque réception scannée.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-100 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="users" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Management du Personnel</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Plannings de la brigade (duplication d'une semaine en un clic), rôles, estimation des coûts de main d'œuvre et export CSV du planning.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-200 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="calendar" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Planification Production</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Les menus du jour planifiés par carte (Entrée, Plat, Dessert), chaque plat relié à sa fiche technique — le plan reste attaché à la vraie recette.</p>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 h-full reveal delay-300 interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); --led-color-inner: rgba(16, 185, 129, 0.05);">
+                    <div class="led-glow"></div>
+                    <div class="w-12 h-12 bg-[#0a1a14] rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        <i data-feather="zap" class="text-emerald-400 w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Stocks & Achats</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Les besoins recalculés selon l'inventaire, les bons de commande vérifiés ligne par ligne avant validation. L'IA ne prépare rien seule : elle propose des actions, vous les appliquez de votre main.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section : Infrastructure locale -->
+    <section class="py-24 px-6 bg-[#030303] relative z-10">
+        <div class="absolute inset-0 bg-gradient-to-b from-[#08120e] to-transparent pointer-events-none opacity-50"></div>
+        <div class="max-w-6xl mx-auto relative z-10">
+
+            <div class="text-center mb-16 reveal">
+                <div class="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+                    <i data-feather="zap" class="text-emerald-400 w-5 h-5"></i>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-display font-bold mb-4 clip-text bg-gradient-to-r from-emerald-300 to-emerald-500">Infrastructure Locale Ultra-Sécurisée</h2>
+                <p class="text-emerald-500 tracking-[0.2em] text-xs font-bold uppercase">Traitement interne. 0 % de latence. 100 % de données protégées.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <div class="glass-card rounded-[1.5rem] p-8 flex items-start gap-5 reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="mt-1 w-10 h-10 flex-shrink-0 bg-[#0a1a14] rounded-xl flex items-center justify-center border border-emerald-500/20">
+                        <i data-feather="database" class="text-emerald-400 w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-base font-bold text-white mb-2 uppercase tracking-wide">Base de Données SQLite</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Données structurées privées, stockées localement sans aucun Cloud.</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[1.5rem] p-8 flex items-start gap-5 reveal delay-100 interactive-card" style="--led-color: rgba(16, 185, 129, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="mt-1 w-10 h-10 flex-shrink-0 bg-[#0a1a14] rounded-xl flex items-center justify-center border border-emerald-500/20">
+                        <i data-feather="cpu" class="text-emerald-400 w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-base font-bold text-white mb-2 uppercase tracking-wide">IA 100 % Locale & Privée</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Aucune donnée n'est envoyée à des serveurs externes. L'analyse est effectuée exclusivement en local — ou se coupe entièrement : « Continuer sans IA ».</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[1.5rem] p-8 flex items-start gap-5 reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="mt-1 w-10 h-10 flex-shrink-0 bg-[#0a1a14] rounded-xl flex items-center justify-center border border-emerald-500/20">
+                        <i data-feather="lock" class="text-emerald-400 w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-base font-bold text-white mb-2 uppercase tracking-wide">Souveraineté Totale</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Les recettes et marges restent confidentielles, loin de tout tracking.</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[1.5rem] p-8 flex items-start gap-5 reveal delay-100 interactive-card" style="--led-color: rgba(16, 185, 129, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="mt-1 w-10 h-10 flex-shrink-0 bg-[#0a1a14] rounded-xl flex items-center justify-center border border-emerald-500/20">
+                        <i data-feather="smartphone" class="text-emerald-400 w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-base font-bold text-white mb-2 uppercase tracking-wide">Accès Mobile Local</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">Installation sur PC, scan et consultation sur smartphone — les modules HACCP utilisent directement l'appareil photo du téléphone.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration minimale -->
+            <div class="glass-card rounded-[2rem] p-8 md:p-10 reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.2);">
+                <div class="led-glow"></div>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-white/5 gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-[#0a1a14] rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            <i data-feather="hard-drive" class="text-emerald-400 w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Configuration Minimum</h3>
+                            <p class="text-xs text-emerald-500/70 font-mono tracking-widest mt-1">SYS.OP.MIN REQ</p>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <span class="text-xs font-mono text-emerald-400 tracking-wider">SYSTEM READY</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Système :</span> Windows 10/11, macOS (12+), ou Linux</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Mémoire Vive (RAM) :</span> 8 Go minimum (16 Go au mieux)</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Processeur :</span> Puce Apple (M1+) ou GPU dédié (4 Go+ VRAM)</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Stockage :</span> ~1,5 Go (interface) + 5-10 Go requis par le moteur IA local</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Langues :</span> interface en français, anglais, allemand, espagnol, italien</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i data-feather="check" class="text-emerald-500 w-4 h-4 mt-0.5"></i>
+                        <p class="text-sm text-gray-300 font-mono"><span class="text-gray-500">Sans IA :</span> remplissage manuel complet, rapide — aucune perte de fonction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section : Autonomie totale -->
+    <section class="py-24 px-6 relative z-10 border-t border-white/5">
+        <div class="max-w-6xl mx-auto">
+
+            <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+                <h2 class="text-3xl md:text-5xl font-display font-bold mb-8">Autonomie Totale</h2>
+                <p class="text-gray-400 leading-relaxed text-sm md:text-base">
+                    Même sans équipement puissant, le cœur du système reste pleinement fonctionnel. Le logiciel est totalement prévu pour une utilisation sans IA : le remplissage des éléments se fait simplement de manière manuelle, via une interface ultra-rapide.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="glass-card rounded-[2rem] p-8 md:p-10 reveal interactive-card" style="--led-color: rgba(16, 185, 129, 0.4); border-bottom: 2px solid rgba(16, 185, 129, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20 text-emerald-400">
+                            <i data-feather="database" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white uppercase tracking-wide leading-tight">Utilisation Classique <br/><span class="text-xs text-gray-400 font-normal">(Base de données locale intégrée)</span></h3>
+                    </div>
+
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                            <p class="text-sm text-gray-300"><strong class="text-gray-100 font-medium">Inventaire & Stocks :</strong> ajout manuel, suivi des seuils d'alerte, catégories.</p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                            <p class="text-sm text-gray-300"><strong class="text-gray-100 font-medium">HACCP :</strong> historique et traçabilité manuelle (températures, DLC, carnets sanitaires).</p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                            <p class="text-sm text-gray-300"><strong class="text-gray-100 font-medium">Achats :</strong> calcul automatique des besoins selon l'inventaire et export de bons de commande.</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-8 md:p-10 reveal delay-200 interactive-card" style="--led-color: rgba(245, 158, 11, 0.4); border-bottom: 2px solid rgba(245, 158, 11, 0.3);">
+                    <div class="led-glow"></div>
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20 text-amber-400">
+                            <i data-feather="cpu" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white uppercase tracking-wide leading-tight">Fonctionnalités Avancées <br/><span class="text-xs text-gray-400 font-normal">(Moteur IA activé) :</span></h3>
+                    </div>
+
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                            <p class="text-sm text-gray-300">L'Assistant Culinaire conversationnel — dans l'Ingénierie des Menus</p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                            <p class="text-sm text-gray-300">Extraction automatique des données depuis une photo de bon de livraison, facture, avoir, étiquette DLC.</p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                            <p class="text-sm text-gray-300">L'analyse aromatique des ingrédients — le moteur Épicure.</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section : Open source -->
+    <section class="py-24 px-6 relative z-10 border-t border-white/5">
+        <div class="max-w-5xl mx-auto">
+            <div class="glass-card rounded-[2rem] p-8 md:p-12 reveal interactive-card text-center" style="--led-color: rgba(245, 158, 11, 0.35); --led-color-inner: rgba(245, 158, 11, 0.08); border-bottom: 2px solid rgba(245, 158, 11, 0.3);">
+                <div class="led-glow"></div>
+                <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-500/25">
+                    <i data-feather="github" class="text-amber-400 w-6 h-6"></i>
+                </div>
+                <h2 class="text-2xl md:text-4xl font-display font-bold mb-6 text-white">Logiciel open source</h2>
+                <p class="text-gray-300 leading-relaxed text-sm md:text-base max-w-3xl mx-auto mb-4">
+                    Ce logiciel de gestion pour restaurateurs est <strong class="text-gray-100">open source</strong> et sert aussi d'<strong class="text-gray-100">outil d'apprentissage pédagogique dans les lycées hôteliers</strong> : fiches techniques, HACCP, food-cost, stocks, production — le même socle pour la cuisine professionnelle et la formation.
+                </p>
+                <p class="text-gray-400 leading-relaxed text-sm md:text-base max-w-3xl mx-auto mb-8">
+                    Le code source est hébergé librement sur GitHub : disponible au téléchargement, l'historique complet du développement est balisé pas à pas, la CI exécute 86 portes de vérification automatiques.
+                </p>
+                <a href="https://github.com/clausake/claus.io/releases" class="inline-flex items-center gap-3 px-6 py-3 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 transition-colors no-underline font-medium">
+                    <i data-feather="download" class="w-4 h-4"></i>
+                    <span>Version v0.1.0 — github.com/clausake/claus.io</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- Pied de page -->
+    <footer class="py-12 px-6 border-t border-white/5 text-center text-gray-600 text-sm bg-[#010101] relative z-10">
+        <div class="max-w-7xl mx-auto flex flex-col items-center justify-center gap-4">
+            <div class="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+                <i data-feather="code" class="w-4 h-4 text-emerald-500"></i>
+            </div>
+            <p>claus.io · EUPL-1.2 · <script>document.write(new Date().getFullYear())</script> — Vos données ne quittent jamais votre machine.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        feather.replace();
+
+        // Suivi LED à la souris
+        document.querySelectorAll('.interactive-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.setProperty('--mouse-x', `50%`);
+                card.style.setProperty('--mouse-y', `50%`);
+            });
+        });
+
+        // Révélation au défilement
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    if (entry.target.classList.contains('interactive-card')) {
+                        entry.target.classList.add('in-view');
+                        setTimeout(() => entry.target.classList.remove('in-view'), 1500);
+                    }
+                }
+            });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll('.reveal, .interactive-card').forEach(el => observer.observe(el));
+
+        // Démo vidéo : lecture/pause au clic, son au bouton, fondu d'entouree d'overlay
+        (function () {
+            const vid = document.getElementById('demo-video');
+            const wrap = document.getElementById('demo-wrap');
+            const overlay = document.getElementById('demo-overlay');
+            const soundBtn = document.getElementById('demo-sound');
+            const soundIcon = document.getElementById('demo-sound-icon');
+            const soundLabel = document.getElementById('demo-sound-label');
+            if (!vid || !wrap || !overlay || !soundBtn) return;
+            const sync = () => {
+                wrap.classList.toggle('is-playing', !vid.paused);
+                feather.replace();
+            };
+            overlay.addEventListener('click', () => { overlay.style.display = 'none'; vid.play().catch(() => {}); });
+            vid.addEventListener('click', () => { if (vid.paused) vid.play(); else vid.pause(); });
+            vid.addEventListener('play', sync);
+            vid.addEventListener('pause', sync);
+            soundBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                vid.muted = !vid.muted;
+                soundIcon.setAttribute('data-feather', vid.muted ? 'volume-x' : 'volume-2');
+                soundLabel.textContent = vid.muted ? 'Activer le son' : 'Couper le son';
+                feather.replace();
+            });
+        })();
+
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) nav.classList.add('shadow-lg', 'shadow-emerald-900/10');
+            else nav.classList.remove('shadow-lg', 'shadow-emerald-900/10');
+        });
+    </script>
+</body>
+</html>
