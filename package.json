@@ -113,6 +113,8 @@
     "verify:hermes-mord": "python3 scripts/negative-test-hermes.py",
     "verify:types": "python3 scripts/verify-types.py",
     "verify:types-mord": "python3 scripts/negative-test-types.py",
+    "verify:chemins-empaquete": "python3 scripts/verify-chemins-empaquete.py",
+    "verify:chemins-empaquete-mord": "python3 scripts/negative-test-chemins-empaquete.py",
     "verify:llm-porte": "npx vitest run test/unit/llm-porte.test.ts",
     "verify:llm-porte-mord": "python3 scripts/negative-test-llm-porte.py"
   },
@@ -126,7 +128,12 @@
       "dist-server/**/*",
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "vocab.json",
+      "vocab_translations.json",
+      "embeddings.chem.safetensors",
+      "embeddings.cooc.safetensors",
+      "embeddings.core.safetensors"
     ],
     "win": {
       "target": "nsis"

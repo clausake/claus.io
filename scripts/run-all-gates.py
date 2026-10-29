@@ -194,6 +194,12 @@ DEFAUT = ["verify:split",
           # le juge ROUGISSE. La retirer rend le reglag mensonger a nouveau
           # sans qu'aucun lot ne le voie.
           "verify:llm-porte", "verify:llm-porte-mord",
+          # Les chemins de l'application EMPAQUETEE (defaut mesure sur l'installeur
+          # 0.1.0 : fenetre « Not Found », Epicure en vecteurs nuls, guide en 404 —
+          # trois pannes silencieuses d'un seul process.cwd()). La porte lit le
+          # contrat dans la source ; la morsure reintroduit le defaut d'origine et
+          # exige que la porte ROUGISSE (mesure : 2 mutations, 2 rouges).
+          "verify:chemins-empaquete", "verify:chemins-empaquete-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

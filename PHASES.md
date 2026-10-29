@@ -1386,3 +1386,116 @@ CI sur 11951035 : 7 check-runs vertes (86 portes, e2e, types, build, journal,
 vitest 158, build Windows, build-mac). Landing servie : 0 promesse revee, la
 regle fondatrice lisible. Les codes faillibles restent en archive SHA :
 /tmp/opencode/sha-tag-v010-avant.txt (1c6aba6, avant reforge du tag).
+
+## Chantier 20 — Le déploiement Windows : la fenêtre « Not Found » et le ZIP qui ne compilait pas (29/10)
+
+### Ce que le client a rapporté, et ce qui a été MESURÉ
+
+1. ZIP GitHub + `LANCER_APPLICATION.bat` → `'vite' n'est pas reconnu en tant que
+   commande interne ou externe` puis `[ERREUR] Echec lors de la compilation du
+   frontend.`
+   - **Cause (rejouée)** : le `.bat` posait `set NODE_ENV=production` AVANT
+     `npm install`. npm lit cette variable et, en production, n'installe PAS les
+     devDependencies — or `vite`, `tsx`, `esbuild`, `electron` en sont. Le
+     `npm install` rend 0 (donc le script ne rougit pas) avec un `node_modules`
+     sans `vite`. Mesure : `NODE_ENV=production npm install` sur un package.json
+     portant vite en devDependency → `node_modules/.bin/vite` ABSENT ; le même
+     install avec `--include=dev` → binaire présent, `vite/6.4.5` répond.
+2. Installeur Windows 0.1.0 → fenêtre affichant « Not Found ».
+   - **Cause (lue dans le LIVRÉ, pas dans le source)** : l'AppImage arm64 de la
+     release a été téléchargée (340 552 877 o), extraite (`unsquashfs` via
+     `--appimage-extract`), et son `resources/app.asar` (369 718 838 o, 27 924
+     entrées) ouvert à la main : `dist/index.html` y EST (4 293 o, 40 chunks) —
+     mais le bundle embarqué porte à la ligne 8184
+     `const distPath = import_path13.default.join(process.cwd(), "dist")`.
+     Empaquetée, l'application tient `dist` DANS son asar, alors que le cwd de
+     l'exe est le dossier d'installation (ou `System32`). Le `express.static` ne
+     trouve rien, l'attrape-tout `app.get("*")` fait `sendFile` sur un chemin
+     inexistant → page Express « Not Found ».
+   - **Reproduction** : réplique exacte de `server.ts:204-242` servie depuis un
+     cwd décalé, `NODE_ENV=production` → `HTTP 404` + corps `Not Found`. Depuis
+     le bon cwd → `HTTP 200` + la page réelle. Le code HTTP seul ne tranche pas :
+     c'est le `distPath` affiché par le serveur qui dit la vérité.
+
+### Deux autres pannes silencieuses du MÊME défaut (non signalées par le client)
+
+3. Epicure : le moteur d'accords lisait `"vocab.json"`, `"embeddings.*.safetensors"`
+   en chemins RELATIFS, et ces fichiers n'étaient pas embarqués par
+   `build.files`. Dans le livré : `CRITICAL error loading EpicureModel embedding
+   files: ENOENT vocab.json` → vecteurs NULS, interface muette à côté.
+4. `src/routes/admin.ts` : le guide se téléchargeait depuis
+   `process.cwd()/public/Executive_Guide.pdf` (dossier non embarqué) → 404.
+
+### La réparation
+
+- `src/services/chemin-ressources.ts` (nouveau) : résolution par CANDIDATS —
+  `COOKDRIVE_DIST` (chemin exact posé par le lanceur) → parent du module
+  (`dist-server/..` = la racine de l'asar, et la racine du dépôt en local) →
+  cwd. Le premier candidat qui contient RÉELLEMENT le fichier sentinelle gagne ;
+  aucun candidat lève `RESSOURCE_INTROUVABLE` en nommant les chemins fouillés.
+  (Un 404 muet ne dit rien ; cette erreur si.)
+- `server.ts` sert `resoudreDist()`, `epicure.ts` lit `resoudreDonneesEpicure()`,
+  `admin.ts` prend le PDF dans dist (repli `public/` pour le dev).
+- `electron/main.cjs` pose `COOKDRIVE_DIST = path.join(__dirname, '..', 'dist')`.
+- `package.json` `build.files` embarque `vocab.json`, `vocab_translations.json`
+  et les trois `embeddings.*.safetensors`.
+- `LANCER_APPLICATION.bat` / `.ps1` : `NODE_ENV=production` déplacé JUSTE AVANT
+  `npm start` ; installation en `npm install --include=dev` ; le contrôle passe
+  de « `node_modules` existe » à « `node_modules/vite` ET `node_modules/tsx`
+  existent » (un dossier tronqué passait avant) ; le navigateur s'ouvre après le
+  démarrage du serveur.
+- `package-lock.json` régénéré : `npm ci` échouait (`EUSAGE`, 34 paquets
+  optionnels absents du lock) — donc TOUT nouveau build GitHub Actions était
+  bloqué avant même la compilation. Mesuré : `npm ci` → `RC=1` avant, `RC=0`
+  après (616 insertions / 148 suppressions).
+- `README_LANCEMENT.txt` réécrit (il renvoyait à « AI Studio → Exporter », voie
+  qui n'existe plus, et son texte était corrompu en octets).
+
+### Les portes ajoutées (règle 6 : une porte qui ne pique pas est décorative)
+
+- `verify:chemins-empaquete` (`scripts/verify-chemins-empaquete.py`) : 6 règles
+  lues dans la source — aucun des trois chemins ne retombe sur le cwd nu, le
+  lanceur pose `COOKDRIVE_DIST`, les cinq fichiers Epicure sont dans
+  `build.files`, la résolution qui échoue NOMME son échec.
+- `verify:chemins-empaquete-mord` : rejoue la porte sur une COPIE du dépôt où le
+  défaut d'origine est réintroduit, et exige qu'elle ROUGISSE.
+  Mesuré au PREMIER essai : les deux mutations rendaient la porte VERTE — la
+  porte lisait le dépôt de travail et non la copie jugée. Corrigée (la racine
+  jugée est passée en argument), re-mesuré : `mutations=2 rouges=2`,
+  `VERDICT : la porte voit le defaut d'origine`.
+- Les deux sont au `DEFAUT` de `scripts/run-all-gates.py` (sinon : porte
+  décorative, règle 6) — jouées par le lot : `GATES=2 ROUGES=0`.
+
+### Vérifié le 29/10 (preuves re-mesurées, pas relues)
+
+- `npx tsc --noEmit` → RC=0. `npx vitest run` → 16 fichiers, 184 tests verts
+  (dont 13 nouveaux dans `test/unit/chemin-ressources.test.ts`, joués dans leurs
+  deux directions).
+- `npm run build` → chunk d'entrée 490,26 ko (plafond 620) ; `npm run build:server`
+  → `dist-server/server.cjs` 327,6 ko.
+- `npm ci` → RC=0 (il rendait RC=1).
+- Lancement du BUNDLE depuis un cwd étranger (`/`) : `EpicureModel : donnees
+  lues depuis …` + `EpicureModel loaded 1790 ingredients and vectors successful`
+  + `[frontend] dist servi depuis …` + `GET / → HTTP 200 4 293 o`.
+- `npx electron-builder -l` → AppImage arm64 construite, asar vérifié à la main :
+  `dist/index.html` présent, les cinq fichiers Epicure à la racine de l'asar,
+  `process.cwd(), "dist"` : 0 occurrence dans le bundle.
+- LA FENÊTRE, jugée par CDP sur l'application empaquetée (`--remote-debugging-port`,
+  `Runtime.evaluate` + `Page.captureScreenshot`), lancée avec un **faux `dist`
+  posé dans le cwd** pour que le leurre trahisse une résolution par le cwd :
+  cible `page | "claus.io" | http://127.0.0.1:3000/`, titre `claus.io`, DOM
+  réel (`1 #root`, `2 scripts`, texte « L'intelligence artificielle au service
+  de la restauration… », « Accéder à la Cuisine »), capture 261 680 o. Le faux
+  dist n'a jamais été servi. `GET /api/settings` → 200 + l'en-tête
+  `X-Cookdrive-Instance` du jeton annoncé dans `cookdrive-ready.json` (parité
+  ready/fenêtre tenue).
+
+### Limites de cette relecture (à dire, pas à taire)
+
+- La fenêtre n'a pas été screenshotée depuis le X11 (`xwininfo` voit 0 enfant
+  sous ce Xvfb) : la preuve vient du DOM et de la capture CDP, pas du compositeur.
+- `EADDRINUSE` sur 3000 faisait glisser le serveur sur 3001 avec le même jeton
+  pendant les runs — attendu (le port par défaut n'est pas imposé), mais cela
+  rappelle qu'un `glisse:true` seul ne prouve rien sans le jeton.
+- Le chemin de l'UI complète (les 13 onglets) n'est PAS rejoué ici : c'est
+  `verify:ui-tabs`, hors de ce chantier.

@@ -3,14 +3,18 @@ import { Router } from "express";
 import fs from "fs";
 import path from "path";
 import type { AuditLogger } from "../services/audit.js";
+import { resoudreDist } from "../services/chemin-ressources.js";
 
 // Factory : les routes admin ont besoin du dossier de données utilisateur.
 export default function adminRouter(storageDir: string, logAudit: AuditLogger) {
   const router = Router();
 
 router.get("/api/admin/guide-download", (req, res) => {
-const guidePath = path.join(process.cwd(), "public", "Executive_Guide.pdf");
-if (fs.existsSync(guidePath)) {
+// Le PDF vit dans dist/ (vite copie public/ au build) : empaqueté, il est DANS
+// l'asar et le cwd n'en dit rien. On garde public/ en second pour le mode dev
+// où dist/ peut ne pas exister encore.
+const guidePath = [(() => { try { return path.join(resoudreDist(), "Executive_Guide.pdf"); } catch { return ""; } })(), path.join(process.cwd(), "public", "Executive_Guide.pdf")].find((p) => p && fs.existsSync(p));
+if (guidePath) {
   res.download(guidePath, "Executive_Guide.pdf");
 } else {
   res.status(404).json({ error: "Guide not found" });

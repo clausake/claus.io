@@ -87,14 +87,23 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64 et .deb ARM64 pour Linux, installeur NSIS Windows x64, et .dmg Apple Silicon pour macOS) sont attachées à la [release v0.1.0](https://github.com/clausake/claus.io/releases/tag/v0.1.0). Les images Windows et macOS sont non signées : une confirmation manuelle (SmartScreen / clic droit → Ouvrir) est demandée à la première ouverture.
+**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64 et .deb ARM64 pour Linux, installeur NSIS Windows x64, et .dmg Apple Silicon pour macOS) sont attachées à la [release](https://github.com/clausake/claus.io/releases). Les images Windows et macOS sont non signées : une confirmation manuelle (SmartScreen / clic droit → Ouvrir) est demandée à la première ouverture.
+
+> ⚠️ **v0.1.0** : ces installeurs ouvraient une page « Not Found » (le serveur
+> cherchait son dossier `dist` dans le dossier courant de l'exécutable au lieu de
+> son archive) et tournaient avec le moteur d'accords Epicure en vecteurs nuls.
+> Corrigé au chantier 20 — prendre l'installeur **0.1.1** ou plus récent. Le ZIP
+> + `LANCER_APPLICATION.bat` de v0.1.0 échouait à la compilation pour la même
+> famille de raison : le script forçait `NODE_ENV=production` avant `npm install`,
+> ce qui fait sauter à npm les devDependencies (`vite`, `tsx`). Corrigé aussi.
 
 **De source** (développeur) :
 
 ```bash
 git clone https://github.com/clausake/claus.io.git
 cd claus.io
-npm install
+npm install            # (les devDependencies sont nécessaires : vite, tsx)
+npm run build          # compile dist/ — le .bat le fait pour vous
 cp .env.example .env   # renseigner si nécessaire
 ```
 
