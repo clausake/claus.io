@@ -24,6 +24,7 @@ import httpLogger from "./src/middleware/http-logger.js";
 import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
 import { settingsStore } from "./src/services/settings.js";
 import { uploadsDir } from "./src/services/paths.js";
+import { resoudreDist } from "./src/services/chemin-ressources.js";
 import { startDbBackup } from "./src/services/db-backup.js";
 import { announceReady } from "./src/services/ready.js";
 
@@ -215,7 +216,12 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    // Le dossier dist ne se devine pas depuis le cwd : empaqueté, il vit DANS
+    // l'asar (voir src/services/chemin-dist.ts, qui porte le défaut « Not Found »
+    // de l'installeur 0.1.0). Une résolution qui échoue lève ici, AVANT d'ouvrir
+    // la fenêtre, au lieu de rendre un 404 atterrissant dans l'interface.
+    const distPath = resoudreDist();
+    console.log(`[frontend] dist servi depuis : ${distPath}`);
     // Assets Vite: le nom de fichier porte le hash de contenu (index-CUpTgUSW.js),
     // donc l'URL change des que le contenu change: on peut declarer
     // max-age=1 an + immutable sans risquer de servir un vieux bundle.

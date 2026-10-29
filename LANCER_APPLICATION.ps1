@@ -2,8 +2,11 @@
 $Host.UI.RawUI.WindowTitle = "Agent Culinaire OS - Démarrage Automatique"
 Clear-Host
 
-# Forcer le mode de production pour une stabilité locale totale (sans compilation à la volée)
-$env:NODE_ENV = "production"
+# NODE_ENV n'est VOLONTAIREMENT pas posé ici : `npm install` lit cette variable et,
+# avec NODE_ENV=production, npm ne télécharge PAS les devDependencies — vite, tsx,
+# esbuild, electron en font partie. C'était la cause de « 'vite' n'est pas reconnu »
+# au premier lancement (les librairies installées étaient incomplètes alors que
+# npm install avait rendu 0). Il est posé plus bas, juste avant `npm start`.
 
 Write-Host "================================================================" -ForegroundColor Yellow
 Write-Host "  Agent Culinaire OS - Assistant de Lancement Automatique (PS)" -ForegroundColor Yellow
@@ -14,13 +17,13 @@ Write-Host ""
 $nodePath = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodePath) {
     Write-Host "[ERREUR] Node.js n'a pas été détecté sur votre système." -ForegroundColor Red
-    Write-Host "Veuillez installer Node.js (version LTS) gratuitement depuis :" -ForegroundColor Gray
+    Write-Host "Veuillez installer Node.js (version LTS, 22 ou plus) gratuitement depuis :" -ForegroundColor Gray
     Write-Host "https://nodejs.org/" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Une fois installé, fermez cette fenêtre et relancez ce fichier." -ForegroundColor Gray
     Write-Host ""
     Read-Host "Appuyez sur Entrée pour quitter..."
-    exit
+    exit 1
 }
 
 # 2. Vérification de package.json
@@ -29,41 +32,45 @@ if (-not (Test-Path "package.json")) {
     Write-Host "Assurez-vous d'avoir bien extrait TOUS les fichiers du ZIP avant de lancer." -ForegroundColor Gray
     Write-Host ""
     Read-Host "Appuyez sur Entrée pour quitter..."
-    exit
+    exit 1
 }
 
-# 3. Vérification et Installation des dépendances
-if (-not (Test-Path "node_modules")) {
-    Write-Host "[INFO] Premier démarrage détecté. Téléchargement des librairies..." -ForegroundColor Cyan
-    Write-Host "Cette opération prend 1 à 2 minutes et nécessite internet." -ForegroundColor Gray
+# 3. Dépendances : on juge le BINAIRE, pas le dossier (un node_modules vide ou
+#    tronqué passait le test « Test-Path node_modules » et cassait le build).
+if (-not ((Test-Path "node_modules/vite/package.json") -and (Test-Path "node_modules/tsx/package.json"))) {
+    Write-Host "[INFO] Installation des librairies (vite, tsx, esbuild...)..." -ForegroundColor Cyan
+    Write-Host "Cette opération prend quelques minutes et nécessite internet." -ForegroundColor Gray
     Write-Host ""
-    npm install
-    if ($LASTEXITCODE -ne 0) {
+    # --include=dev : même si un .npmrc de la machine force la production.
+    npm install --include=dev
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path "node_modules/vite/package.json")) {
         Write-Host "[ERREUR] Échec lors de l'installation des librairies." -ForegroundColor Red
-        Write-Host "Vérifiez votre connexion internet et réessayez." -ForegroundColor Gray
+        Write-Host "Vérifiez la connexion internet, supprimez node_modules, puis relancez." -ForegroundColor Gray
         Write-Host ""
         Read-Host "Appuyez sur Entrée pour quitter..."
-        exit
+        exit 1
     }
     Write-Host "[SUCCÈS] Librairies installées avec succès !" -ForegroundColor Green
     Write-Host ""
 }
 
 # 4. Vérification de la compilation du frontend
-if (-not (Test-Path "dist")) {
+if (-not (Test-Path "dist/index.html")) {
     Write-Host "[INFO] Compilation initiale de l'interface graphique..." -ForegroundColor Cyan
     npm run build
-    if ($LASTEXITCODE -ne 0) {
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path "dist/index.html")) {
         Write-Host "[ERREUR] Échec lors de la compilation du frontend." -ForegroundColor Red
+        Write-Host "Supprimez le dossier dist puis relancez ce fichier." -ForegroundColor Gray
         Write-Host ""
         Read-Host "Appuyez sur Entrée pour quitter..."
-        exit
+        exit 1
     }
     Write-Host "[SUCCÈS] Compilation terminée avec succès !" -ForegroundColor Green
     Write-Host ""
 }
 
-# 5. Lancement
+# 5. Lancement : NODE_ENV=production SEULEMENT ici (le serveur sert dist/).
+$env:NODE_ENV = "production"
 Write-Host "[INFO] Démarrage du serveur intelligent Agent Culinaire OS..." -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host "  L'APPLICATION EST PRÊTE ET DÉMARRE !" -ForegroundColor Green
@@ -72,8 +79,9 @@ Write-Host "  URL : http://localhost:3000" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host ""
 
-# Ouvrir la page web dans le navigateur par défaut
-Start-Process "http://localhost:3000"
+# Le navigateur s'ouvre APRÈS le démarrage du serveur (ouvert avant, il tombait
+# sur « connexion refusée » pendant l'initialisation de la base).
+Start-Job -ScriptBlock { Start-Sleep -Seconds 8; Start-Process "http://localhost:3000" } | Out-Null
 
 # Démarrer l'application Express
 npm start

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { resoudreDonneesEpicure } from "./src/services/chemin-ressources.js";
 
 // String distance algorithm for high-performance fuzzy matching
 function editDistance(s1: string, s2: string): number {
@@ -511,10 +512,16 @@ export class EpicureModel {
 
   constructor() {
     try {
-      this.vocab = JSON.parse(fs.readFileSync("vocab.json", "utf-8"));
+      // Les données du moteur (vocabulaire + vecteurs) sont cherchées par
+      // candidats, jamais depuis le cwd : empaquetée, l'application les porte à
+      // la racine de son asar, alors que le cwd est le dossier de l'exe. Le
+      // défaut mesuré était un chargement « réussi » de vecteurs NULS.
+      const dossier = resoudreDonneesEpicure();
+      console.log(`EpicureModel : donnees lues depuis ${dossier}`);
+      this.vocab = JSON.parse(fs.readFileSync(path.join(dossier, "vocab.json"), "utf-8"));
       this.vocabList = Object.keys(this.vocab).sort((a, b) => this.vocab[a] - this.vocab[b]);
-      
-      const transPath = "vocab_translations.json";
+
+      const transPath = path.join(dossier, "vocab_translations.json");
       if (fs.existsSync(transPath)) {
         try {
           this.vocabTranslations = JSON.parse(fs.readFileSync(transPath, "utf-8"));
@@ -524,9 +531,9 @@ export class EpicureModel {
         }
       }
 
-      this.chemEmbeddings = this.loadEmbeddings("embeddings.chem.safetensors");
-      this.coocEmbeddings = this.loadEmbeddings("embeddings.cooc.safetensors");
-      this.coreEmbeddings = this.loadEmbeddings("embeddings.core.safetensors");
+      this.chemEmbeddings = this.loadEmbeddings(path.join(dossier, "embeddings.chem.safetensors"));
+      this.coocEmbeddings = this.loadEmbeddings(path.join(dossier, "embeddings.cooc.safetensors"));
+      this.coreEmbeddings = this.loadEmbeddings(path.join(dossier, "embeddings.core.safetensors"));
       this.isLoaded = true;
       console.log("EpicureModel loaded 1790 ingredients and vectors successful.");
     } catch (err) {

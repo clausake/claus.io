@@ -113,6 +113,12 @@ function startServer() {
     try { fs.rmSync(readyFile, { force: true }); } catch (e) {}
     process.env.COOKDRIVE_READY_FILE = readyFile;
     process.env.COOKDRIVE_INSTANCE_TOKEN = INSTANCE_TOKEN;
+    // Le dossier du frontend compilé, donné en clair au serveur : empaqueté, il
+    // vit dans l'asar, à côté de ce fichier (__dirname = …/resources/app.asar/
+    // electron). Sans cette ligne, le serveur cherche dans le cwd — le dossier de
+    // l'exe, où `dist` n'existe pas — et la fenêtre affiche « Not Found »
+    // (défaut mesuré sur l'installeur 0.1.0, voir src/services/chemin-dist.ts).
+    process.env.COOKDRIVE_DIST = path.join(__dirname, '..', 'dist');
 
     try {
       const serverJsPath = path.join(__dirname, '..', 'dist-server', 'server.cjs');
