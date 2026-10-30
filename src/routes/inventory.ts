@@ -1,6 +1,6 @@
 // Routes : Inventaire
 import { Router } from "express";
-import { safeJsonParse } from "../shared/util.js";
+import { safeJsonParse, nouvelId } from "../shared/util.js";
 import {
   COLONNES_NUM,
   COLONNES_TEXTE,
@@ -130,7 +130,7 @@ try {
 
   const brutId = req.body?.id;
   const itemId =
-    typeof brutId === "string" && brutId.trim() !== "" ? brutId.trim() : Date.now().toString();
+    typeof brutId === "string" && brutId.trim() !== "" ? brutId.trim() : nouvelId();
   const existeDeja = await db.get("SELECT id FROM inventory WHERE id = ?", [itemId]);
   if (existeDeja) {
     // Une clef prise n'est pas une panne du serveur: c'est une requisette

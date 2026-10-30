@@ -23,9 +23,30 @@
 //
 // Lancement : node scripts/verify-auth.mjs   (le code de sortie EST le verdict)
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { rmSync, mkdirSync, openSync } from "node:fs";
 import { execSync } from "node:child_process";
+
+const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
+
+// La racine du depot, DERIVEE du fichier lui-meme : un nom en dur
+// (« cookdrive-project » = l ancien nom, ou « .clausio/claus.io » = le
+// chemin de MA machine) ne figure dans la cmdline d aucun fils sur un
+// autre poste — mesure le 30/10 : la CI GitHub (depot dans
+// /home/runner/work/claus.io/claus.io) ne voyait AUCUN fils et ma porte
+// verify:garde-fantomes rougissait « la porte serait decorative ».
+
+// `child.kill()` ne tue que le CLI tsx : le SERVEUR est un petit-fils
+// node (tsx relance un processus). Mesure du 30/10 : six harnais joues a
+// la suite laissaient SIX serveurs vivants, chacun avec sa base — le
+// fantome que le garde d'amont rattrapait a chaque run. On spawn donc
+// detache (le fils devient chef de son groupe) et on tue le GROUPE.
+const arreter = (c) => {
+  if (!c || !c.pid) return;
+  try { process.kill(-c.pid, "SIGKILL"); }
+  catch { try { c.kill("SIGKILL"); } catch {} }
+};
 
 const PORT = 4171;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -63,7 +84,7 @@ try {
       // decorative. Le nom REEL du depot est le meme que celui de la base de
       // donnees (src/db/init.ts: ~/.clausio), donc le juge ne peut pas rougir
       // sur un dépôt voisin : il ne vise que CELUI-CI.
-      cmdline.includes(".clausio/claus.io") &&
+      cmdline.includes(RACINE) &&
       Number(pidStr) !== process.pid
     ) {
       try { process.kill(Number(pidStr), "SIGKILL"); } catch {}
@@ -72,6 +93,7 @@ try {
 } catch {}
 await new Promise((r) => setTimeout(r, 500));
 const child = spawn(process.execPath, [tsx, "server.ts"], {
+    detached: true, // le fils devient chef de groupe (killed par `arreter`)
   env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "development",
          COOKDRIVE_INSTANCE_TOKEN: TOKEN_INSTANCE,
          // Harnais : le budget auth (20/15 min) serait sature par les runs
@@ -95,12 +117,12 @@ for (let i = 0; i < 160; i++) {
   await new Promise((res) => setTimeout(res, 250));
 }
 if (instanceEtrange) {
-  child.kill("SIGKILL");
+  arreter(child);
   console.log("ECHEC  instance PERIMEE sur le port " + PORT + " (en-tete dit « " + instanceEtrange + " »)");
   process.exit(1);
 }
 if (!pret) {
-  child.kill("SIGKILL");
+  arreter(child);
   console.log("ECHEC  serveur pas pret sur " + BASE);
   process.exit(1);
 }
@@ -227,16 +249,16 @@ try {
   check("C2 logout detruit la session -> mutation 401",
     c2logout.status === 200 && c2.status === 401, `logout=${c2logout.status} post=${c2.status}`);
 } finally {
-  child.kill("SIGKILL");
+  arreter(child);
 }
 
 if (fail > 0) {
   console.log(`ECHEC  ${fail} regle(s) du contrat d'identite rouge(s)`);
-  child.kill("SIGKILL");
+  arreter(child);
   process.exit(1);
 }
 console.log("CONTRAT IDENTITE: toutes les regles vertes");
 // Exit explicite : le pipe du fils et le keep-alive undici garderaient le
 // event loop vivant apres le verdict (mesure du premier run, RC=124).
-child.kill("SIGKILL");
+arreter(child);
 process.exit(0);

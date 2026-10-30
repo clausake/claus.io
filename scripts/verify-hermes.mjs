@@ -21,12 +21,33 @@
 //
 // Lancement : node scripts/verify-hermes.mjs
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { rmSync, mkdirSync, openSync } from "node:fs";
 import { createServer } from "node:net";
 import { execSync } from "node:child_process";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+
+const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
+
+// La racine du depot, DERIVEE du fichier lui-meme : un nom en dur
+// (« cookdrive-project » = l ancien nom, ou « .clausio/claus.io » = le
+// chemin de MA machine) ne figure dans la cmdline d aucun fils sur un
+// autre poste — mesure le 30/10 : la CI GitHub (depot dans
+// /home/runner/work/claus.io/claus.io) ne voyait AUCUN fils et la porte
+// verify:garde-fantomes rougissait « la porte serait decorative ».
+
+// `child.kill()` ne tue que le CLI tsx : le SERVEUR est un petit-fils
+// node (tsx relance un processus). Mesure du 30/10 : six harnais joues a
+// la suite laissaient SIX serveurs vivants, chacun avec sa base — le
+// fantome que le garde d'amont rattrapait a chaque run. On spawn donc
+// detache (le fils devient chef de son groupe) et on tue le GROUPE.
+const arreter = (c) => {
+  if (!c || !c.pid) return;
+  try { process.kill(-c.pid, "SIGKILL"); }
+  catch { try { c.kill("SIGKILL"); } catch {} }
+};
 
 const DATA = join(process.cwd(), "test", "tmp-hermes");
 const DBFILE = join(DATA, "agent_culinaire.db");
@@ -50,7 +71,7 @@ try {
   ).toString().split("\n")) {
     const m = pid.match(/^(.*)\|PID=\/proc\/(\d+)\/cmdline$/);
     if (!m) continue;
-    if (m[1].includes("server.ts") && m[1].includes(".clausio/claus.io") && Number(m[2]) !== process.pid) {
+    if (m[1].includes("server.ts") && m[1].includes(RACINE) && Number(m[2]) !== process.pid) {
       try { process.kill(Number(m[2]), "SIGKILL"); } catch {}
     }
   }
@@ -109,6 +130,7 @@ async function demarrerServeur(env) {
   rmSync(env.USER_DATA_PATH, { recursive: true, force: true });
   mkdirSync(env.USER_DATA_PATH, { recursive: true });
   const child = spawn(process.execPath, [TSX, "server.ts"], {
+    detached: true, // le fils devient chef de groupe (killed par `arreter`)
     env: { ...process.env, ...env },
     stdio: ["ignore", "ignore", openSync(join(env.USER_DATA_PATH, "serveur-stderr.log"), "w")],
   });
@@ -120,7 +142,7 @@ async function demarrerServeur(env) {
     } catch {}
     await new Promise((r) => setTimeout(r, 250));
   }
-  if (!pret) { child.kill("SIGKILL"); return null; }
+  if (!pret) { arreter(child); return null; }
   return { child, base };
 }
 
@@ -198,7 +220,7 @@ async function demarrerServeur(env) {
       } finally { await db.close(); }
     }
   } finally {
-    s1.child.kill("SIGKILL");
+    arreter(s1.child);
   }
   await new Promise((r) => setTimeout(r, 800));
 }
@@ -244,7 +266,7 @@ async function demarrerServeur(env) {
     const h9b = await call(s2.base, "POST", "/api/hermes/reflechir", { cerveau: "factice" });
     check("H9b maitre garde le cerveau factice -> 200", h9b.status === 200, `status=${h9b.status}`);
   } finally {
-    s2.child.kill("SIGKILL");
+    arreter(s2.child);
   }
 }
 
