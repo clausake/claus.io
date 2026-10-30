@@ -27,12 +27,26 @@
 //   U7 meme contrat sur les fournisseurs (l'autre route a cle nue)
 //
 // Lancement: node scripts/probe-ids-uniques.mjs
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import fs from "node:fs";
 import { createServer } from "net";
+import { fileURLToPath } from "node:url";
 
-const DATA_DIR = path.join(process.cwd(), "test", "tmp-probe-ids-uniques");
+// La racine du depot, DERIVEE du fichier lui-meme : un nom en dur
+// (« cookdrive-project » = l ancien nom, ou « .clausio/claus.io » = le
+// chemin de MA machine) ne figure dans la cmdline d aucun fils sur un
+// autre poste — mesure le 30/10 : la CI GitHub (depot dans
+// /home/runner/work/claus.io/claus.io) ne voyait AUCUN fils et ma porte
+// verify:garde-fantomes rougissait « la porte serait decorative ».
+// `process.cwd()` lui ne DERIVE rien : il rend le chemin de LANCE, pas de
+// fichier — mesure le 30/10 : `probe-ids-uniques.mjs` lance depuis
+// /tmp/opencode/runner-sim (la CI) rendait DATA_DIR et tsxBin ABSENTS et
+// exit 9 « SERVEUR PAS PRET (infrastructure) », la ou le MEME probe lance
+// depuis the racine rendait GATES_IDS=7 ROUGES=0.
+const RACINE = path.resolve(fileURLToPath(import.meta.url), "..", "..");
+
+const DATA_DIR = path.join(RACINE, "test", "tmp-probe-ids-uniques");
 const TOKEN = "ids-uniques";
 
 function portLibre() {
@@ -58,12 +72,12 @@ fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const PORT = await portLibre();
 const BASE = `http://127.0.0.1:${PORT}`;
-const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsxBin = path.join(RACINE, "node_modules", ".bin", "tsx");
 // detached: tsx CLI lance un FILS node qui porte le serveur. Tuer le CLI seul
 // laisserait le fils vivant : c'est exactement le fantome que la porte
 // verify:garde-fantomes traque. On tue le GROUPE.
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
-  cwd: process.cwd(),
+  cwd: RACINE,
   detached: true,
   env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
   stdio: "ignore",
