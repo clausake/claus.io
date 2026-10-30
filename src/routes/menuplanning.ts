@@ -4,6 +4,7 @@ import { ollamaSettingsRef } from "../shared/ollama.js";
 import type { Database } from "sqlite";
 import { requireString, optionalString } from "../middleware/validate.js";
 import type { AuditLogger } from "../services/audit.js";
+import { nouvelId } from "../shared/util.js";
 
 // Un champ de detail de plat doit rester du JSON LISIBLE. Les DEUX noms de
 // champ sont acceptes (recipe_json cote API, recipe_details cote vue Menu, que
@@ -56,7 +57,7 @@ try {
   const recipeId = optionalString(req, "recipe_id", 50) || null;
   const titleVal = optionalString(req, "title", 200) || "";
   const planningLang = language || ollamaSettingsRef.current.language || 'fr';
-  const id = Date.now().toString();
+  const id = nouvelId();
   await db.run(
     "INSERT INTO menu_planning (id, date, meal_type, recipe_id, title, recipe_json, language) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [

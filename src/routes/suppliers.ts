@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { Database } from "sqlite";
 import { requireString, optionalString, requireArray } from "../middleware/validate.js";
 import { jugerLignesDeDocument } from "../shared/document-items.js";
+import { nouvelId } from "../shared/util.js";
 import type { AuditLogger } from "../services/audit.js";
 
 export default function createRouter(db: Database, logAudit: AuditLogger) {
@@ -99,7 +100,7 @@ try {
   if (!requireArray(req, res, "items")) return;
   const { items, supplier } = req.body;
   const supplierVal = optionalString(req, "supplier", 200) || "";
-  const documentId = Date.now().toString();
+  const documentId = nouvelId();
 
   // -- Le contrat de la cle ecrite ------------------------------------------
   // L'UI envoyait `inventory_id: <nom de l'article>` : le document se cree, son
@@ -408,7 +409,7 @@ try {
   const name = req.body.name;
   const email = optionalString(req, "email", 200) || "";
   const phone = optionalString(req, "phone", 50) || "";
-  const id = Date.now().toString();
+  const id = nouvelId();
   await db.run(
     "INSERT INTO suppliers (id, name, email, phone) VALUES (?, ?, ?, ?)",
     [id, name, email, phone],

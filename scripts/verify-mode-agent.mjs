@@ -22,12 +22,33 @@
 //
 // Lancement : node scripts/verify-mode-agent.mjs
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { rmSync, mkdirSync, openSync } from "node:fs";
 import { createServer } from "node:net";
 import { execSync } from "node:child_process";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+
+const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
+
+// La racine du depot, DERIVEE du fichier lui-meme : un nom en dur
+// (« cookdrive-project » = l ancien nom, ou « .clausio/claus.io » = le
+// chemin de MA machine) ne figure dans la cmdline d aucun fils sur un
+// autre poste — mesure le 30/10 : la CI GitHub (depot dans
+// /home/runner/work/claus.io/claus.io) ne voyait AUCUN fils et la porte
+// verify:garde-fantomes rougissait « la porte serait decorative ».
+
+// `child.kill()` ne tue que le CLI tsx : le SERVEUR est un petit-fils
+// node (tsx relance un processus). Mesure du 30/10 : six harnais joues a
+// la suite laissaient SIX serveurs vivants, chacun avec sa base — le
+// fantome que le garde d'amont rattrapait a chaque run. On spawn donc
+// detache (le fils devient chef de son groupe) et on tue le GROUPE.
+const arreter = (c) => {
+  if (!c || !c.pid) return;
+  try { process.kill(-c.pid, "SIGKILL"); }
+  catch { try { c.kill("SIGKILL"); } catch {} }
+};
 
 const DATA = join(process.cwd(), "test", "tmp-mode-agent");
 const DBFILE = join(DATA, "agent_culinaire.db");
@@ -51,7 +72,7 @@ try {
   ).toString().split("\n")) {
     const m = pid.match(/^(.*)\|PID=\/proc\/(\d+)\/cmdline$/);
     if (!m) continue;
-    if (m[1].includes("server.ts") && m[1].includes(".clausio/claus.io") && Number(m[2]) !== process.pid) {
+    if (m[1].includes("server.ts") && m[1].includes(RACINE) && Number(m[2]) !== process.pid) {
       try { process.kill(Number(m[2]), "SIGKILL"); } catch {}
     }
   }
@@ -63,6 +84,7 @@ rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
 
 const child = spawn(process.execPath, [TSX, "server.ts"], {
+    detached: true, // le fils devient chef de groupe (killed par `arreter`)
   env: {
     ...process.env,
     PORT: String(PORT),
@@ -90,7 +112,7 @@ const check = (label, cond, detail) => {
 };
 
 if (!pret) {
-  child.kill("SIGKILL");
+  arreter(child);
   console.log("ECHEC  serveur pas pret sur " + BASE + " (stderr: " + ERRLOG + ")");
   process.exit(1);
 }
@@ -222,7 +244,7 @@ try {
       `propose=${propose.length} applique=${applique.length} rejete=${rejete.length}`);
   }
 } finally {
-  child.kill("SIGKILL");
+  arreter(child);
 }
 
 if (fail > 0) {

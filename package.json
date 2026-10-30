@@ -118,7 +118,9 @@
     "verify:garde-fantomes-mord": "python3 scripts/negative-test-garde-fantomes.py",
     "verify:chemins-empaquete-mord": "python3 scripts/negative-test-chemins-empaquete.py",
     "verify:llm-porte": "npx vitest run test/unit/llm-porte.test.ts",
-    "verify:llm-porte-mord": "python3 scripts/negative-test-llm-porte.py"
+    "verify:llm-porte-mord": "python3 scripts/negative-test-llm-porte.py",
+    "verify:ids-uniques": "node scripts/probe-ids-uniques.mjs",
+    "verify:ids-uniques-mord": "python3 scripts/negative-test-ids-uniques.py"
   },
   "build": {
     "appId": "com.agentculinaire.os",

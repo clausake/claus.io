@@ -218,3 +218,29 @@ export function getOllamaHost(s: OllamaUrlSettings | null) {
   }
   return "http://localhost:11434";
 }
+
+// ─── Identifiant de ligne NEUF, unique meme sous rafale ──────────────────────
+// Defaut mesuré (30/10) : cinq routes écrivaient la clé primaire avec
+// `Date.now().toString()`. Deux écritures tombant dans la MEME milliseconde
+// produisent la même clé, la contrainte saute et la route rend 500 — le chef
+// perd la ligne qu'il venait de saisir. Mesure sur POST /api/menu-planning :
+// 40 écritures séquentielles → 3 réponses 500 ; 40 en parallèle → 33. Ce n'est
+// pas une hypothèse de lecture : c'est compté (scripts/probe-ids-uniques.mjs).
+//
+// Le remède n'est pas un nombre aléatoire (une collision reste possible et
+// silencieuse) mais une SÉQUENCE : dans une même milliseconde, le deuxième
+// appel reçoit un suffixe. Unique par construction dans le processus, ordonné
+// par le préfixe d'horodatage, et la forme reste `...` + `-` + base36.
+let dernierHorodatage = 0;
+let rangDansLaMs = 0;
+
+export function nouvelId(): string {
+  const maintenant = Date.now();
+  if (maintenant === dernierHorodatage) {
+    rangDansLaMs += 1;
+  } else {
+    dernierHorodatage = maintenant;
+    rangDansLaMs = 0;
+  }
+  return rangDansLaMs === 0 ? maintenant.toString() : `${maintenant}-${rangDansLaMs.toString(36)}`;
+}

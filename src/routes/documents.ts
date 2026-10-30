@@ -6,7 +6,7 @@ import type { Database } from "sqlite";
 import fs from "fs";
 import path from "path";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
-import { safeJsonParse, calculatePricePerRef, prixOuNul, ExtractedDocumentData } from "../shared/util.js";
+import { safeJsonParse, calculatePricePerRef, prixOuNul, nouvelId, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
 import { generer } from "../shared/llm.js";
@@ -125,7 +125,7 @@ try {
     });
   }
 
-  const docId = id || Date.now().toString();
+  const docId = id || nouvelId();
 
   // -- Deux defauts de cette branche, tous deux muets --------------------
   //  1. Le tri se faisait sur `if (id)` et non sur « la ligne EXISTE ». Or la
@@ -520,7 +520,7 @@ try {
   
   const isDraft = req.query.draft === 'true';
   if (isDraft) {
-    const id = Date.now().toString();
+    const id = nouvelId();
     await db.run(
       "INSERT INTO documents (id, type, supplier, date, total_amount, source_image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [id, "A DEFINIR", "", "", 0, `/uploads/${filename}`, "DRAFT"]
