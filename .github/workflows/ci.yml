@@ -19,6 +19,19 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le poste GitLab (.gitlab-ci.yml) pose DEJA cette variable, pas GitHub Actions.
+# Sans elle, `npm ci` execute le postinstall de onnxruntime-node, qui telecharge
+# les providers CUDA/TensorRT depuis le CDN Microsoft (api.nuget.org) : le CDN est
+# injoignable depuis le runner GitHub — ETIMEDOUT, et le job « gates » rougit sur
+# `Run npm ci` AVANT d'avoir juge quoi que ce soit. Mesure le 30/10 sur le run
+# 40996854754 (seul job rouge de la CI, les sept autres verts). Les binaires CPU
+# linux/x64 sont deja dans le paquet (node_modules/onnxruntime-node/bin/napi-v6/
+# linux/x64) : l'OCR tourne sur CPU, le skip ne retire aucune capacite jugee.
+# Le defaut etait la : la variable etait consolee sur GitLab et oubliee sur
+# GitHub — deux harnais, une seule moitie protegee (la regle des deux directions).
+env:
+  ONNXRUNTIME_NODE_INSTALL: "skip"
+
 jobs:
   # ── Lot 1 : statique ──────────────────────────────────────────────────────
   types:
