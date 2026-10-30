@@ -143,12 +143,19 @@ try {
   const scheduleRows = await db.all("SELECT * FROM staff_schedule WHERE date >= ? AND date <= ?", [startDate, endDate]);
   
   const generateDates = (s: string, e: string) => {
-    let current = new Date(s);
-    const endD = new Date(e);
+    // Les bornes sont comparées comme des CALENDRIERS, jamais comme des
+    // horloges. La version d'origine faisait `new Date("2026-10-22")` (= midi
+    // UTC) puis `toISOString().split("T")[0]` : sous un poste à UTC+2, le
+    // `setDate(+1)` franchissait minuit UTC et LE DERNIER JOUR du créneau
+    // sautait. Mesuré ce poste (Europe/Paris, UTC+2) : le créneau demandé
+    // 2026-10-22 → 2026-10-29 rendait SEPT lignes et s'arrêtait au 2026-10-28 —
+    // le tableau de bord du patron ne montrait pas la journée en cours. Les
+    // bornes venaient déjà de jourLocalISO : c'est l'énumération qui parlait UTC.
+    const cle = (x: string) => Number(x.slice(0, 4)) * 10000 + Number(x.slice(5, 7)) * 100 + Number(x.slice(8, 10));
     const dates: string[] = [];
-    while (current <= endD) {
-      dates.push(new Date(current).toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
+    for (let i = 7; i >= 0; i--) {
+      const d = jourLocalISO(i);
+      if (cle(d) >= cle(s) && cle(d) <= cle(e)) dates.push(d);
     }
     return dates;
   };

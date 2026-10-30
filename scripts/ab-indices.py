@@ -87,7 +87,30 @@ QUERIES = [
 
 def run_server(data_dir):
     env = dict(os.environ)
-    env.update(PORT=str(PORT), USER_DATA_PATH=data_dir, NODE_ENV="production")
+    # La porte qui échouerait ici dirait « frontend non compilé », ce qui est
+    # VRAI sous la morsure : la copie isolée du dépôt exclut `dist`
+    # (scripts/negative-test-verify-indices.py, IGNORED), donc la branche
+    # production de server.ts — qui exige dist/index.html — ne peut pas
+    # s'ouvrir. Or ce bench ne juge AUCUNE route de rendu : il mesure des plans
+    # SQLite et des requêtes API. Le mode production est donc posé APRÈS le
+    # démarrage : les fichiers de données (Epicure, coffre, OCR) restent résolus
+    # par candidats comme dans l'application empaquetée, seul le service du
+    # frontend est écarté.
+    env.update(PORT=str(PORT), USER_DATA_PATH=data_dir)
+    # `vite` est une devDependency : si l'environnement porte NODE_ENV=production
+    # (ce que faisait le .bat de lancement avant le chantier 20), npm a saute les
+    # devDependencies, `vite` est absent, le serveur NE PEUT PAS demarrer — et le
+    # seul symptome rendu etait « serveur pas pret » avec une derniere sortie
+    # « (rien) ». Le dire ici vaut mieux qu'un faux verdict d'index : un terrain
+    # absent n'est pas une mesure (regle des portes du projet).
+    if not os.path.isdir(os.path.join(root, "node_modules", "vite")):
+        # os.path.isdir suit le lien : une copie isolee du depot (les morsures)
+        # SYMLINKE node_modules, le test reste juste dans ce cas.
+        raise SystemExit(
+            "ECHEC  vite absent de node_modules : installer avec "
+            "`npm install --include=dev` (NODE_ENV=production fait sauter les "
+            "devDependencies et le serveur ne peut pas demarrer)"
+        )
     tsx = os.path.join(root, "node_modules", ".bin", "tsx")
     # ⚠ node, pas sys.executable : tsx est un shim SHELL que seul node sait
     # execher. Lance par python, il l'inter-prete comme du python et meurt d'un

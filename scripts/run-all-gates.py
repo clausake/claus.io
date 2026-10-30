@@ -200,6 +200,13 @@ DEFAUT = ["verify:split",
           # contrat dans la source ; la morsure reintroduit le defaut d'origine et
           # exige que la porte ROUGISSE (mesure : 2 mutations, 2 rouges).
           "verify:chemins-empaquete", "verify:chemins-empaquete-mord",
+          # Le garde-fou ANTI-FANTOME des sept juges qui levent un serveur sur un
+          # port fixe (defaut mesure le 29/10 : ils tuaient sur l'ancien nom du
+          # depot, donc ne tuaient RIEN — verify:auth rougissait en 409 sur la
+          # vieille base d'un fils de 47 minutes, la lecon du 03/10 etait
+          # decorative). La porte demarre un vrai fils et exige que le capteur le
+          # voie ; la morsure remet l'ancien motif et exige 7 rouges.
+          "verify:garde-fantomes", "verify:garde-fantomes-mord",
           # Le contrat DASHBOARD (Sprint 13): les deux routes de LECTURE du
           # tableau de bord (cost-data + stock-data), chacune avec sa preuve
           # de morsure. Sans elles, la route cost-data peut redevenir une

@@ -1466,7 +1466,7 @@ regle fondatrice lisible. Les codes faillibles restent en archive SHA :
 - Les deux sont au `DEFAUT` de `scripts/run-all-gates.py` (sinon : porte
   décorative, règle 6) — jouées par le lot : `GATES=2 ROUGES=0`.
 
-### Vérifié le 29/10 (preuves re-mesurées, pas relues)
+### Vérifié le 29/10 — le porteur « Not Found » (preuves re-mesurées, pas relues)
 
 - `npx tsc --noEmit` → RC=0. `npx vitest run` → 16 fichiers, 184 tests verts
   (dont 13 nouveaux dans `test/unit/chemin-ressources.test.ts`, joués dans leurs
@@ -1489,6 +1489,61 @@ regle fondatrice lisible. Les codes faillibles restent en archive SHA :
   dist n'a jamais été servi. `GET /api/settings` → 200 + l'en-tête
   `X-Cookdrive-Instance` du jeton annoncé dans `cookdrive-ready.json` (parité
   ready/fenêtre tenue).
+
+### Le porteur « Not Found » réglé, trois autres pannes sorties du même lot (29→30/10)
+
+Cinq portes rouges restaient debout après le correctif ci-dessus. Elles ont été
+jouées une par une, et DEUX sont des défauts du produit, pas du harnais :
+
+1. **Le tableau de bord ne montrait pas la journée en cours** (`verify:dashboard`
+   D1, `expect(corps.length).toBe(8)` → 7). `generateDates` (src/routes/dashboard.ts)
+   itérait des `Date` construites sur `"2026-10-22"` (= MIDI UTC) et rendait
+   `toISOString().split("T")[0]` : sous un poste à UTC+2, `setDate(+1)` franchissait
+   minuit UTC et LE DERNIER JOUR du créneau sautait. Mesuré : créneau demandé
+   2026-10-22 → 2026-10-29, rendu 7 lignes terminant au 28. Or les bornes venaient
+   déjà de `jourLocalISO` — c'est l'énumération qui parlait UTC. Réparé en
+   comparant des CALENDRIERS (`AAAAAMMJJ` en nombres), sans horloge : `7 passed`,
+   et `verify:dashboard-mord` rendu `VERDIT LUS: 9/9 MORDENT`.
+2. **Le garde-fou anti-fantôme de SEPT juges ne tuait rien.** Les scripts
+   `verify-{auth,audit,hermes,mode-agent,mode-manuel,suggestions,surveillance}.mjs`
+   testaient la cmdline de leurs orphelins contre `cookdrive-project` — l'ANCIEN
+   nom du dépôt, qui ne survit que dans `homepage` de package.json. Un fils lancé
+   depuis `/home/clausake/.clausio/claus.io` ne le porte pas (mesuré sur
+   `/proc/<pid>/cmdline`). Conséquence vécue : `verify:auth` rouge TROIS fois de
+   suite (`B1 setup → 409`) sur la vieille base d'un fils de 47 minutes — le
+   fantôme que la leçon du 03/10 prétendait avoir réglé. Motif remplacé par le nom
+   RÉEL du dépôt (le même que le dossier de données, `src/db/init.ts`), donc le
+   garde ne peut pas tuer les serveurs d'un dépôt voisin. Après correction, le
+   juge est rejoué FANTÔME POSÉ (un serveur lancé sur son port avec sa base) :
+   `CONTRAT IDENTITE: toutes les regles vertes`.
+3. `verify:indices-mord` rendait « serveur pas pret » avec une dernière sortie
+   `(rien)` : sa copie isolée exclut `dist`, donc la branche `NODE_ENV=production`
+   de `server.ts` — qui exige `dist/index.html` — ne peut pas s'ouvrir. Ce bench ne
+   juge AUCUNE route de rendu (il mesure des plans SQLite) : le mode production est
+   posé APRÈS le démarrage, et un test nominal de `vite` rend enfin un diagnostic
+   au lieu d'un silence. Rejoué : `N1 rc=0`, `N2 rc=1`, « le garde mord ».
+4. La leçon du 03/10 (AGENTS.md, « un fils tsx survit et tient le port ») est
+   devenue une PORTE : `verify:garde-fantomes` démarre un vrai fils serveur et
+   exige que le capteur le voie (sinon la porte serait décorative), puis juge les
+   sept juges sur leur code exécuté — pas sur leurs commentaires, où l'ancien nom
+   reste écrit pour raconter la faute. Sa morsure remet `cookdrive-project` et
+   exige que les sept rougissent : `juges=7 rouges=7`, `VERDICT : la porte voit le
+   garde qui ne tue rien`. Les deux sont au `DEFAUT` (règle 6).
+5. **Une porte neuve en polluait une autre.** Ma propre `verify:garde-fantomes`
+   démarrait son fils serveur sur le port FIXE 4177 — qui est le port JUGÉ par
+   `scripts/probe-inventory-put-partial.mjs` (`PORT_OCCUPE=1` → rc=5). Le lot
+   complet rendait donc `verify:inventory-put-voices` rouge à cause de moi.
+   Mesuré : `RESULTATS PORT_OCCUPE=1 PORT=4177 JETON_RENDU="f2bf…" JETON_ATTENDU=
+   "probe-invput"`. Corrigé : la porte se cale sur un port LIBRE ; rejouée, elle
+   rend `portees=8 rouges=0`, sa morsure `juges=7 rouges=7`, et
+   `verify:inventory-put-voices` est repassé `SERVEUR_ABSENT=0 … rc=0`.
+   Leçon consignée : un port fixe est un contrat chez l'AUTRE — une porte qui en
+   fait rougir une autre n'est pas une mesure, c'est une pollution du terrain.
+6. `verify:routes` rend **44** tests verts (la vitrine en annonce 46) et le lot
+   compte **90** portes (la vitrine en annonce 86, AGENTS.md 69) : trois chiffres
+   de vitrine périmés, relevés et non recopiés (règle 1). La vitrine reste à
+   remesurer dans un lot dédié — elle n'est pas jugée par ces portes-ci.
+
 
 ### Limites de cette relecture (à dire, pas à taire)
 
