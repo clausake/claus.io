@@ -57,7 +57,7 @@ try {
   ).toString().split("\n")) {
     const m = pid.match(/^(.*)\|PID=\/proc\/(\d+)\/cmdline$/);
     if (!m) continue;
-    if (m[1].includes("server.ts") && m[1].includes("cookdrive-project") && Number(m[2]) !== process.pid) {
+    if (m[1].includes("server.ts") && m[1].includes(".clausio/claus.io") && Number(m[2]) !== process.pid) {
       try { process.kill(Number(m[2]), "SIGKILL"); } catch {}
     }
   }

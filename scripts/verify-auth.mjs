@@ -55,7 +55,15 @@ try {
     const [, cmdline, pidStr] = m;
     if (
       cmdline.includes("server.ts") &&
-      cmdline.includes("cookdrive-project") &&
+      // Le motif etait "cookdrive-project" : l'ANCIEN nom du depot (le
+      // homepage de package.json le conserve encore). Un fils orphelin lance
+      // depuis /home/clausake/.clausio/claus.io ne le porte PAS dans sa
+      // cmdline : le garde ne tuait RIEN, B1 rougissait en 409 SETUP_DEJA_FAIT
+      // sur la vieille base du fantome, et la lecon du 03/10 etait devenue
+      // decorative. Le nom REEL du depot est le meme que celui de la base de
+      // donnees (src/db/init.ts: ~/.clausio), donc le juge ne peut pas rougir
+      // sur un dépôt voisin : il ne vise que CELUI-CI.
+      cmdline.includes(".clausio/claus.io") &&
       Number(pidStr) !== process.pid
     ) {
       try { process.kill(Number(pidStr), "SIGKILL"); } catch {}

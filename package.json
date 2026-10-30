@@ -3,7 +3,7 @@
   "description": "claus.io — assistant culinaire IA open source (AGPL-3.0)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -114,6 +114,8 @@
     "verify:types": "python3 scripts/verify-types.py",
     "verify:types-mord": "python3 scripts/negative-test-types.py",
     "verify:chemins-empaquete": "python3 scripts/verify-chemins-empaquete.py",
+    "verify:garde-fantomes": "python3 scripts/verify-garde-fantomes.py",
+    "verify:garde-fantomes-mord": "python3 scripts/negative-test-garde-fantomes.py",
     "verify:chemins-empaquete-mord": "python3 scripts/negative-test-chemins-empaquete.py",
     "verify:llm-porte": "npx vitest run test/unit/llm-porte.test.ts",
     "verify:llm-porte-mord": "python3 scripts/negative-test-llm-porte.py"

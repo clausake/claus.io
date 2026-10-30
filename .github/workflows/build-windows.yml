@@ -8,9 +8,12 @@
 # Déclencheurs :
 #   - manuel (workflow_dispatch) pour la release en cours ;
 #   - à chaque tag v* pour les releases suivantes.
-# L'attache à la release utilise le tag v0.1.0 en dur tant que la version
-# courante du dépôt reste 0.1.0 ; le tag later porté par le déclencheur v*
-# devient la référence naturellement.
+# L'attache à la release LIT la version de package.json pour un déclenchement
+# manuel (le dispatch ne porte pas de tag) : un numéro figé à la main attacherait
+# les installeurs neufs à l'ANCIENNE release — exactement ce qui est arrivé à
+# v0.1.0, dont les assets ont été remplacés au fil des corrections sans que la
+# version annoncée bouge. Le tag porté par le déclencheur v* reste la référence
+# quand il existe.
 
 name: windows-x64
 
@@ -67,7 +70,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
           fi
 
       - name: attacher l'installeur à la release
@@ -112,7 +115,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
           fi
 
       - name: attacher l'installeur à la release
