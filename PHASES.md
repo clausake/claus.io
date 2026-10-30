@@ -1545,6 +1545,34 @@ jouées une par une, et DEUX sont des défauts du produit, pas du harnais :
    remesurer dans un lot dédié — elle n'est pas jugée par ces portes-ci.
 
 
+7. **La CI GitHub n'avait jamais jugé le lot des portes depuis le 16/10.** Le job
+   `gates` rouge sur `Run npm ci` (run 40996854754, les sept autres jobs verts) :
+   le postinstall de `onnxruntime-node` télécharge les providers CUDA/TensorRT sur
+   `api.nuget.org`, injoignable depuis le runner → `AggregateError [ETIMEDOUT]`.
+   La variable `ONNXRUNTIME_NODE_INSTALL: skip` qui règle ça est posée dans
+   `.gitlab-ci.yml` (leçon du 02/10) et **absente de `.github/workflows/ci.yml`** :
+   deux harnais, une seule moitié protégée. Ajoutée en `env:` global de la CI
+   GitHub (les binaires CPU linux/x64 sont déjà dans le paquet, l'OCR est jugé sur
+   CPU — `verify:ocr-moteur` n'est pas dans ce lot). Les binaires CPU ne sont pas
+   une capacité perdue : c'est le contrat même de la porte `verify:ocr-moteur`,
+   hors `DEFAUT` parce qu'elle exige les poids, absents de git (§7 de AGENTS.md).
+
+### Re-vérifié le 30/10 sur le LIVRÉ reconstruit (le code d'aujourd'hui, pas celui de 0.1.0)
+
+- `npx electron-builder -l` → RC=0, AppImage arm64 + deb régénérés depuis le
+  commit `5452cbb`.
+- La FENÊTRE rejouée par CDP sur ce livré, toujours avec le **faux `dist` posé
+  dans le cwd** (leurre) : cible `page | "claus.io" | http://127.0.0.1:3000/`,
+  titre `claus.io`, `1 #root`, `2 scripts`, texte réel (« Accéder à la Cuisine »),
+  capture 261 682 o ; `[frontend] dist servi depuis …app.asar/dist` et
+  `EpicureModel loaded 1790 ingredients and vectors successful` lus dans le log du
+  processus empaqueté.
+- LOT COMPLET rejoué : `GATES=90 ROUGES=0`, `PORTES=90 ROUGES=0 … TOUT VERT`
+  (lu par `python3 scripts/lire-gates.py`, jamais par un grep sur le binaire).
+- `git push origin main` → `bb37503..5452cbb` ; tag `v0.1.1` poussé, le workflow
+  `windows-x64` démarré sur le tag (il rattache les installeurs à la version de
+  `package.json`, plus à un numéro figé).
+
 ### Limites de cette relecture (à dire, pas à taire)
 
 - La fenêtre n'a pas été screenshotée depuis le X11 (`xwininfo` voit 0 enfant
