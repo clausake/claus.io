@@ -50,9 +50,9 @@ const arreter = (c) => {
   catch { try { c.kill("SIGKILL"); } catch {} }
 };
 
-const DATA = join(process.cwd(), "test", "tmp-mode-agent");
+const DATA = join(RACINE, "test", "tmp-mode-agent");
 const DBFILE = join(DATA, "agent_culinaire.db");
-const TSX = join(process.cwd(), "node_modules", ".bin", "tsx");
+const TSX = join(RACINE, "node_modules", ".bin", "tsx");
 const ERRLOG = join(DATA, "serveur-stderr.log");
 
 const portLibre = () => new Promise((resolve, reject) => {

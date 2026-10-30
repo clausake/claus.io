@@ -51,11 +51,11 @@ const arreter = (c) => {
 const PORT = 4171;
 const BASE = `http://127.0.0.1:${PORT}`;
 const TOKEN_INSTANCE = "verify-auth";
-const DATA = join(process.cwd(), "test", "tmp-auth");
+const DATA = join(RACINE, "test", "tmp-auth");
 rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
 
-const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsx = join(RACINE, "node_modules", ".bin", "tsx");
 const ERRLOG = join(DATA, "serveur-stderr.log");
 // Fantome : un fils orphelin d'un run precedent tient encore le port avec une
 // VIEILLE base (lecon du 03/10 — B1 rendait SETUP_DEJA_FAIT a cause d'un fils

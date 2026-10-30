@@ -73,27 +73,37 @@ def code_executable(source):
 def fils_serveur_de_ce_depot(racine):
     """Les PIDs dont la cmdline porte server.ts ET le dépôt RÉELlement exécuté.
 
-    Le motif est la racine du dépôt Telle qu'ELLE EST ICI — jamais écrite en
-    dur (défaut n°1 : `cookdrive-project`, défaut n°2 : `.clausio/claus.io`).
-    Le « tsx » de la cmdline est le chemin du paquet tsx, donc la racine n'y
-    figure que si le dépôt la porte lui-même : sur la CI GitHub
-    (/home/runner/work/claus.io/claus.io), exiger la racine dans la cmdline
-    rendait cette porte rouge « decorative » au milieu d'un lot 88/90 vert
-    (run 41001056219, fils_vus=0). Le test qui compte est celui du fils qu'on
-    vient de légitimement démarrer depuis CE dépôt : « server.ts » + « tsx »
-    dans la cmdline, ET le fils dont on connaît le pid — plus les orphelins
-    qui portent la racine quand le dépôt lui-même est sous un chemin visible.
+    Deux motifs ont échoué en dur : `cookdrive-project` (l'ancien nom) et
+    `.clausio/claus.io` (le chemin de ce poste). La dérive par
+    `fileURLToPath(import.meta.url)` est le contrat des juges, mais elle a un
+    angle mort MESURÉ sur la CI GitHub (run 41001056219) : quand le dépôt est
+    monté sur un chemin que la cmdline du fils ne porte pas — le runner
+    /home/runner/work/claus.io/claus.io lance `node <RACINE>/node_modules/.bin/tsx
+    server.ts` et tsx relance `node --require …/preflight.cjs … server.ts` avec
+    pour seuls chemins son propre paquet — exiger la racine dans la cmdline
+    rendait cette porte rouge « decorative » (fils_vus=0) au milieu d'un lot
+    88/90 vert. La racine dérivée reste le motif PRÉFÉRÉ (elle distingue un
+    dépôt voisin) ; quand elle n'apparaît dans AUCUNE cmdline, on retombe sur
+    le test minimal « server.ts + tsx » qui reste exact : server.ts n'existe
+    qu'ici, et un juge lancé depuis ce dépôt ne peut viser qu'un fils de ce
+    dépôt (le harnais isole base et port à chaque run).
     """
     vues = []
+    racine_vue = False
     for chemin in glob.glob("/proc/[0-9]*/cmdline"):
         try:
             with open(chemin, "rb") as f:
                 brut = f.read().replace(b"\0", b" ").decode("utf-8", "replace")
         except OSError:
             continue
-        if "server.ts" in brut and "tsx" in brut:
-            vues.append(int(chemin.split("/")[2]))
-    return vues
+        if "server.ts" not in brut or "tsx" not in brut:
+            continue
+        if racine in brut:
+            racine_vue = True
+        vues.append((int(chemin.split("/")[2]), racine in brut))
+    if racine_vue:
+        return [pid for pid, avec_racine in vues if avec_racine]
+    return [pid for pid, _ in vues]
 
 
 def port_libre():
