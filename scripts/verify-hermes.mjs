@@ -49,9 +49,9 @@ const arreter = (c) => {
   catch { try { c.kill("SIGKILL"); } catch {} }
 };
 
-const DATA = join(process.cwd(), "test", "tmp-hermes");
+const DATA = join(RACINE, "test", "tmp-hermes");
 const DBFILE = join(DATA, "agent_culinaire.db");
-const TSX = join(process.cwd(), "node_modules", ".bin", "tsx");
+const TSX = join(RACINE, "node_modules", ".bin", "tsx");
 const ERRLOG = join(DATA, "serveur-stderr.log");
 
 const portLibre = () => new Promise((resolve, reject) => {
@@ -241,7 +241,7 @@ async function demarrerServeur(env) {
 {
   const env2 = {
     PORT: String(await portLibre()),
-    USER_DATA_PATH: join(process.cwd(), "test", "tmp-hermes-off"),
+    USER_DATA_PATH: join(RACINE, "test", "tmp-hermes-off"),
     COOKDRIVE_INSTANCE_TOKEN: "verify-hermes-off",
     COOKDRIVE_RATELIMIT_OFF: "1",
     COOKDRIVE_AGENT_OFF: "1",
