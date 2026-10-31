@@ -551,7 +551,7 @@ try {
 IMPORTANTE:
 1. DETECCI\xD3N DE TIPO: 
 - Si ves una lista de art\xEDculos con precios y un TOTAL, es una FACTURA ("FACTURE").
-- Si es una FACTURA, extrae TODOS los art\xEDculos presentes.
+- Si es una FACTURA, extrae la totalidad de los art\xEDculos presentes, sin omitir ninguno.
 - Si es un Albar\xE1n sin precios, tipo es "BL".
 - Si es un Abono, tipo es "AVOIR".
 2. ART\xCDCULOS: Para cada art\xEDculo, s\xE9 extremadamente preciso con la CANTIDAD y la UNIDAD. 
@@ -772,7 +772,7 @@ try {
 IMPORTANTE:
 1. DETECCIÓN DE TIPO: 
 - Si ves una lista de artículos con precios y un TOTAL, es una FACTURA ("FACTURE").
-- Si es una FACTURA, extrae TODOS los artículos presentes.
+- Si es una FACTURA, extrae la totalidad de los artículos presentes, sin omitir ninguno.
 - Si es un Albarán sin precios, tipo es "BL".
 - Si es un Abono, tipo es "AVOIR".
 2. ARTÍCULOS: Para cada artículo, sé extremadamente preciso con la CANTIDAD y la UNIDAD. 
