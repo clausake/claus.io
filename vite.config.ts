@@ -42,10 +42,19 @@ export default defineConfig(({mode}) => {
             // cite dans index.html — les features se chargedaient donc au
             // chargement initial, et le gain se reduisait a peines rien (~40 ko).
             // Laisser Rollup decider produit le chunk asynchrone attendu.
-            "vendor-charts": ["recharts"],
-            "vendor-pdf": ["jspdf", "jspdf-autotable"],
-            "vendor-csv": ["papaparse"],
-            "vendor-qrcode": ["qrcode.react"],
+            // T4.1 : les entrees "vendor-charts"/"vendor-pdf"/"vendor-csv"/
+            // "vendor-qrcode" ont ete RETIREES (même lecon que Motion, cf. ci-dessus).
+            // Ces quatre paquets ne sont importes QUE par des vues lazy (recharts :
+            // DashboardOverview/InventoryAudit/SettingsView ; jspdf : Purchasing/
+            // FichesTechniques/MenuAnalysis/SettingsView ; papaparse : InventoryAudit ;
+            // qrcode.react : SettingsView — toutes via lazy-views.ts). En les figeant
+            // par nom, Rollup y HOISTAIT le runtime React partage (les helpers lazy(),
+            // react.dev/errors) ; le chunk devenait ainsi un dependant STATIQUE du chunk
+            // d'entree (import{...}from"./vendor-charts" en tete de index.js) et les
+            // 388 723 o (charts) + 422 612 o (pdf) se telechargeaient au demarrage.
+            // Sans regle, Rollup en fait des chunks ASYNCHRONES chargés a la demande.
+            // Le contrat est verrouille par scripts/verify-bundle.mjs (chunk d'entree
+            // sous 620 000 o) + la mesure du lot initial de index.html.
             // Les traductions (5 langues, ~147 Ko source) ne sont pas nécessaires
             // au premier rendu : le module est importé par les vues, donc un chunk
             // dédié part en async et sort du plafond du chunk d'entrée.

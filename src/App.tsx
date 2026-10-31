@@ -23,14 +23,17 @@ import {
   X,
 
   Menu as MenuIcon} from "lucide-react";
-import {
-  Area,
-} from "recharts";
+// T4.1 : l'import statique `import { Area } from "recharts"` (Area n'était JAMAIS
+// utilisé — seule occurrence : un commentaire « Content Area » l.578) tirait tout
+// vendor-charts (388 723 o) dans le graphe STATIQUE de l'entrée. Retiré : les vues
+// à graphiques (DashboardOverview/InventoryAudit/SettingsView) sont des lazy-views
+// qui importent recharts chez elles -> vendor-charts ne charge qu'à la demande.
 import { INITIAL_CART } from "./data/menuData";
 import { TRANSLATIONS } from "./data/translations";
 import { AnimatePresence, LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
-import { LandingPage, NavItem } from "./components/views";
+import { LandingPage } from "./components/LandingPage";
+import { NavItem } from "./components/NavItem";
 import { Assistant } from "./components/Assistant";
 import { AuthGate, type Utilisateur } from "./components/AuthGate";
 import { Sidebar } from "./components/Sidebar";
