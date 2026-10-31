@@ -17,9 +17,12 @@ declarerait prouve sans avoir juge.
 
 Les mutations et leurs juges :
   M1 le generateur redevient `Date.now().toString()` (src/shared/util.ts)
-     -> U2_parallele (40 ecritures en parallele : les collisions tombent la)
+     -> U0_generateur_sync (20 000 appels SYNCHRONES : deterministe, le meme
+        verdict mord sur toute machine ; U2/U6 dependent du planning reseau et
+        ne peuvent pas servir de juge unique — mesure du 30/10 sur la CI)
   M2 la planification n'utilise plus le generateur (elle rappelle Date.now())
-     -> U2_parallele (la route contourne le remede)
+     -> U2_parallele OU U1_sequentiel (la route contourne le remede ; selon la
+        vitesse de la machine la collision tombe dans l'une ou l'autre rafale)
   M3 les fournisseurs n'utilisent plus le generateur
      -> U7_fournisseurs
 
@@ -44,17 +47,17 @@ MUTATIONS = [
      UTIL,
      "  return rangDansLaMs === 0 ? maintenant.toString() : `${maintenant}-${rangDansLaMs.toString(36)}`;",
      "  return Date.now().toString();",
-     "U2_parallele"),
+     ("U0_generateur_sync",)),
     ("M2 la planification contourne le generateur",
      PLANNING,
      "  const id = nouvelId();",
      "  const id = Date.now().toString();",
-     "U2_parallele"),
+     ("U2_parallele", "U1_sequentiel")),
     ("M3 les fournisseurs contournent le generateur",
      SUPPLIERS,
      "  const id = nouvelId();",
      "  const id = Date.now().toString();",
-     "U7_fournisseurs"),
+     ("U7_fournisseurs",)),
 ]
 
 
@@ -148,15 +151,16 @@ def main():
             rc2, out2 = play()
         finally:
             write(rel, base)
-        nomme = ("VERDICT " + vise + " ROUGE") in out2
+        nomme = [v for v in vise if ("VERDICT " + v + " ROUGE") in out2]
         if rc2 == 0:
             print("NE MORD PAS %s: la porte reste verte avec la mutation" % nom)
             muettes.append(nom)
         elif not nomme:
-            print("ROUGE SANS NOM %s: rougit mais ne nomme pas %s" % (nom, vise))
+            print("ROUGE SANS NOM %s: rougit mais ne nomme aucun de %s"
+                  % (nom, "|".join(vise)))
             muettes.append(nom + " (rougit sans nommer)")
         else:
-            print("MORD %s -> %s nomme" % (nom, vise))
+            print("MORD %s -> %s nomme" % (nom, "|".join(nomme)))
 
     shutil.rmtree(WORK, ignore_errors=True)
     print("MUTATIONS=%d MUETTES=%d ANCRERIES=%d"
