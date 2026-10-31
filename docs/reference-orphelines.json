@@ -1,194 +1,119 @@
 {
   "classes": {
+    "negative-test-audit.py": "PORTEE",
+    "negative-test-chemins-empaquete.py": "PORTEE",
     "negative-test-consume-contract.py": "PORTEE",
     "negative-test-dashboard-contract.py": "PORTEE",
     "negative-test-document-items.py": "PORTEE",
     "negative-test-documents-validate.py": "PORTEE",
+    "negative-test-extraction.py": "PORTEE",
     "negative-test-forecast-graine.py": "PORTEE",
+    "negative-test-garde-fantomes.py": "PORTEE",
     "negative-test-haccp-contract.py": "PORTEE",
+    "negative-test-hermes.py": "PORTEE",
+    "negative-test-ids-uniques.py": "PORTEE",
     "negative-test-inventory-bulk.py": "PORTEE",
     "negative-test-inventory-put.py": "PORTEE",
+    "negative-test-llm-porte.py": "PORTEE",
+    "negative-test-modes.py": "PORTEE",
     "negative-test-post-inventory-contract.py": "PORTEE",
     "negative-test-ready-parity.py": "PORTEE",
     "negative-test-recipes-contract.py": "PORTEE",
+    "negative-test-suggestions.py": "PORTEE",
     "negative-test-supplier-import.py": "PORTEE",
     "negative-test-supplier-price.py": "PORTEE",
+    "negative-test-surveillance.py": "PORTEE",
+    "negative-test-types.py": "PORTEE",
     "negative-test-verify-indices.py": "PORTEE",
-    "probe-ancres-haccp.py": "ORPHELINE",
     "probe-binding-undefined.mjs": "PORTEE",
-    "probe-blocs-sprint11.py": "ORPHELINE",
     "probe-consume-semantiques.mjs": "PORTEE",
     "probe-dashboard-voices.mjs": "PORTEE",
     "probe-document-items-voices.mjs": "PORTEE",
     "probe-documents-validate-contract.mjs": "PORTEE",
-    "probe-emuns-haccp.py": "ORPHELINE",
     "probe-forecast-real.py": "PORTEE",
-    "probe-forme-filtre.py": "ORPHELINE",
-    "probe-garde-instance-harnais-mord.py": "DEMI-PORTEE",
-    "probe-haccp-prerequis.py": "ORPHELINE",
+    "probe-fuseau-cost-data.mjs": "PORTEE",
+    "probe-garde-instance-harnais-mord.py": "PORTEE",
+    "probe-ids-uniques.mjs": "PORTEE",
     "probe-index-forecast-installe.py": "PORTEE",
-    "probe-index-forecast.py": "ORPHELINE",
     "probe-index-installe.py": "PORTEE",
-    "probe-index-reel.py": "ORPHELINE",
-    "probe-index-staffday.py": "ORPHELINE",
     "probe-installeur-morsure.py": "PORTEE",
     "probe-instance-garde-mord.py": "PORTEE",
     "probe-instance-guard.mjs": "PORTEE",
     "probe-inventory-bulk.mjs": "PORTEE",
     "probe-inventory-put-partial.mjs": "PORTEE",
-    "probe-join-stats.py": "ORPHELINE",
     "probe-labor-cost-zero.py": "PORTEE",
-    "probe-nplus1.py": "ORPHELINE",
+    "probe-livrable-14.py": "PORTEE",
     "probe-number-statics.mjs": "PORTEE",
     "probe-post-inventory-voices.mjs": "PORTEE",
     "probe-put-recipes-voices.mjs": "PORTEE",
     "probe-put-yield.py": "PORTEE",
     "probe-ready-parity.mjs": "PORTEE",
     "probe-recipes-voices.mjs": "PORTEE",
-    "probe-stats.py": "ORPHELINE",
     "probe-supplier-import-contract.mjs": "PORTEE",
     "probe-supplier-price-contract.mjs": "PORTEE",
     "probe-verif-module.py": "PORTEE"
   },
   "compte": {
-    "DEMI-PORTEE": 1,
-    "ORPHELINE": 11,
-    "PORTEE": 37
+    "PORTEE": 52
   },
-  "hors_loi": {},
-  "source": "scripts/capteur-orphelines.py",
-  "surveillees": {
+  "hors_loi": {
     "probe-ancres-haccp.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Prototype de préparation d'un patcheur (docstring « Avant d'ecrire le patcheur »), rendu informatif (compte d'ancres count==1, ABSTENTION si 0 ou >1, sans rc bloquant). Le garde d'ancres est assure par tsc (verify:types) ; la couverture HACCP est jugee par verify:haccp + verify:haccp-mord (playwright contrat + morsure). Aucune dependance fonctionnelle (les cites_par etaient la boucle interne des 11 + faux positifs de sous-chaine dans src/)."
     },
     "probe-blocs-sprint11.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Preparateur des 7 blocs du Sprint 11 (docstring « prepare le remplacement transactionnel en extrayant les 7 PORTIONS anciennes »). Echafaudage d'ecriture consomme au Sprint 11 ; rendu = chiffres + predicats booleens, aucun rc de porte."
     },
     "probe-emuns-haccp.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Prototype de coherence enums HACCP (Haccp.tsx/HaccpModules.tsx vs route haccp.ts vs db/init.ts), rendu informatif (comptages confirm()/alert()/ConfirmDialog). Couvert par verify:haccp + verify:haccp-mord."
     },
     "probe-forme-filtre.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
-    },
-    "probe-garde-instance-harnais-mord.py": {
-      "cite_par": [
-        "package.json",
-        "scripts/verify-http.mjs",
-        "scripts/verify-perf.mjs",
-        "scripts/verify-ratelimit.mjs",
-        "scripts/verify-sse.mjs"
-      ],
-      "cite_par_reel": [
-        "package.json",
-        "scripts/verify-http.mjs",
-        "scripts/verify-perf.mjs",
-        "scripts/verify-ratelimit.mjs",
-        "scripts/verify-sse.mjs"
-      ],
-      "classe": "DEMI-PORTEE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": true,
-      "portes": [
-        "\"verify:instance-mord-harnais\""
-      ]
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Instrument de performance SQL (seed TARGET=150000, EXPLAIN QUERY PLAN). Mesure ~15 min et ne rend AUCUN verdict binaire (mesure du 31/10 : finit sur « oracle python: 81 rangees », jamais VERDICT/ECHEC). Un instrument qui ne peut pas rougir n'est pas une porte (AGENTS.md). La decision d'index est portee par verify:indices (ab-indices.py) + verify:indices-mord."
     },
     "probe-haccp-prerequis.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Generateur d'un fichier de patch (ECRIT scripts/blocks/haccp-prerequis.txt, 51 lignes). Echafaudage d'ecriture consomme, ne juge pas ; scripts/blocks/ est le depot des blocs deja appliques au produit."
     },
     "probe-index-forecast.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Prototype de la decision d'index menu_planning JOIN recipe_ingredients, DOUBLONNE par la porte installee verify:installe-index-forecast (probe-index-forecast-installe.py, juge ix_menu_planning_date via EXPLAIN QUERY PLAN). Rendu = chiffres + verdict conditionne au volume/date (informatif)."
     },
     "probe-index-reel.py": {
-      "cite_par": [
-        "scripts/probe-index-installe.py",
-        "scripts/probe-index-staffday.py"
-      ],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Prototype de la decision d'index (staff_id, day) on staff_schedule, DOUBLONNE par la porte installee verify:installe-index (probe-index-installe.py, meme WHERE staff_id=? AND day=?). Mesure de colonnes/EXPLAIN, informatif."
     },
     "probe-index-staffday.py": {
-      "cite_par": [
-        "scripts/probe-index-reel.py"
-      ],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Variante de la decision d'index (staff_id, day) avec seed TARGET=150000 (mesure ~15 min, 0 sortie de verdict en 600s mesure du 31/10). DOUBLONNE par verify:installe-index. Instrumentale + trop lourde pour un lot."
     },
     "probe-join-stats.py": {
-      "cite_par": [
-        "scripts/probe-nplus1.py"
-      ],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Instrument comparant la boucle N+1 vs la JOINTURE sur staff_schedule (seed 150000, ~15 min, aucune ligne VERDICT mesure du 31/10). Informatif ; l'equivalence N+1/jointure est portee par verify:indices (ab-indices.py)."
     },
     "probe-nplus1.py": {
-      "cite_par": [
-        "scripts/probe-join-stats.py"
-      ],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Instrument N+1 vs jointure sur staff_schedule (rendu « gain 60.3 % », « boucle=jointure identique=True », sans rc de porte). Informatif ; la non-regression N+1 est portee par verify:indices + sa morsure."
     },
     "probe-stats.py": {
-      "cite_par": [],
-      "cite_par_reel": [],
-      "classe": "ORPHELINE",
-      "conducteur": false,
-      "defaut": false,
-      "package_json": false,
-      "portes": []
+      "consignee_par": "Qwen T2.3 31/10/2026",
+      "disposition": "SUPPRIMEE (prototype de sprint, sans porte ni dependant)",
+      "raison": "Instrument de chronometrage SQL (TOTAL SQL estime par tour, part des ecritures, part du N+1). Aucune ligne de verdict, informatif ; le suivi des requetes lentes est assure par scripts/audit-perf.mjs."
     }
   },
-  "total_sondes": 49
+  "source": "scripts/capteur-orphelines.py",
+  "surveillees": {},
+  "total_sondes": 52
 }
