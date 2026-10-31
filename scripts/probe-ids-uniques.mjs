@@ -101,7 +101,6 @@ const sortieGen = (gen.stdout || "") + (gen.stderr || "");
 const mGen = /DISTINCTS=(\d+)/.exec(sortieGen);
 verdict("U0_generateur_sync", mGen !== null && Number(mGen[1]) === N_APPELS,
   `distincts=${mGen ? mGen[1] : "?"} attendu=${N_APPELS}`);
-
 // detached: tsx CLI lance un FILS node qui porte le serveur. Tuer le CLI seul
 // laisserait le fils vivant : c'est exactement le fantome que la porte
 // verify:garde-fantomes traque. On tue le GROUPE.
