@@ -3,7 +3,7 @@ import {
   BookOpen, ChefHat, ClipboardList, LayoutDashboard, PackageSearch, Settings, ShieldCheck, ShoppingCart, X, Bot, FlaskConical, CheckCircle2, FileText, Calendar, Thermometer, Sparkles,
 } from "lucide-react";
 import * as motionSlim from "motion/react-m";
-import { NavItem } from "./views";
+import { NavItem } from "./NavItem";
 import type { Utilisateur } from "./AuthGate";
 
 interface SidebarProps {
