@@ -202,18 +202,22 @@ DEFAUT = ["verify:split",
           # la MEME milliseconde produisent la MEME cle, la contrainte saute, la
           # route repond 500 « Failed to save to planning » et la ligne du chef
           # est perdue. La sonde juge le serveur REEL (tsx, port libre, jeton
-          # d'instance verifie) : 40 ecritures SEQUENTIELLES + 40 EN PARALLELE
-          # sur la planification (la fenetre du defaut), les 80 lignes RELUES en
-          # base, 80 ids DISTINCTs, parite response/base, la milliseconde
+          # d'instance verifie) : 40 ecritures SEQUENTIELLES + 200 EN PARALLELE
+          # sur la planification (la fenetre du defaut ; 40 ne collisionnait pas
+          # sur un runner rapide, mesure du 30/10), les 240 lignes RELUES en
+          # base, 240 ids DISTINCTs, parite response/base, la milliseconde
           # partagee VRAIMENT exercee (U6 : sans elle, la porte n'a pas juge le
-          # defaut), meme contrat sur les fournisseurs (U7). La retirer rend
+          # defaut), meme contrat sur les fournisseurs (U7, 100 envois) et 20 000
+          # appels SYNCHRONES au generateur (U0, deterministe). La retirer rend
           # l'unicite jugeable partiellement sans qu'aucun lot ne le voie.
           "verify:ids-uniques",
           # La morsure de l'unicite : elle remet le defaut d'origine
           # (`Date.now().toString()`) dans util.ts, rejoue verify:ids-uniques,
-          # exige ECHEC sur U2_parallele puis RESTAURE ; elle contourne le
-          # generateur dans menuplanning (U2) et suppliers (U7). Au lot par la
-          # regle 6 (une sonde package.json sans DEFAUT est une DEMI-PORTEE).
+          # exige ECHEC sur U0_generateur_sync (deterministe : le verdict U2
+          # dependait du planning reseau et ne nommait pas M1 sur le runner) puis
+          # RESTAURE ; elle contourne le generateur dans menuplanning (U2 ou U1)
+          # et suppliers (U7). Au lot par la regle 6 (une sonde package.json sans
+          # DEFAUT est une DEMI-PORTEE).
           "verify:ids-uniques-mord",
           # Les chemins de l'application EMPAQUETEE (defaut mesure sur l'installeur
           # 0.1.0 : fenetre « Not Found », Epicure en vecteurs nuls, guide en 404 —

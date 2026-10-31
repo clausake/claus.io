@@ -17,17 +17,21 @@
 // sequence est la seule forme qui donne l'unicite par construction.
 //
 // LES VERDICTS (rc 0 = tous tenus, rc 9 = la porte ne s'est pas jouee) :
+//   U0 20 000 appels SYNCHRONES au generateur : tous distincts (verdict
+//      deterministe : sous l'horloge nue ils tombent dans une ou deux
+//      millisecondes et rendent des ids IDENTIQUES — c'est ce verdict qui
+//      nomme M1 sur toute machine, sans dependre du planning reseau)
 //   U1 40 ecritures sequentielles sur la planification : aucune refusee
-//   U2 40 ecritures en PARALLELE : aucune refusee (la fenetre du defaut)
-//   U3 les 80 lignes sont RELUES en base (pas seulement « 200 »)
-//   U4 les 80 ids sont DISTINCTS
+//   U2 200 ecritures en PARALLELE : aucune refusee (la fenetre du defaut)
+//   U3 les 240 lignes sont RELUES en base (pas seulement « 200 »)
+//   U4 les 240 ids sont DISTINCTS
 //   U5 chaque id rendu par une reponse se retrouve en base (parite)
 //   U6 la rafale a bien touche la milliseconde partagee (sinon la porte n'a pas
 //      exerce le defaut : terrain insuffisant, PAS un vert)
-//   U7 meme contrat sur les fournisseurs (l'autre route a cle nue)
+//   U7 meme contrat sur les fournisseurs (l'autre route a cle nue, 100 envois)
 //
 // Lancement: node scripts/probe-ids-uniques.mjs
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { createServer } from "net";
@@ -73,13 +77,38 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const PORT = await portLibre();
 const BASE = `http://127.0.0.1:${PORT}`;
 const tsxBin = path.join(RACINE, "node_modules", ".bin", "tsx");
+
+// ── U0 : le generateur, en SYNCHRONE (verdict deterministe) ─────────────────
+// 20 000 appels dans la MEME boucle : sous l'horloge nue ils tombent dans une
+// ou deux millisecondes et rendent des ids IDENTIQUES ; sous la sequence, tous
+// sont distincts PAR CONSTRUCTION. Ce verdict ne depend ni du planning reseau
+// ni de la vitesse de la machine (contrairement a U1/U2/U6) : il nomme M1 a
+// coup sur, y compris sur un runner ou la rafale parallele est trop etalee
+// pour collisionner. Mesure du 30/10 sur la CI GitHub : la morsure M1 rougissait
+// sans nommer U2 (la porte avait pourtant juge le defaut ailleurs).
+const N_APPELS = 20000;
+const codeGen =
+  "import { nouvelId } from './src/shared/util.ts';" +
+  "const s = new Set();" +
+  `for (let i = 0; i < ${N_APPELS}; i++) s.add(nouvelId());` +
+  "console.log('DISTINCTS=' + s.size);";
+const gen = spawnSync(process.execPath, [tsxBin, "-e", codeGen], {
+  cwd: RACINE,
+  encoding: "utf8",
+  timeout: 60000,
+});
+const sortieGen = (gen.stdout || "") + (gen.stderr || "");
+const mGen = /DISTINCTS=(\d+)/.exec(sortieGen);
+verdict("U0_generateur_sync", mGen !== null && Number(mGen[1]) === N_APPELS,
+  `distincts=${mGen ? mGen[1] : "?"} attendu=${N_APPELS}`);
+
 // detached: tsx CLI lance un FILS node qui porte le serveur. Tuer le CLI seul
 // laisserait le fils vivant : c'est exactement le fantome que la porte
 // verify:garde-fantomes traque. On tue le GROUPE.
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
   cwd: RACINE,
   detached: true,
-  env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
+  env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", COOKDRIVE_RATELIMIT_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },
   stdio: "ignore",
 });
 server.on("error", () => {
@@ -129,10 +158,13 @@ for (let i = 0; i < 40; i++) {
 verdict("U1_sequentiel", refusSeq === 0, `refus=${refusSeq}` + (exempleRefus ? " exemple=" + exempleRefus : ""));
 
 // ── U2 : en PARALLELE (la fenetre du defaut) ────────────────────────────────
+// 200 envois, pas 40 : sous l'horloge nue, 40 requetes peuvent s'etaler sur
+// plus d'une milliseconde sur une machine rapide et ne JAMAIS collisionner
+// (mesure du 30/10 sur la CI). 200 rend la fenetre quasi certaine.
 const idsPar = [];
 let refusPar = 0;
 const envois = [];
-for (let i = 0; i < 40; i++) {
+for (let i = 0; i < 200; i++) {
   envois.push(poster("/api/menu-planning", { date: jour(1000 + i), meal_type: "DINNER", title: "Rafale par " + i }).then((r) => {
     if (r.code === 200 && r.corps && r.corps.id) idsPar.push(String(r.corps.id));
     else refusPar += 1;
@@ -145,11 +177,11 @@ verdict("U2_parallele", refusPar === 0, `refus=${refusPar}`);
 const relu = await (await fetch(`${BASE}/api/menu-planning`)).json().catch(() => []);
 const lignes = Array.isArray(relu) ? relu : [];
 const idsBase = new Set(lignes.map((l) => String(l.id)));
-verdict("U3_relu_en_base", lignes.length === 80, `lignes=${lignes.length} attendu=80`);
+verdict("U3_relu_en_base", lignes.length === 240, `lignes=${lignes.length} attendu=240`);
 
 const tousIds = [...idsPlanning, ...idsPar];
 const distincts = new Set(tousIds);
-verdict("U4_ids_distincts", distincts.size === 80, `distincts=${distincts.size} attendu=80 (recus=${tousIds.length})`);
+verdict("U4_ids_distincts", distincts.size === 240, `distincts=${distincts.size} attendu=240 (recus=${tousIds.length})`);
 
 const absents = tousIds.filter((id) => !idsBase.has(id));
 verdict("U5_parite_reponse_base", absents.length === 0, `absents=${absents.length}` + (absents.length ? " ex=" + absents[0] : ""));
@@ -166,10 +198,12 @@ verdict("U6_fenetre_exercee", collisionsEvitees > 0,
   `millisecondes partagees=${collisionsEvitees} (sans elles, la porte n'aurait pas juge le defaut)`);
 
 // ── U7 : l'autre route a cle nue ───────────────────────────────────────────
+// 100 envois (pas 20) : meme raison que U2 — une fenetre trop etroite peut
+// laisser passer M3 sans collision sur une machine rapide.
 const envoisSup = [];
 const idsSup = [];
 let refusSup = 0;
-for (let i = 0; i < 20; i++) {
+for (let i = 0; i < 100; i++) {
   envoisSup.push(poster("/api/suppliers", { name: "Fournisseur rafale " + i }).then((r) => {
     if (r.code === 200 && r.corps && r.corps.id) idsSup.push(String(r.corps.id));
     else refusSup += 1;
@@ -179,7 +213,7 @@ await Promise.all(envoisSup);
 const supRelus = await (await fetch(`${BASE}/api/suppliers`)).json().catch(() => []);
 const idsSupBase = new Set((Array.isArray(supRelus) ? supRelus : []).map((s) => String(s.id)));
 const supAbsents = idsSup.filter((id) => !idsSupBase.has(id));
-verdict("U7_fournisseurs", refusSup === 0 && new Set(idsSup).size === 20 && supAbsents.length === 0,
+verdict("U7_fournisseurs", refusSup === 0 && new Set(idsSup).size === 100 && supAbsents.length === 0,
   `refus=${refusSup} distincts=${new Set(idsSup).size} absents_en_base=${supAbsents.length}`);
 
 tuer();
