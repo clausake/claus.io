@@ -41,6 +41,16 @@ DEFAUT = ["verify:split",
           "verify:ui-tabs",
           "verify:ratelimit", "verify:ci", "verify:indices",
           "verify:instance-guard", "verify:instance-mord",
+          # T2.1 (integrite du harnais) : cette morsure etait une DEMI-PORTEE
+          # (mesure capteur-orphelines.py : package_json true, defaut false).
+          # La sonde probe-garde-instance-harnais-mord.py est citee par 5
+          # conducteurs (package.json + verify-{http,perf,ratelimit,sse}) mais
+          # n'etait pas jouee au lot : une porte que le lot n'appelle pas n'est
+          # pas une porte (regle 6). Elle ne depend d'AUCUN poids ni reseau
+          # externe (serveur imposteur sur 127.0.0.1:4126-4129) ; elle seule
+          # rend 12/12 branches correctes. Elle rejoint donc ses deux soeurs
+          # instance-guard / instance-mord au DEFAUT.
+          "verify:instance-mord-harnais",
           "verify:purchasing", "verify:forecast", "verify:forecast-mord",
           "verify:ready", "verify:ready-mord",
           "verify:inventory-put",
