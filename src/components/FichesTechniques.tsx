@@ -34,6 +34,8 @@ import { appartientDossier, exportSingleRecipeToPDF as exportPDF } from "../lib/
 import { RecipeModal } from "./RecipeModal";
 import { FichesGrilleCategories } from "./FichesGrilleCategories";
 import { FichesVueLivre } from "./FichesVueLivre";
+// T3.2 : barre de titre extraite (extraction pure, byte-exact) dans le même dossier.
+import { FichesTechniquesHeader } from "./FichesTechniquesHeader";
 
 // Le payload du chat culinaire (Sprint 16) : recette nommee en francais,
 // ingredients en nom/quantite/unite, etapes en string[].
@@ -616,70 +618,7 @@ export function FichesTechniques({
 
   return (
     <div className="led-glow-container h-full flex flex-col animate-in fade-in duration-150 overflow-hidden relative">
-      <div className="p-6 border-b border-white/10 bg-[#0A0A0A] flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center">
-            <BookOpen className="w-6 h-6 mr-3 text-emerald-500" />
-            {t.technicalSheets}
-          </h2>
-          <p className="text-slate-500 mt-1">{t.foodCostSubtitle}</p>
-        </div>
-        <div className="flex gap-4">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileScan}
-            accept="image/*,.pdf"
-            className="hidden"
-          />
-          <button
-            onClick={() => {
-              const newRecipe = {
-                id: "manual-" + Math.random().toString(36).substr(2, 9),
-                name: t.newRecipe || "Nouvelle Recette",
-                category: selectedCategory || "general",
-
-                ingredients: [],
-                preparation_steps: "",
-                is_saved: true,
-              };
-              setSelectedRecipeForModal(newRecipe);
-            }}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all led-glow-emerald border border-blue-400/30 shadow-lg flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            {t.addRecipeManually || "Ajouter Manuellement"}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all led-glow-purple border border-purple-400/30 shadow-lg flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4 text-purple-200 animate-pulse" />
-            {t.scanAndImport || "Scanner & Importer par IA"}
-          </button>
-          <button
-            onClick={() => {
-              setViewMode(viewMode === "categories" ? "book" : "categories");
-              setActiveLetter(null);
-            }}
-            className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 border shadow-lg ${
-              viewMode === "book"
-                ? "bg-amber-600 hover:bg-amber-500 text-white led-glow-amber border-amber-400/30"
-                : "bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
-            }`}
-          >
-            <FolderOpen className="w-4 h-4" />
-            {t.recipeBook || "Livre des Recettes"}
-          </button>
-          <button
-            onClick={fetchRecipes}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all led-glow-emerald border border-emerald-400/30 shadow-lg flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t.refresh}
-          </button>
-        </div>
-      </div>
+      <FichesTechniquesHeader viewMode={viewMode} setViewMode={setViewMode} selectedCategory={selectedCategory} setActiveLetter={setActiveLetter} setSelectedRecipeForModal={setSelectedRecipeForModal} fileInputRef={fileInputRef} handleFileScan={handleFileScan} fetchRecipes={fetchRecipes} t={t} />
 
       {isScanning && (
         <div className="absolute inset-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300">
