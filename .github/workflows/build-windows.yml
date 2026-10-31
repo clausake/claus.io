@@ -1,11 +1,12 @@
-# Installeur Windows x64 — compilé sur un vrai hôte Windows.
+# Installeurs des trois plateformes — chacun compile sur son hote NATIF.
 #
-# Pourquoi ici et pas sur la machine locale : le cross-compile arm64->x64 est
-# impossible pour les modules natifs (node-gyp le refuse), et makensis casse
-# (EPIPE) depuis un hôte Linux. Sur hôte natif Windows, les deux étapes sont
-# ordinaires.
+# Windows x64 : sur un vrai hote Windows (makensis casse en EPIPE depuis Linux,
+#               et le cross-compile arm64->x64 est refuse pour les modules natifs).
+# macOS arm64 : sur un runner Apple (une regle de facto d'Apple pour les images disque).
+# Linux arm64 : sur un runner ARM (le cross-compile x64->arm64 est refuse pour
+#               sqlite3/argon2/onnxruntime/@napi-rs/canvas).
 #
-# Déclencheurs :
+# Declencheurs :
 #   - manuel (workflow_dispatch) pour la release en cours ;
 #   - à chaque tag v* pour les releases suivantes.
 # L'attache à la release LIT la version de package.json pour un déclenchement
@@ -15,7 +16,7 @@
 # version annoncée bouge. Le tag porté par le déclencheur v* reste la référence
 # quand il existe.
 
-name: windows-x64
+name: installateurs
 
 on:
   workflow_dispatch:
@@ -123,3 +124,59 @@ jobs:
         with:
           tag_name: ${{ steps.rel.outputs.tag }}
           files: release/*.dmg
+
+  build-linux:
+    # Linux ARM64 (AppImage + deb) — construit sur un runner ARM natif.
+    #
+    # POURQUOI CE JOB EXISTE (defaut mesure le 30/10 sur la release v0.1.1) :
+    # le README annoncait des installeurs Linux attaches, mais la release ne
+    # portait que le .exe et le .dmg — les AppImage/.deb avaient ete construits
+    # a la main sur le poste arm64 et jamais pousses. Un utilisateur Linux qui
+    # suivait le README (« prendre 0.1.1 ou plus recent ») retombait donc sur la
+    # 0.1.0, celle qui ouvre « Not Found » (chantier 20). Les deux assets 0.1.1
+    # ont ete rattaches a la main le 31/10 ; ce job empeche la recidive.
+    #
+    # Pourquoi un runner ARM et pas ubuntu-latest (x64) : le cross-compile
+    # x64->arm64 est impossible pour les modules natifs (sqlite3, argon2,
+    # onnxruntime, @napi-rs/canvas) — npm ci installerait les binaires x64.
+    # Les runners ARM heberges sont disponibles pour les depots publics.
+    runs-on: ubuntu-24.04-arm
+    # Meme raison que dans ci.yml : le postinstall de onnxruntime-node telecharge
+    # les providers CUDA/TensorRT depuis le CDN Microsoft, injoignable depuis le
+    # runner (ETIMEDOUT). Les binaires CPU linux/arm64 sont deja dans le paquet.
+    env:
+      ONNXRUNTIME_NODE_INSTALL: "skip"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm run build:server
+
+      - name: electron-builder AppImage + deb (arm64, sans publication)
+        run: npx electron-builder -l --publish never
+
+      - name: à quelle release rattacher
+        id: rel
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: attacher les installeurs à la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          files: |
+            release/*.AppImage
+            release/*.deb
