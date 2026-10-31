@@ -111,6 +111,19 @@ DEFAUT = ["verify:split",
           # Elle exige un arbre propre (git checkout), donc elle n'est
           # JAMAS jouee sur un workspace sale.
           "verify:audit-mord",
+          # T1.3 (securite) : la barriere npm-audit. Elle rougit sur une
+          # dependance CRITICAL (seuil bloquant) et consigne high/moderate sans
+          # rougir (le depot porte des high dev-only/non-montables consignees,
+          # doctrine CI §8 « seuil CRITICAL »). La CI (ci.yml job security) la
+          # rejoue ; ici elle est au lot pour qu'une critique introduite demain
+          # casse AUSSI le lot local, pas seulement la CI.
+          "verify:audit-barriere",
+          # La morsure de la barriere : critique factice via --rapport (sans
+          # reseau) DOIT rougir (M1), le meme rapport sans critique DOIT rester
+          # vert (M2), et le depot reel doit rester vert (M3). Tout se joue dans
+          # un tmpdir — JAMAIS l'arbre de travail. Une barriere qui ne peut pas
+          # rougir n'est pas une mesure (AGENTS.md §2).
+          "verify:audit-barriere-mord",
           # Chantier 3 (feuille de route §8) : la boîte de suggestions. La
           # sonde juge le serveur REEL AVEC identite active : l'agent propose
           # (A1 — sa SEULE ecriture), le staff est refuse (A3), les payloads

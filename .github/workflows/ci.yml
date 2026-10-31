@@ -77,6 +77,42 @@ jobs:
             exit 1
           fi
 
+  # ── Lot 1b : securite (T1.3) ────────────────────────────────────────────────
+  # Aucun job de securite n'existait (constat T1.3, fait 7 : grep "npm audit"
+  # .github/workflows/ci.yml = 0) alors que la doctrine AGENTS.md §7 / CI §8
+  # decrit un « seuil CRITICAL ». Sans garde automatise, une critique introduite
+  # demain passe en silence.
+  security:
+    name: security (barriere npm-audit CRITICAL + morsure)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Bloquant : une CRITICAL casse la CI (allow_failure:false par defaut).
+      - name: verify:audit-barriere (barriere CRITICAL bloquante)
+        run: npm run verify:audit-barriere
+      # Deterministe, sans reseau : une critique factice DOIT rougir la barriere.
+      - name: verify:audit-barriere-mord (la barriere rougit sur une critique factice)
+        run: npm run verify:audit-barriere-mord
+      # Non bloquant : le rapport JSON complet (high/moderate consignees) est
+      # archive 1 mois. continue-on-error : un rouge high (dev-only/non-montable
+      # consignee docs/audit §5) ne casse PAS le pipeline — seul le CRITICAL
+      # bloque, via l'etape verify:audit-barriere ci-dessus.
+      - name: npm audit --json (rapport high/moderate, allow_failure)
+        continue-on-error: true
+        run: npm audit --json > audit-report.json || true
+      - name: artifact audit-report (JSON, 1 mois)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: audit-report.json
+          retention-days: 30
+
   # ── Lot 2 : unites ────────────────────────────────────────────────────────
   vitest:
     name: vitest (158 tests)
