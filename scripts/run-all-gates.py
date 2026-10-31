@@ -357,6 +357,16 @@ DEFAUT = ["verify:split",
           # verify:ocr-moteur est HORS DEFAUT, pour la MEME raison que
           # verify:ocr-modeles : elle joue le vrai moteur et exige les poids
           # (12,8 Mo hors git).
+          # T2.2 (31/10) : le commentaire ci-dessus affirmait « peut rester au
+          # lot » alors que la porte N'Y ETAIT PAS — un commentaire qui dit le
+          # contraire du code (mesure : extraction des entrees-string DEFAUT =
+          # verify:ocr-moteur-mord ABSENTE, seul le mot « DEFAUT » du commentaire
+          # rendait le grep optimiste). La porte est jouable sans poids : lancee
+          # seule elle rend MORSURE JUGE OCR tout vert rc=0 (4 courses sur
+          # consigne fabriquee). Le desaccord est tranche dans le sens du
+          # commentaire : la porte est AJOUTEE au DEFAUT, commentaire et code
+          # disent desormais la meme chose.
+          "verify:ocr-moteur-mord",
           # verify:llm-fournisseur (Tache 13) : les trois
           # voies du routage + le reglage LLM, juges au banc (le contrat nomme
           # la porte ; les juges existants sont joues sous leur nom).
