@@ -104,6 +104,8 @@
     "verify:audit-mord": "python3 scripts/negative-test-audit.py",
     "verify:audit-barriere": "node scripts/verify-audit-barriere.mjs",
     "verify:audit-barriere-mord": "node scripts/verify-audit-barriere-mord.mjs",
+    "verify:no-mute": "python3 scripts/verify-no-mute.py",
+    "verify:no-mute-mord": "python3 scripts/verify-no-mute-mord.py",
     "verify:suggestions": "node scripts/verify-suggestions.mjs",
     "verify:suggestions-mord": "python3 scripts/negative-test-suggestions.py",
     "verify:mode-manuel": "node scripts/verify-mode-manuel.mjs",
