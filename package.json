@@ -266,7 +266,7 @@
     "lightningcss-win32-x64-msvc": "1.32.0"
   },
   "maintainer": "ClausIO <clausake@localhost>",
-  "homepage": "https://gitlab.com/cookdrive-group/cookdrive-project",
+  "homepage": "https://github.com/clausake/claus.io",
   "overrides": {
     "node-gyp": "^11.3.0",
     "tar": "^7.5.22"
