@@ -134,6 +134,18 @@ DEFAUT = ["verify:split",
           # un tmpdir — JAMAIS l'arbre de travail. Une barriere qui ne peut pas
           # rougir n'est pas une mesure (AGENTS.md §2).
           "verify:audit-barriere-mord",
+          # T3.3 (produit/tests) : la regle « aucun test muet ». Elle rougit sur
+          # tout .skip/.only/.todo vitest/playwright dans test/ et src/. Le fait
+          # 13 du planning (« 7 .skip », commande grep -rn "\\.skip\\( test src")
+          # etait un FAUX POSITIF : rejouee elle rend 0, le motif est une
+          # sous-chaine de process.exit( / sys.exit(. La regle etait assise sur un
+          # capteur qui ne voit pas un vrai skip ; cette porte est le capteur qui
+          # ne peut pas mentir par omission (garde : grep blanc process.exit>0).
+          "verify:no-mute",
+          # Morsure : it.skip factice injecte dans test/.morsure-no-mute/ (zone
+          # SCANNER, pas tmp-* qui sont exclus) -> DOIT rougir et NOMMER le
+          # fichier, puis retour au vert apres retrait. Jamais l'arbre juge.
+          "verify:no-mute-mord",
           # Chantier 3 (feuille de route §8) : la boîte de suggestions. La
           # sonde juge le serveur REEL AVEC identite active : l'agent propose
           # (A1 — sa SEULE ecriture), le staff est refuse (A3), les payloads
