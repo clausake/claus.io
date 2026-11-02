@@ -163,6 +163,95 @@ jobs:
       - name: electron-builder AppImage + deb (arm64, sans publication)
         run: npx electron-builder -l --publish never
 
+      # ── E1 : smoke test de l'installeur (plan docs/plan-chantier-qwen-2026-11-02-v012.md)
+      #
+      # Le serveur EMPAQUETE doit repondre : on lance le VRAI AppImage (jamais
+      # `tsx server.ts` du source) sous xvfb et on sonde son API. Un smoke en
+      # continue-on-error, ou un vert sans sonde, est INTERDIT par le plan.
+      # Il vit AVANT l'attache a la release : un installeur dont le serveur ne
+      # repond pas ne doit pas etre publie (c'etait le defaut v0.1.0 : la porte
+      # repondait 200, la maquette « Not Found »).
+      #
+      # Ce que le smoke prouve, en 60 s maximum :
+      #   1. le compte-rendu de pret (COOKDRIVE_READY_FILE pose par main.cjs)
+      #      apparait ET GET /api/settings repond 200 ;
+      #   2. le jeton d'instance du compte-rendu == l'en-tete X-Cookdrive-Instance
+      #      de la reponse — on sonde NOS serveur, pas un herite du port ;
+      #   3. GET / repond 200 et rend l'UI embarquee (<div id="root">).
+      # A l'echec : les 40 dernieres lignes du log du serveur (pas un rouge muet).
+      #
+      # Windows (.exe) et macOS (.dmg) : PAS de smoke — l'execution headless
+      # d'un installeur NSIS/dmg n'est pas implantee. Ce bloc NOMME le manque
+      # au lieu de laisser croire que les trois plateformes sont couvertes.
+      - name: smoke AppImage (le serveur empaquete repond en 60 s)
+        shell: bash
+        timeout-minutes: 10
+        env:
+          SMOKE_PORT: "3997"
+          SMOKE_TMP: ${{ runner.temp }}/clausio-smoke
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libnss3 libgbm1 \
+            libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libasound2t64
+          APPIMAGE="$(ls release/*.AppImage)"
+          echo "== AppImage juge : $APPIMAGE"
+          mkdir -p "$SMOKE_TMP"
+          rm -f "$SMOKE_TMP/cookdrive-ready.json" "$SMOKE_TMP/smoke.log" \
+                /tmp/cookdrive-ready.json
+          # main.cjs pose son compte-rendu dans app.getPath('temp') : TMPDIR le
+          # borne vers un dossier qu'on relit. PORT est un CONTRAT : impose, le
+          # serveur meurt sur EADDRINUSE au lieu de glisser en silence.
+          export TMPDIR="$SMOKE_TMP" PORT="$SMOKE_PORT"
+          xvfb-run -a "$APPIMAGE" --appimage-extract-and-run --no-sandbox \
+            --disable-gpu > "$SMOKE_TMP/smoke.log" 2>&1 &
+          APP_PID=$!
+
+          echec() {
+            echo "::error::SMOKE ECHEC — $1"
+            echo "===== 40 dernieres lignes du log de l'AppImage ====="
+            tail -n 40 "$SMOKE_TMP/smoke.log" || true
+            kill $APP_PID 2>/dev/null || true
+            exit 1
+          }
+
+          # 1) compte-rendu de pret + GET /api/settings -> 200, en 60 s
+          ok=""
+          fin=$((SECONDS + 60))
+          while [ $SECONDS -lt $fin ]; do
+            kill -0 $APP_PID 2>/dev/null || echec "l'AppImage est mort avant de repondre"
+            if [ -f "$SMOKE_TMP/cookdrive-ready.json" ]; then
+              curl -fsS -m 3 -o /dev/null \
+                "http://127.0.0.1:$SMOKE_PORT/api/settings" && ok=1 && break
+            fi
+            sleep 2
+          done
+          [ -n "$ok" ] || echec "aucun compte-rendu + 200 sur /api/settings en 60 s"
+          echo "== compte-rendu de pret recu + /api/settings -> 200"
+
+          # 2) identite : jeton du compte-rendu == en-tete X-Cookdrive-Instance
+          attends="$(python3 -c "import json;print(json.load(open('$SMOKE_TMP/cookdrive-ready.json'))['instance'])")"
+          rendu="$(curl -fsS -m 3 -D - -o /dev/null \
+            "http://127.0.0.1:$SMOKE_PORT/api/settings" \
+            | tr -d '\r' | awk -F': ' 'tolower($1)=="x-cookdrive-instance"{print $2}')"
+          if [ "$attends" != "$rendu" ]; then
+            echec "jeton d'instance divergent (compte-rendu != en-tete) — on sondait un autre serveur"
+          fi
+          echo "== identite verifiee (jeton $attends)"
+
+          # 3) GET / -> 200 avec l'UI embarquee. Le corps est tamponne avant le
+          #    grep : `curl | grep -q` ferait quitter grep tot -> SIGPIPE -> curl
+          #    rend 141 sous pipefail = faux rouge. Ici seul curl -f decide du 200.
+          corps="$(curl -fsS -m 3 "http://127.0.0.1:$SMOKE_PORT/")"
+          case "$corps" in
+            *'<div id="root">'*) : ;;
+            *) echec "GET / ne rend pas <div id=\"root\"> (l'UI empaquetee est absente)" ;;
+          esac
+          echo "== GET / rend l'UI embarquee (<div id=\"root\">)"
+
+          echo "SMOKE OK — AppImage : /api/settings 200, jeton conforme, UI rendue"
+          kill $APP_PID 2>/dev/null || true
+
       - name: à quelle release rattacher
         id: rel
         shell: bash
