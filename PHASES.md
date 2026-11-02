@@ -1582,3 +1582,78 @@ jouées une par une, et DEUX sont des défauts du produit, pas du harnais :
   rappelle qu'un `glisse:true` seul ne prouve rien sans le jeton.
 - Le chemin de l'UI complète (les 13 onglets) n'est PAS rejoué ici : c'est
   `verify:ui-tabs`, hors de ce chantier.
+
+## Campagne de réparation 31/10–02/11 — 27 commits, la release 0.1.2 et la CI GitHub (02/11)
+
+Le planning du 31/10 (`docs/planning-reparation-2026-10-31.md`, 13 tâches
+mesurées) répartissait le travail entre DeepSeek (sécurité/harnais/CI) et Qwen
+(produit/dette/bundle). Bilan mesuré : `git rev-list --count 77b219e..946e592`
+= **27 commits**, du déploiement GitHub (31/10) à la release **0.1.2** (02/11).
+
+### Sécurité (T1, consigné au 31/10)
+
+- **T1.1** (b40a29e) : dompurify CRITIQUE neutralisé par override `^3.4.17`
+  dans package.json — l'audit est passé à `critical: 0`. Re-mesuré le 02/11 :
+  `npm audit --json` → `{high: 6, moderate: 29, critical: 0}`. L'export PDF
+  (jspdf) prouvé au passage.
+- **T1.2** (94b69b8) : triage des high — 4 montées (override body-parser
+  `^2.4.0`, markdown-it `15.0.3`, multer `2.5.0`, undici `8.12.3`), le reste
+  consigné non monté. Les 4 overrides/montées vivent dans package.json
+  (re-lu ce jour).
+- **T1.3** (375024f) : barrière npm-audit dans la CI GitHub
+  (`verify:audit-barriere` bloquante au seuil CRITICAL + morsure
+  `verify:audit-barriere-mord` sans réseau) ; le rapport high/moderate est
+  archivé en artefact (allow_failure, 1 mois).
+
+### Dette et harnais (T2–T3, consigné au 31/10)
+
+- **T2.1/T2.2** (743ffb5, 94f04f7) : la demi-portée
+  `verify:instance-mord-harnais` et la porte `verify:ocr-moteur-mord` branchées
+  au lot — capteurs DEMI-PORTEE et commentaire-vs-code à 0.
+- **T2.3** (d9d52ce) : les 11 sondes orphelines disposées une à une avec raison
+  par sonde (capteur ORPHELINE=0) ; `docs/skips-2026-10-31.md` consigne les
+  .skip restants.
+- **T3.3** (a81d655, rectifié au 51daab1) : le « fait 13 » des tests .skip
+  était un FAUX POSITIF (journaux non suivis, pas process.exit) — une barrière
+  no-mute garde le lot.
+- **T3.2** (ff0bd48→2d8ab2a, 9 commits) : neuf extractions PURES (aucune ligne
+  de logique déplacée) : translations.ts 3929→16 lignes (un module par langue),
+  Purchasing.tsx 1479→671, documents.ts 906→689, InventoryAudit.tsx
+  1226→748, DocumentManager.tsx 1324→789, SettingsView.tsx 1136→755,
+  Haccp.tsx 1006→721, RecipeModal.tsx 921→489, FichesTechniques.tsx 853→792.
+
+### Produit (T4–T5 + reprises Qwen du 02/11)
+
+- **T4.1** (cfeb250) : vendor-pdf et vendor-charts hors du chargement initial —
+  811 335 o économisés au boot (consigné au commit). Re-mesuré le 02/11 :
+  `grep -c "vendor-pdf\|jspdf" dist/index.html` → 0.
+- **T5.1** (4acc2e6) : parité README/workflow/release des installeurs — le job
+  `build-linux` (runner ARM natif) construit AppImage + deb à chaque tag v* ;
+  la récidive de la v0.1.1 (installeurs Linux promis au README mais jamais
+  attachés) est fermée.
+- **02/11** (76ba697, 24991e2, c1c2390) : `verify:ui-tabs` puis
+  `verify:reception` rougissaient par la boucle d'entrée du HARNAIS (10×8 s
+  avalée), pas par le produit ; `entrerDansApp()` — export mort qui faisait
+  `page.goto(page.url())` (about:blank au premier appel) — retiré.
+
+### La release 0.1.2 (02/11, commit 946e592)
+
+- Tag `v0.1.2` → commit `946e592` (`git rev-parse v0.1.2^{commit}` =
+  `946e5921e5…`).
+- CI du commit : run **41430526576, 7/7 jobs verts**, lot complet
+  `GATES=98 ROUGES=0 TOUT VERT` (lu dans le log du job gates, jamais greppé
+  dans le binaire).
+- Run installeurs **41430532470 : build / build-mac / build-linux = success** ;
+  la release porte les 4 installeurs (AppImage arm64, deb arm64, Setup .exe,
+  .dmg Apple Silicon), non draft, non prerelease.
+
+### Limites à la date de cette consigne (à dire, pas à taire)
+
+- Le compositeur Chromium du poste de dev ne produit plus de frames
+  (`requestAnimationFrame` = 0) : les e2e LOCAUX ne sont pas fiables ici, la
+  CI fait foi. Environmental, non réparable depuis le dépôt.
+- Quatre erreurs étaient ouvertes au moment d'écrire ces lignes
+  (`docs/plan-chantier-qwen-2026-11-02-v012.md`) : aucun smoke test
+  d'installeur, le présent journal absent, les vulnérabilités livrées sans
+  plan de sortie, le README périmé — ce dernier corrigé au commit fdc50e3 ;
+  les trois autres suivent dans les commits de ce chantier.
