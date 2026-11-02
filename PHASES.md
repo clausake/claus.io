@@ -1657,3 +1657,53 @@ mesurées) répartissait le travail entre DeepSeek (sécurité/harnais/CI) et Qw
   d'installeur, le présent journal absent, les vulnérabilités livrées sans
   plan de sortie, le README périmé — ce dernier corrigé au commit fdc50e3 ;
   les trois autres suivent dans les commits de ce chantier.
+
+## Publication 0.1.3 — le moteur publié devient l'arbre audité (02/11)
+
+Faute détectée après E1–E4 (`docs/plan-chantier-qwen-2026-11-02-013.md`) : la
+release **publique** v0.1.2 (assets `cree/maj = 10:41–10:44Z`) avait été
+construite depuis `946e592`, AVANT E3 — donc ce que télécharge un client
+embarquait encore les 4 `high` runtime. L'arbre propre et smoke-prouvé
+(`c425339`) n'était publié nulle part. « Fonctionnel sans erreur » n'était vrai
+que sur l'arbre, pas sur le livrable. Ce chantier publie l'arbre.
+
+### P2 — `pdf2pic` retirée (commit c2c0711)
+
+Dépendance directe de production **morte**, donc embarquée chez le client :
+`npm ls pdf2pic` → `clausio@0.1.2 └── pdf2pic@3.2.0` (aucun reverse-dépendant) ;
+`git grep -n "pdf2pic" HEAD -- src server.ts scripts electron` → rc=1, zéro
+occurrence vivante (les seules traces sont les copies `.avant-*`/`.orig` de
+`scripts/blocks/`, que `build.files` n'embarque pas). Elle exige GraphicsMagick
+à l'exécution : poids mort livré. Retirée par `npm uninstall` (méthode E3,
+aucune réécriture de code). **`pdf-parse` préservé** (interdit) : 4 routes
+l'importent (`documents.ts:8`, `haccp.ts:6`, `menu.ts:6`, `recipes.ts:27`).
+Honnêteté du chiffre : `pdf2pic` n'était pas une vulnérabilité comptée —
+`npm audit --omit=dev` rend `{high:0, moderate:10, critical:0}` avant == après ;
+le gain est le retrait du poids mort embarqué, pas un score (consigné
+`docs/audit-2026-11-02.md` §5). CI du commit : run 41483397997, 7/7 verts.
+
+### P1 — release v0.1.3 (commit 362f93f, tag v0.1.3)
+
+`npm version 0.1.3 --no-git-tag-version`, tag `v0.1.3` posé DEPUIS le commit
+release, pushé après CI verte du commit. Le tag NOUVEAU fait attacher le
+workflow à une release séparée — aucune collision avec v0.1.2.
+
+- CI du commit de release : run **41487554336, 7/7 verts**.
+- Run installateurs du tag : **41492415754** — `build-linux :: smoke AppImage`
+  ✓ AVANT `attacher les installeurs` ✓ ; AppImage jugé `claus.io-0.1.3-arm64.AppImage`,
+  `/api/settings` 200, jeton d'instance `7e74fdd2…` conforme, `<div id="root">` rendu.
+- v0.1.3 publiée (non draft, non prerelease) avec **4 assets** créés `17:36–17:39Z`,
+  soit APRÈS le push du tag (~17:34Z). Notes de release posées par `gh release
+  edit --notes-file` (n'altere ni les assets, ni le drapeau latest).
+- v0.1.2 **intacte** : ses 4 assets gardent `10:41–10:44Z` (relecture identique
+  à la baseline). Aucun tag `*-smoke*` laissé, aucun `--latest` forcé, v0.1.2
+  non re-taggé. GitHub a promeu AUTOMATIQUEMENT v0.1.3 en « Latest » (comportement
+  natif de la release non-draft la plus récente — non forcé, signalé ici).
+
+### Limites de cette publication (à dire, pas à taire)
+
+- Le smoke ne couvre que Linux (AppImage) ; `.exe` et `.dmg` construits mais non
+  fumés — nommé dans le workflow, accepté par le plan.
+- Les trois `high` retirés (`pdf-to-img`/`xlsx`/`pdf2pic`) l'ont été comme
+  dépendances mortes : si une fonction revient, re-monter les successeurs
+  (pdf-to-img 7.0.2, SheetJS ≥0.20) et re-fumer, pas réintroduire à l'aveugle.
