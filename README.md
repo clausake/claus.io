@@ -92,7 +92,8 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 > ⚠️ **v0.1.0** : ces installeurs ouvraient une page « Not Found » (le serveur
 > cherchait son dossier `dist` dans le dossier courant de l'exécutable au lieu de
 > son archive) et tournaient avec le moteur d'accords Epicure en vecteurs nuls.
-> Corrigé au chantier 20 — prendre l'installeur **0.1.1** ou plus récent. Le ZIP
+> Corrigé au chantier 20 — prendre l'installeur **0.1.2** ou plus récent (la
+> release courante : [v0.1.2](https://github.com/clausake/claus.io/releases/tag/v0.1.2)). Le ZIP
 > + `LANCER_APPLICATION.bat` de v0.1.0 échouait à la compilation pour la même
 > famille de raison : le script forçait `NODE_ENV=production` avant `npm install`,
 > ce qui fait sauter à npm les devDependencies (`vite`, `tsx`). Corrigé aussi.
