@@ -19,6 +19,7 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { entrerDansAppSansNavigation } from "./entrer-dans-app";
 
 let PORT = 0;
 let BASE = "";
@@ -98,6 +99,13 @@ const ONGLETS = [
 ];
 
 test.describe("banc UI/UX — les onglets (12 + anti-doublon)", () => {
+  // 12 onglets sur un runner charge ne tiennent pas dans les 90 s du projet :
+  // la porte rougissait sur `Test timeout of 90000ms exceeded` PENDANT que le
+  // meme spec seul rendait 13 passed (mesure du 02/11, plan E1.3). Le budget
+  // global de playwright.config.ts reste a 90 s (hors sujet) : on le releve ICI,
+  // la ou c'est justifie, et uniquement pour cette suite.
+  test.setTimeout(150_000);
+
   for (const nom of ONGLETS) {
     test(`onglet ${nom} : rendu + console propre + focus visible`, async ({ page }) => {
       const erreurs: string[] = [];
@@ -118,16 +126,13 @@ test.describe("banc UI/UX — les onglets (12 + anti-doublon)", () => {
       await page.waitForLoadState("networkidle");
 
       // la landing est le premier ecran : le vrai chemin utilisateur est
-      // d'y entrer (re-essaie tant que le premier bouton est "Acceder",
-      // lecon 2910822108 : hydratation lente).
-      await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
-      for (let i = 0; i < 10; i++) {
-        const premier = page.locator("button").first();
-        const texte = (await premier.textContent().catch(() => "")) || "";
-        if (!/Acc[ée]der/i.test(texte)) break;
-        await premier.click({ timeout: 8_000 }).catch(() => {});
-        await page.waitForTimeout(500);
-      }
+      // d'y entrer. L'ancienne boucle (10 clics x click({timeout: 8_000}) dont
+      // le .catch avalait le Timeout) consommait 80 s de budget sans JAMAIS
+      // verifier que l'entree avait reussi — un clic avale etait indistinguable
+      // d'un clic reussi, et le test mourait sur nav.click a 90 s. Le helper
+      // partage sort sur « la sidebar est visible » et nomme l'etat reel de la
+      // page s'il n'y arrive pas (plan E1).
+      await entrerDansAppSansNavigation(page);
       await page.waitForTimeout(1_200);
 
       // naviguer vers l'onglet par la sidebar (le vrai chemin utilisateur)
@@ -146,13 +151,9 @@ test.describe("banc UI/UX — les onglets (12 + anti-doublon)", () => {
 
 test("sidebar : pas de doublon de navigation (un seul chemin par onglet)", async ({ page }) => {
     await page.goto(BASE + "/");
-    await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
-    for (let i = 0; i < 10; i++) {
-      const premier = page.locator("button").first();
-      if (!/Acc[ée]der/i.test((await premier.textContent().catch(() => "")) || "")) break;
-      await premier.click({ timeout: 8_000 }).catch(() => {});
-      await page.waitForTimeout(500);
-    }
+    // meme defaut, meme correctif que les 12 onglets ci-dessus : la boucle
+    // 10 x 8 s avalées est remplacee par l'attente de la sidebar.
+    await entrerDansAppSansNavigation(page);
     await page.waitForTimeout(1_000);
     // « Chat Culinaire » ne doit PLUS exister comme entree de sidebar : le chat
     // vit dans Ingenierie des Menus. Deux entrees vers le meme onglet = deux
