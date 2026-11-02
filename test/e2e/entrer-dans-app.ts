@@ -21,35 +21,9 @@
 // ne saute PAS la landing (aucun hack d'etat React, aucune exclusion de test).
 import { Page } from "@playwright/test";
 
-export async function entrerDansApp(page: Page, budgetMs = 60_000): Promise<void> {
-  await page.goto(page.url().replace(/\/$/, "") + "/", { waitUntil: "domcontentloaded" });
-  // La sidebar est la preuve qu'on est ENTRE : elle n'est pas rendue avant
-  // l'entree (piege deja consigne par le harnais Motion et reception-view.spec.ts).
-  const nav = page.getByRole("button", { name: /Tableau de bord/i }).first();
-  // Le premier bouton de la landing est celui d'entree ; on le cible par son
-  // libelle et non par sa position, pour ne pas casser a la prochaine traduction.
-  const entree = page.getByRole("button", { name: /Acc[ée]der/i }).first();
-  const fin = Date.now() + budgetMs;
-  while (Date.now() < fin) {
-    if (await nav.isVisible().catch(() => false)) return;       // entré
-    if (await entree.isVisible().catch(() => false)) {
-      // noWaitAfter + timeout court : un clic qui ne rend pas dans 4 s n'avale
-      // plus le budget, on boucle et on re-essaie jusqu'a la fin du budget.
-      await entree.click({ timeout: 4_000, noWaitAfter: true }).catch(() => {});
-    }
-    await page.waitForTimeout(400);
-  }
-  const etat = await page.evaluate(() => ({
-    url: location.href,
-    boutons: Array.from(document.querySelectorAll("button")).slice(0, 25)
-      .map((b) => (b.textContent || "").trim().replace(/\s+/g, " ")).filter(Boolean),
-  }));
-  throw new Error("landing non passee en " + budgetMs + " ms — etat reel: " + JSON.stringify(etat));
-}
-
 // Variante pour les specs qui montent EUX-MEMES leur serveur sur un port
-// ephemere : `page.url()` vaut encore "about:blank" au premier appel, donc le
-// helper ci-dessus ne peut pas en deduire la base. On lui passe la base explicitement.
+// ephemere : la base est passee explicitement (au premier appel `page.url()`
+// vaut encore "about:blank", donc on ne peut pas la deduire de l'URL).
 export async function entrerDansAppDepuis(page: Page, base: string, budgetMs = 60_000): Promise<void> {
   await page.goto(base.replace(/\/$/, "") + "/", { waitUntil: "domcontentloaded" });
   await entrerDansAppSansNavigation(page, budgetMs);
