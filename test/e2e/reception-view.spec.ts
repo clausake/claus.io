@@ -39,6 +39,7 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { entrerDansAppSansNavigation } from "./entrer-dans-app";
 
 let PORT = 0;
 let BASE = "";
@@ -261,24 +262,12 @@ const ouvrirAchats = async (page: any) => {
   // consignee par le harnais Motion). Un test qui saute cette porte reste sur
   // une page sans boutons et rougit en accusant l'onglet d'etre absent — un
   // faux negatif qui ferait croire a un panneau manquant. On entre donc comme
-  // un utilisateur, en ciblant le premier bouton d'action au lieu d'un libelle
-  // dur (qui casserait a la prochaine traduction).
-  // ⚠ Mesure CI (pipeline 2910822108) : sur un runner partage, le bundle met
-  // >8 s a s'hydrater — le clic a timeout 8 s avalait son echec (.catch) et le
-  // spec restait sur la landing. Donc : attendre le bouton (30 s), puis
-  // re-essayer tant que le PREMIER bouton est celui d'entree (la landing se
-  // REAFFICHE a chaque reload : showLanding est un state React initial a true).
-  // On ne peut pas detecter la landing par le texte du body (« Restauration
-  // IO » est aussi dans l'app, mesures traductions.ts:160..510) — le marqueur
-  // fiable est le premier bouton lui-meme.
-  await page.locator("button").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
-  for (let i = 0; i < 10; i++) {
-    const premier = page.locator("button").first();
-    const texte = (await premier.textContent().catch(() => "")) || "";
-    if (!/Acc[ée]der/i.test(texte)) break;
-    await premier.click({ timeout: 8_000 }).catch(() => {});
-    await page.waitForTimeout(500);
-  }
+  // un utilisateur, par le helper partage (plan E2) : l'ancienne boucle locale
+  // etait le MEME defaut que verify:ui-tabs — 10 clics de click({timeout: 8_000})
+  // dont le .catch avalait le Timeout, soit 80 s de budget brulees en clics
+  // avales sans jamais verifier l'entree (mesure du 02/11 : le lot rougissait,
+  // le spec seul passait en 6.0s). Le helper sort sur « la sidebar est visible ».
+  await entrerDansAppSansNavigation(page);
   // Le panneau se monte apres l'entree (et les vues sont paressees a la demande).
   await page.waitForTimeout(1_200);
   // Alt+6 = l'onglet « Achats » de la barre laterale (voir App.tsx, la table des
@@ -286,8 +275,25 @@ const ouvrirAchats = async (page: any) => {
   await page.keyboard.press("Alt+6");
 };
 
+// L'etat REEL de la page, en toutes lettres : c'est le diagnostic deja ecrit
+// (il est bon — sans lui on accuserait un panneau d'etre absent alors que la
+// cause est amont : landing non passee, licence, vue paressee jamais montee).
+// Le plan E2.3 le branche desormais sur l'echec de l'attente de l'onglet.
+const etatDeLaPage = (page: any) =>
+  page.evaluate(() => ({
+    url: location.href,
+    boutons: Array.from(document.querySelectorAll("button")).slice(0, 40)
+      .map((b) => (b.textContent || "").trim().replace(/\s+/g, " ")).filter(Boolean),
+    titre: document.title,
+    corps: (document.body?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 260),
+  }));
+
 test("vue Reception : le panneau existe, le bon se receptionne, le stock monte",
      async ({ page, request }) => {
+  // meme cause que verify:ui-tabs : sous charge, l'entree + le chunk paresse de
+  // la sous-vue depassent les 90 s du projet. Le spec seul passait en 6.0s
+  // (mesure du 02/11) ; on releve le budget ICI, pas dans playwright.config.ts.
+  test.setTimeout(120_000);
   const { article, documentId } = await seed(request);
   const avant = await solde(request, article.id);
   expect(Number.isNaN(avant)).toBe(false);
@@ -295,25 +301,22 @@ test("vue Reception : le panneau existe, le bon se receptionne, le stock monte",
   await ouvrirAchats(page);
 
   // --- A. l'onglet « Reception » est dans le DOM --------------------------
-  let vuOnglet = false;
-  for (let i = 0; i < 60 && !vuOnglet; i++) {
-    vuOnglet = await cliquer(page, ONGLET);
-    if (!vuOnglet) await page.waitForTimeout(250);
-  }
-  if (!vuOnglet) {
-    // Le message d'echec porte l'etat REEL de la page : sans lui, ce test
-    // rougit en accusant le panneau d'etre absent alors que la cause peut etre
-    // amont (landing non passee, licence, vue paresseee qui n'a jamais monte).
-    const etat = await page.evaluate(() => ({
-      url: location.href,
-      boutons: Array.from(document.querySelectorAll("button")).slice(0, 40)
-        .map((b) => (b.textContent || "").trim().replace(/\s+/g, " ")).filter(Boolean),
-      titre: document.title,
-      corps: (document.body?.textContent || "").trim().replace(/\s+/g, " ").slice(0, 260),
-    }));
+  // Apres Alt+6, on attend explicitement l'onglet (plan E2.2) au lieu de 60
+  // tours de cliquer + 250 ms. Le selecteur reste DOM et non role/name : le
+  // libelle porte l'accent et le badge de compte colle un chiffre a son nom
+  // accessible (« Reception1 ») — voir l'en-tete du fichier, le regex (?!ner)
+  // est ce qui le distingue du bouton d'action « Receptionner ».
+  const ongletPresent = page.locator("button", { hasText: ONGLET }).first();
+  try {
+    await expect(ongletPresent).toBeVisible({ timeout: 30_000 });
+  } catch {
+    // echec de l'attente : le message porte l'etat REEL, pas un Timeout nu.
+    const etat = await etatDeLaPage(page);
     expect(false, "onglet Reception absent — etat de la page: " +
             JSON.stringify(etat)).toBe(true);
   }
+  // Le clic reste un `cliquer` DOM : il juge la presence ET presse l'onglet.
+  const vuOnglet = await cliquer(page, ONGLET);
   expect(vuOnglet, "l'onglet Reception est absent du panneau Achats").toBe(true);
 
   // --- B. le tableau du bon : fournisseur, designation, quantite commandee --
@@ -400,17 +403,20 @@ test("vue Reception : le panneau existe, le bon se receptionne, le stock monte",
   // --- E. un bon receptionne ne se representationne pas -------------------
   await page.reload({ waitUntil: "domcontentloaded" });
   await ouvrirAchats(page);
-  // Meme boucle qu'en A : la vue est paressee a la demande, son chunk peut
-  // arriver apres l'entree. Une tentative unique jugerait un montage en cours.
-  // Patience x2 (120 essais = 30 s) mesuree en CI (pipeline 2910767143) : le
-  // runner partage met 15 s+ a servir le chunk lazy au premier hit disque —
-  // le contrat reste « l'onglet revient apres rechargement », seul le capteur
-  // est plus patient.
-  let revu = false;
-  for (let i = 0; i < 120 && !revu; i++) {
-    revu = await cliquer(page, ONGLET);
-    if (!revu) await page.waitForTimeout(250);
+  // Meme attente qu'en A : la vue est paressee a la demande, son chunk peut
+  // arriver apres l'entree. Une tentative unique jugerait un montage en cours ;
+  // 30 s est le budget mesure en CI (pipeline 2910767143 : le runner partage met
+  // 15 s+ a servir le chunk lazy au premier hit disque). Le contrat reste
+  // « l'onglet revient apres rechargement », seul le capteur est explicite.
+  try {
+    await expect(page.locator("button", { hasText: ONGLET }).first())
+      .toBeVisible({ timeout: 30_000 });
+  } catch {
+    const etat = await etatDeLaPage(page);
+    expect(false, "l'onglet Reception a disparu au rechargement — etat de la page: " +
+            JSON.stringify(etat)).toBe(true);
   }
+  const revu = await cliquer(page, ONGLET);
   expect(revu, "l'onglet Reception a disparu au rechargement").toBe(true);
   await expect(page.locator("text=/RECEIVED/i").first()).toBeVisible({ timeout: 15_000 });
 
