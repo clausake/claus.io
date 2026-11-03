@@ -125,6 +125,11 @@ export function SettingsView({
   const testerLlm = async () => {
     setTestIaEnCours(true);
     setVerdictIa(null);
+    // R2 (plan 014) : la detection ne tournait qu'au montage. Si le maitre a
+    // ouvre l'app AVANT de demarrer Ollama, le datalist restait vide et il
+    // retapait le nom a la main. Rejouer la detection au « Tester » coute un
+    // appel local et repeuple les suggestions.
+    void detecterLesMoteurs();
     try {
       await ecrireReglageIa();
       const res = await fetch("/api/llm/tester");
@@ -529,8 +534,19 @@ export function SettingsView({
                   value={modeleIa}
                   onChange={(e) => { setModeleIa(e.target.value); setVerdictIa(null); }}
                   placeholder={choixIa === "ollama" ? "ex : qwen2.5:7b-instruct" : "ex : qwen2.5-7b-instruct-q4_k_m.gguf"}
+                  list="modeles-detectes"
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white font-mono focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
                 />
+                {/* P2 (plan 014) : le champ reste LIBRE — un chemin .gguf de
+                    llama.cpp n'est pas un nom de modele Ollama. Le datalist
+                    propose les modeles deja detectes (aucun appel reseau de
+                    plus : /api/llm/detecter est joue au montage et rejoue au
+                    « Tester », R2). Vide = aucune suggestion, pas d'erreur. */}
+                <datalist id="modeles-detectes">
+                  {Array.from(new Set(
+                    serveursDetectes.flatMap((s) => (s.modeles ?? []).map((m: { nom: string }) => m.nom))
+                  )).map((nom) => <option key={nom} value={nom} />)}
+                </datalist>
               </div>
             </div>
 
