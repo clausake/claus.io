@@ -66,16 +66,15 @@ function pousser(messages: MessageChat[], msg: MessageChat): MessageChat[] {
   return suivants.length > CAP_MESSAGES ? suivants.slice(-CAP_MESSAGES) : suivants;
 }
 
-/** L'etat initial rendu par le store, independant du composant. */
-export function messagesInitiaux(): MessageChat[] {
-  return etatCourant.messages;
+/** Pour les tests : injecte un etat (redrivaison R3, borne R4). */
+export function poserEtat(partial: Partial<InstantaneChat>) {
+  remplacer(partial);
 }
-
 /**
- * Envoie `message` a /api/ai/chat et depose la reponse dans le store — meme
- * si l'appelant est demonte entre-temps (c'est LA reparation).
+ * Envoie `message` a /api/ai/chat et depose la reponse dans le store — meme si
+ * l'appelant est demonte entre-temps (c'est LA reparation).
  * Garde : un second envoi est REFUSE tant qu'un envoi est en cours.
- * `transport` est injectable pour les tests ; le defest est le vrai fetch.
+ * `transport` est injectable pour les tests ; le defaut est le vrai fetch.
  */
 export async function envoyer(
   message: string,
@@ -128,13 +127,23 @@ export async function envoyer(
   }
 }
 
+/** Remplace l'accueil TANT QUE la conversation est vierge. Changer de langue
+ *  ne doit jamais effacer un echange en cours : des qu'une reponse du moteur a
+ *  ete deposee (`derniereReponse`) ou qu'un message du chef est present, la
+ *  fonction est un no-op. Chaîne vide = no-op (le fallback francais du module
+ *  reste en place). */
+export function poserBienvenue(texte: string): void {
+  const t = texte.trim();
+  if (t === "") return;
+  if (etatCourant.derniereReponse !== null) return;
+  if (etatCourant.messages.length !== 1) return;
+  if (etatCourant.messages[0].role !== "assistant") return;
+  if (etatCourant.messages[0].content === t) return;
+  remplacer({ messages: [{ role: "assistant", content: t }] });
+}
+
 /** Pour les tests (et le bouton « nouvelle conversation » du chat) : retour a
  *  l'etat initial, sans disque. */
 export function reinitialiser() {
   remplacer({ messages: [{ role: "assistant", content: BIENVENUE }], derniereReponse: null, enCours: false });
-}
-
-/** Injecte un etat (tests de redrivaison : R3). */
-export function poserEtat(partial: Partial<InstantaneChat>) {
-  remplacer(partial);
 }

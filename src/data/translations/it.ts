@@ -86,6 +86,7 @@ export const IT_TRANSLATIONS: Record<string, string> = {
       "Connetti il tuo smartphone allo **stesso Wi-Fi** di questo computer per scansionare le fatture e gestire l'inventario in diretta.",
 
     localWifiAddress: "Indirizzo di connessione (Wi-Fi Locale)",
+    aucuneAdresseLan: "nessun indirizzo LAN rilevato",
 
     loading: "Caricamento...",
 

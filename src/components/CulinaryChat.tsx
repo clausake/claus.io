@@ -6,7 +6,7 @@ import {
   Send,
 } from "lucide-react";
 import { historiqueSur } from "../shared/recette-chat";
-import { sAbonner, instantane, envoyer } from "../shared/atelier-chat";
+import { sAbonner, instantane, envoyer, poserBienvenue } from "../shared/atelier-chat";
 
 // Le chat culinaire (Sprint 16).
 //
@@ -45,7 +45,6 @@ export function CulinaryChat({
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const isLoading = etat.enCours;
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -59,6 +58,12 @@ export function CulinaryChat({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // A3 : l'accueil suit la langue du maitre (t.chatWelcome), sans jamais effacer
+  // un echange — poserBienvenue est un no-op des qu'une reponse existe.
+  useEffect(() => {
+    if (t.chatWelcome) poserBienvenue(t.chatWelcome);
+  }, [t.chatWelcome]);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -168,7 +173,6 @@ export function CulinaryChat({
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-4 bg-[#0A0A0A] border-t border-white/10">
