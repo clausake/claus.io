@@ -69,6 +69,11 @@ donc le 404 de la capture est bien le **chemin doublé**, pas un moteur éteint.
   `COOKDRIVE_INSTANCE_TOKEN`, `COOKDRIVE_DIST`).
   Donc `http://192.168.1.8:3000` **ne peut pas** répondre au téléphone, pare-feu
   ou non. Le 200 obtenu sur `http://127.0.0.1:3000` côté PC est cohérent.
+  Nuance mesurée : `server.ts:11` charge `dotenv/config`, donc un `.env` posé à
+  côté de l'exe **pourrait** surcharger `HOST`. Sur une installation standard il
+  n'y en a pas : `.env` est absent du dépôt, ignoré par git (`.gitignore:8`) et
+  **non embarqué** par `build.files` (liste mesurée : `dist-server/**`, `dist/**`,
+  `electron/**`, `package.json`, `vocab*.json`, `embeddings.*`).
 - Le choix de l'IP est en plus **fragile** : premier `Object.keys` venu. Même
   algorithme rejoué ici → `172.17.0.1` (docker0 !), il annoncerait
   `http://172.17.0.1:3000`. Sur le PC il a rendu la bonne IP **par chance**.
@@ -103,6 +108,7 @@ donc le 404 de la capture est bien le **chemin doublé**, pas un moteur éteint.
 | **P4a** | Choix de l'IP LAN : fonction pure + `null` honnête | faible (fonction pure) | — |
 | **P4b** | Exposition LAN **opt-in** (décision du maitre requise) | **sécurité** | P4a |
 | **P5** | Journal `PHASES.md` + ré-ancrage | faible | P1-P4 |
+| **P6** | Publication 0.1.4 (sinon rien n'atteint le portable) | faible | P1-P5 |
 
 **Règle d'or inchangée** : l'agent n'écrit jamais en base, l'humain clique et
 exécute. Aucune étape ci-dessous n'ajoute d'écriture serveur.
@@ -168,7 +174,10 @@ puis `GET /api/llm/tester` → `vivant: true` (aujourd'hui : `DEFAILLANCE`/404).
 - Remplacer l'input par un `<select>` (casserait llama.cpp et les modèles non
   listés).
 - Écrire une valeur par défaut dans `llm_modele` en douce : le maitre choisit.
-- Ajouter un `:any` dans `src/` (la porte `verify:types` juge zéro `:any`).
+- Ajouter un `:any` dans le **backend** : `verify:types` juge 0 `:any` réel sur
+  les 67 fichiers de `src/routes|services|middleware|db` (seuil figé à 0, mesuré).
+  Le frontend, lui, n'est pas jugé par cette porte — ça n'autorise pas à en
+  ajouter, mais ça ne doit pas servir d'excuse pour la contourner.
 
 ### Preuves exigées
 ```
@@ -306,7 +315,8 @@ smoke AppImage toujours vert (il tape `127.0.0.1`, insensible au bind).
   `haccp.ts:6`, `menu.ts:6`, `recipes.ts:27`).
 - Ajouter une dépendance npm pour ces quatre corrections (datalist, store de
   module, fonction pure : zéro dépendance).
-- Ajouter un `:any` dans `src/` (`verify:types` juge zéro).
+- Ajouter un `:any` dans le **backend** (`verify:types` = 0 `:any` réel sur
+  67 fichiers, seuil figé — mesuré, ne pas l'abaisser).
 - Modifier la fenêtre d'historique du chat, la sonde fournisseur, ou la
   sémantique de `historiqueSur`.
 - Poser une porte `verify:` nouvelle sans l'inscrire **aussi** dans `DEFAUT`
@@ -342,3 +352,61 @@ Ollama.
   (`requestAnimationFrame` = 0) : la CI reste la source de vérité.
 - Il ne « répare » pas le moteur IA du maitre : Ollama était **déjà** vivant
   (`/api/tags` = 200, mesuré). Seul le **chemin** testé était faux.
+
+## 6. Remarques d'ingénieur (à lire AVANT de coder)
+
+### R1 — P1 : ne pas copier `getOllamaHost`
+`getOllamaHost` (`src/shared/util.ts:210-221`) rend `protocol//host` : il **jette
+le chemin**. Une base derrière un proxy sous-chemin (`https://proxy.exemple/ollama`)
+serait donc cassée par imitation. `baseNue` ne retire que des **suffixes
+d'endpoint connus**, jamais un préfixe : ajouter le cas de test
+`https://proxy.exemple/ollama` → **inchangé**.
+
+### R2 — P2 : la détection ne tourne qu'au montage
+`detecterLesMoteurs()` est appelé une seule fois, au montage (`SettingsView.tsx:157`).
+Si le maitre ouvre l'app **avant** de démarrer Ollama, les suggestions sont vides
+et il retape le nom à la main — exactement le défaut rapporté. Prévoir un
+rafraîchissement (rejouer la détection au clic sur « Tester », et/ou un bouton
+discret) et le couvrir.
+
+### R3 — P3 : la re-dérivation des cartes doit être idempotente
+Re-parser la dernière réponse à chaque remontage **duplique** les cartes. Chaque
+réponse stockée porte un identifiant (index ou sha court) ; le parseur note
+« déjà parsé ». Test exigé : deux montages successifs → **nombre de cartes
+stable**.
+
+### R4 — P3 : borner la mémoire
+Le store vit toute la session : plafonner (ex. 200 messages, plus vieux retirés).
+Ne **pas** toucher la fenêtre *envoyée au serveur* (12, `historiqueSur`).
+
+### R5 — P4b : préférer le tailnet à `0.0.0.0`
+Les deux téléphones du maitre sont déjà dans le tailnet (mesuré ce jour :
+`nothing-phone-2a-plus` 100.64.16.46, `redmi-note-12-pro-5g` 100.82.65.1).
+Binder **l'adresse Tailscale** (100.x) au lieu de `0.0.0.0` donne l'accès
+téléphone **sans** exposer l'inventaire au Wi-Fi. `0.0.0.0` seulement si le
+maitre demande explicitement le LAN pur (téléphone sans Tailscale).
+
+### R6 — P6 : sans publication, le défaut reste chez le maitre
+Le portable tourne **0.1.3**. Corriger `main` ne change rien pour lui. P6 =
+release **0.1.4** avec la discipline du plan `013` : CI verte du commit de
+release **avant** de pousser le tag, smoke AppImage **avant** l'attachement,
+tag **neuf** (aucune collision), v0.1.3 et v0.1.2 **non re-taggés**, pas de
+`--latest` forcé, aucun tag de test laissé derrière.
+
+### R7 — la décision P4b se prend AVANT le lancement
+Sinon l'agent tranchera seul (option A ou B) — c'est une décision de sécurité,
+pas d'implémentation. À défaut de décision : consigne explicite d'**s'arrêter
+après P4a** et de rendre la main.
+
+### R8 — le smoke CI ne prouvera pas P2/P3
+Le smoke ne fume que l'**AppImage Linux** ; `.exe`/`.dmg` ne sont pas fumés
+(limite nommée du plan `013`). Les corrections d'interface (P2, P3) ne seront
+donc **pas** prouvées sur Windows par la CI. Preuve minimale après P6, côté
+maitre : `Invoke-WebRequest http://127.0.0.1:3000/api/settings` → 200, puis un
+aller-retour d'onglet qui **garde** l'historique.
+
+### R9 — `verify:types` ne juge que le backend
+Mesuré : `ANY_BACKEND=0 FICHIERS=67 SEUIL=0` sur
+`src/routes|services|middleware|db`. Le frontend contient déjà 31 `: any`
+(comptés sur `src/`) et n'est pas jugé par cette porte : ne pas l'abaisser, ne
+pas prétendre qu'elle protège l'UI.
