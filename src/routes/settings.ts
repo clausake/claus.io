@@ -17,6 +17,7 @@ import {
 } from "../services/assistant.js";
 import { rangerClef, lireClef, etatClef } from "../services/coffre.js";
 import { logAuditRacine } from "../services/audit.js";
+import { choisirIpLan, type CandidateInterface } from "../shared/reseau.js";
 
 const logAudit = logAuditRacine;
 
@@ -187,18 +188,12 @@ router.post("/api/settings", async (req, res) => {
   res.json({ status: "success", settings });
 });
 router.get("/api/network-info", (_req, res) => {
-  const interfaces = os.networkInterfaces();
-  let localIp = "localhost";
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name] || []) {
-      if (iface.family === "IPv4" && !iface.internal) {
-        localIp = iface.address;
-        break;
-      }
-    }
-  }
+  // P4a (plan 014) : l'IP annoncee est CHOISIE (pas « premiere venue »), et
+  // si aucune candidate LAN credible n'existe on rend null — jamais une URL
+  // inventee. Le QR du panneau ne se rend que si url existe.
+  const ip = choisirIpLan(os.networkInterfaces() as unknown as Record<string, CandidateInterface[] | undefined>);
   const port = Number(process.env.PORT) || 3000;
-  res.json({ ip: localIp, port, url: `http://${localIp}:${port}` });
+  res.json({ ip, port, url: ip === null ? null : `http://${ip}:${port}` });
 });
 router.get("/api/ollama/status", async (_req, res) => {
   const host = getOllamaHost(settingsStore.value);

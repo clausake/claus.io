@@ -48,9 +48,9 @@ export function SettingsView({
   >("idle");
   const [ollamaInfo, setOllamaInfo] = React.useState<string>("");
   const [networkInfo, setNetworkInfo] = React.useState<{
-    ip: string;
+    ip: string | null;
     port: number;
-    url: string;
+    url: string | null;
   } | null>(null);
 
 
@@ -667,7 +667,10 @@ export function SettingsView({
                     </div>
                     <div className="flex items-center justify-between">
                       <code className="text-emerald-400 font-mono font-bold text-lg">
-                        {networkInfo?.url || t.loading || "Chargement..."}
+                        {networkInfo?.url
+                          ?? (networkInfo
+                            ? (t.aucuneAdresseLan || "aucune adresse LAN détectée")
+                            : (t.loading || "Chargement..."))}
                       </code>
                     </div>
                   </div>
@@ -687,7 +690,9 @@ export function SettingsView({
                     ) : (
                       <div className="text-black text-[10px] text-center font-bold px-2 flex flex-col items-center">
                         <Smartphone className="w-8 h-8 mb-2 text-emerald-600" />
-                        {t.loading || "Chargement..."}
+                        {networkInfo
+                          ? (t.aucuneAdresseLan || "aucune adresse LAN détectée")
+                          : (t.loading || "Chargement...")}
                       </div>
                     )}
                   </div>
