@@ -35,7 +35,7 @@ export {
 } from "./serveurs-locaux.js";
 // Le reglage LLM visible (Tache 9) : cible du reglage + verdict de la sonde.
 export {
-  DEFAUT_OLLAMA, cibleDuReglage, argvDeCible, parseSortieSonde,
+  DEFAUT_OLLAMA, baseNue, cibleDuReglage, argvDeCible, parseSortieSonde,
   fournisseursProposables,
   type ReglageLlmBrut, type CibleSonde, type ConstructionCible,
   type VerdictCible, type VerdictSonde,

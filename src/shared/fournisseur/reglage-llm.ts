@@ -43,6 +43,41 @@ export type ConstructionCible =
 /** Du reglage lu a la cible de la sonde. Une cible qu'on ne peut pas
  *  construire est un DEFAUT NOMME, jamais une supposition : mieux vaut
  *  « CHOIX_ABSENT » dans le verdict qu'un appel a l'URL vide. */
+// Suffixes d'endpoint qu'un reglage peut porter en plus de la base. Un reglage
+// saisi « http://hote:11434/api/generate » n'est PAS une base : le client
+// rajoute son propre chemin, et le doublon rend 404 (defaut mesure le 02/11 sur
+// le poste Windows du maitre). On retire en boucle, du plus specifique au plus
+// general, puis les `/` de fin.
+// Volontairement SANS `new URL` : `new URL` reussit sur une URL a chemin et ne
+// normalise donc rien — c'est le piege qui a laisse passer le defaut.
+const SUFFIXES_ENDPOINT = [
+  "/api/generate",
+  "/api/chat",
+  "/v1/chat/completions",
+  "/v1",
+  "/api",
+];
+
+// Fonction pure : retire les suffixes d'endpoint connus, jamais un prefixe.
+// `https://proxy.exemple/ollama` doit rester INCHANGE (R1 du plan 014) : un
+// moteur derriere un proxy sous-chemin est legitime.
+export function baseNue(url: string): string {
+  let base = (url ?? "").trim();
+  let retire = true;
+  while (retire) {
+    retire = false;
+    const sansBarre = base.replace(/\/+$/, "");
+    for (const suffixe of SUFFIXES_ENDPOINT) {
+      if (sansBarre.toLowerCase().endsWith(suffixe)) {
+        base = sansBarre.slice(0, -suffixe.length);
+        retire = true;
+        break;
+      }
+    }
+  }
+  return base.replace(/\/+$/, "");
+}
+
 export function cibleDuReglage(r: ReglageLlmBrut): ConstructionCible {
   const choix = (r.llm_choix ?? "").trim();
   const modele = (r.llm_modele ?? "").trim() || null;
@@ -51,10 +86,10 @@ export function cibleDuReglage(r: ReglageLlmBrut): ConstructionCible {
   if (choix === "sans") return { defaut: "IA_DESACTIVEE" };
   if (choix === "ollama") {
     const base = (r.llm_url ?? "").trim() || DEFAUT_OLLAMA;
-    return { cible: { nom: "reglage", style: "ollama", base, modele } };
+    return { cible: { nom: "reglage", style: "ollama", base: baseNue(base), modele } };
   }
   if (choix === "llamacpp") {
-    const base = (r.llm_url ?? "").trim();
+    const base = baseNue((r.llm_url ?? "").trim());
     // llama.cpp ne publie rien d'auto-detectable ici : sans URL, rien a sonder.
     if (base === "") return { defaut: "URL_ABSENTE" };
     return { cible: { nom: "reglage", style: "openai", base, modele } };
