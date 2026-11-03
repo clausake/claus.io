@@ -278,6 +278,7 @@ export const EN_A: Record<string, string> = {
       "Connect your smartphone to the **same Wi-Fi network** as this computer to scan invoices and manage inventory live.",
 
     localWifiAddress: "Connection address (Local Wi-Fi)",
+    aucuneAdresseLan: "no LAN address detected",
 
     loading: "Loading...",
 

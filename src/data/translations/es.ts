@@ -59,6 +59,7 @@ export const ES_TRANSLATIONS: Record<string, string> = {
     smartphoneAccessDesc:
       "Conecte su smartphone a la **misma red Wi-Fi** que este ordenador para escanear facturas y gestionar el inventario en directo.",
     localWifiAddress: "Dirección de conexión (Wi-Fi Local)",
+    aucuneAdresseLan: "no se detectó ninguna dirección LAN",
     loading: "Cargando...",
     openCameraToConnect: "Abrir cámara<br/>para conectar",
     today: "Hoy",

@@ -696,6 +696,7 @@ export const DE_A: Record<string, string> = {
       "Verbinden Sie Ihr Smartphone mit dem **selben WLAN-Netzwerk** wie diesen Computer, um Rechnungen zu scannen und den Bestand live zu verwalten.",
 
     localWifiAddress: "Verbindungsadresse (Lokales WLAN)",
+    aucuneAdresseLan: "keine LAN-Adresse gefunden",
 
     loading: "Laden...",
 

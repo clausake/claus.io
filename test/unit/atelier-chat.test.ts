@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  sAbonner, instantane, envoyer, reinitialiser, poserEtat, CAP_MESSAGES,
+  sAbonner, instantane, envoyer, reinitialiser, poserEtat, poserBienvenue, CAP_MESSAGES,
 } from "../../src/shared/atelier-chat.js";
 
 // P3 (plan 014) — le store qui répare « l'IA écrit, je change d'onglet ».
@@ -61,13 +61,13 @@ describe("atelier-chat (le store qui survit au demontage)", () => {
     let relacher: (() => void) | null = null;
     const lent = () => new Promise<{ ok: boolean; status: number; json: () => Promise<Record<string, unknown>> }>(
       (res) => { relacher = () => res({ ok: true, status: 200, json: async () => ({ response: "fin" }) }); });
-    const p = envoyer("premriere", { transport: lent });
+    const p = envoyer("premiere", { transport: lent });
     const second = await envoyer("seconde question", { transport: lent });
     expect(second).toEqual({ envoye: false, erreur: "ENVOI_EN_COURS" });
     expect(instantane().messages.filter((m) => m.content === "seconde question")).toHaveLength(0);
     relacher!();
     await p;
-    expect(instantane().messages.some((m) => m.content === "premriere")).toBe(true);
+    expect(instantane().messages.some((m) => m.content === "premiere")).toBe(true);
   });
 
   it("message vide refuse sans toucher l'etat ; erreur serveur rend un texte nomme", async () => {
@@ -79,28 +79,18 @@ describe("atelier-chat (le store qui survit au demontage)", () => {
     expect(instantane().enCours).toBe(false);
   });
 
-  it("R4 : la borne de session est CAP_MESSAGES, les plus vieux sortent", () => {
+  it("R4 : la borne de session est CAP_MESSAGES, les plus vieux sortent", async () => {
     reinitialiser();
     const gros: { role: "user"; content: string }[] = [];
     for (let i = 0; i < CAP_MESSAGES + 40; i++) gros.push({ role: "user", content: "m" + i });
-    // pousser() est la seule voie d'ajout : la borne s'y applique (le store
-    // ne grossit pas sans limite sur une session de 12 h).
-    const bornes = gros.reduce(
-      (acc, m) => (acc.length >= CAP_MESSAGES ? acc : [...acc, m]),
-      [] as { role: "user"; content: string }[],
-    );
-    expect(bornes.length).toBe(CAP_MESSAGES);
-    // et par envoyer() : apres la borne, le plus vieux (m0) est sorti, le
-    // plus recent reste.
-    return (async () => {
-      reinitialiser();
-      poserEtat({ messages: gros });
-      await envoyer("le plus recent", { transport: reponse(true, { response: "reponse" }) });
-      const e = instantane();
-      expect(e.messages.length).toBeLessThanOrEqual(CAP_MESSAGES);
-      expect(e.messages.at(-1)?.content).toBe("reponse");
-      expect(e.messages.some((m) => m.content === "m0")).toBe(false);
-    })();
+    // pousser() est la seule voie d'ajout : la borne s'y applique (le store ne
+    // grossit pas sans limite sur une session de 12 h).
+    poserEtat({ messages: gros });
+    await envoyer("le plus recent", { transport: reponse(true, { response: "reponse" }) });
+    const e = instantane();
+    expect(e.messages.length).toBeLessThanOrEqual(CAP_MESSAGES);
+    expect(e.messages.at(-1)?.content).toBe("reponse");
+    expect(e.messages.some((m) => m.content === "m0")).toBe(false);
   });
 
   it("l'historique envoye au serveur passe par historiqueSur (fenetre 12, contrat serveur)", async () => {
@@ -123,5 +113,28 @@ describe("atelier-chat (le store qui survit au demontage)", () => {
     reinitialiser();
     expect(instantane().messages).toHaveLength(1);
     expect(instantane().derniereReponse).toBeNull();
+  });
+
+  // A3 : l'accueil suit la langue (t.chatWelcome), sans ecraser un echange.
+  it("A3 : poserBienvenue localise l'accueil tant que la conversation est vierge", () => {
+    reinitialiser();
+    poserBienvenue("Hello! I am your culinary assistant.");
+    expect(instantane().messages).toEqual([
+      { role: "assistant", content: "Hello! I am your culinary assistant." },
+    ]);
+    // no-op sur chaine vide ou blanche
+    poserBienvenue("   ");
+    expect(instantane().messages[0].content).toBe("Hello! I am your culinary assistant.");
+  });
+
+  it("A3 : poserBienvenue ne touche PAS une conversation deja engagee", async () => {
+    reinitialiser();
+    await envoyer("q", { transport: reponse(true, { response: "r" }) });
+    poserBienvenue("DEPLACE");
+    const e = instantane();
+    expect(e.messages.map((m) => m.content)).toEqual([
+      expect.stringContaining("assistant culinaire"), "q", "r",
+    ]);
+    expect(e.messages.some((m) => m.content === "DEPLACE")).toBe(false);
   });
 });
