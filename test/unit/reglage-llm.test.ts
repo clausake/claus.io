@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  cibleDuReglage, argvDeCible, parseSortieSonde, DEFAUT_OLLAMA,
+  cibleDuReglage, argvDeCible, parseSortieSonde, DEFAUT_OLLAMA, baseNue,
 } from "../../src/shared/fournisseur/index.js";
 
 // Tache 9 : le reglage LLM visible. Ces fonctions pures sont ce que le
@@ -20,6 +20,38 @@ describe("cibleDuReglage (le reglage lu, la cible de la sonde)", () => {
     expect(cibleDuReglage({ llm_choix: "llamacpp" })).toEqual({ defaut: "URL_ABSENTE" });
     expect(cibleDuReglage({ llm_choix: "llamacpp", llm_url: "http://hote:8080" }))
       .toEqual({ cible: { nom: "reglage", style: "openai", base: "http://hote:8080", modele: null } });
+  });
+
+  // Plan 014 / P1 — defaut mesure le 02/11 sur le poste Windows du maitre :
+  // un reglage « http://hote:11434/api/generate » etait utilise comme base,
+  // le client rajoutait /api/generate -> chemin double -> 404.
+  it("baseNue retire les suffixes d'endpoint, en boucle", () => {
+    expect(baseNue("http://localhost:11434/api/generate")).toBe("http://localhost:11434");
+    expect(baseNue("http://localhost:11434/api/generate/")).toBe("http://localhost:11434");
+    expect(baseNue("http://localhost:11434/api/chat")).toBe("http://localhost:11434");
+    expect(baseNue("http://hote:8080/v1/chat/completions")).toBe("http://hote:8080");
+    expect(baseNue("http://hote:8080/v1/")).toBe("http://hote:8080");
+    expect(baseNue("http://hote:11434/api")).toBe("http://hote:11434");
+    expect(baseNue("http://hote:11434///")).toBe("http://hote:11434");
+    // base nue -> inchangee ; chaine vide -> chaine vide
+    expect(baseNue("http://localhost:11434")).toBe("http://localhost:11434");
+    expect(baseNue("")).toBe("");
+    // R1 : un prefixe sous-chemin (proxy) n'est JAMAIS retire
+    expect(baseNue("https://proxy.exemple/ollama")).toBe("https://proxy.exemple/ollama");
+  });
+
+  it("un reglage ollama porte l'endpoint est normalise a la lecture", () => {
+    expect(cibleDuReglage({ llm_choix: "ollama", llm_url: "http://localhost:11434/api/generate" }))
+      .toEqual({ cible: { nom: "reglage", style: "ollama", base: "http://localhost:11434", modele: null } });
+    expect(cibleDuReglage({ llm_choix: "ollama", llm_url: "http://192.168.1.8:11434/api/generate/" }))
+      .toEqual({ cible: { nom: "reglage", style: "ollama", base: "http://192.168.1.8:11434", modele: null } });
+  });
+
+  it("un reglage llamacpp porte l'endpoint est normalise idem, et URL_ABSENTE survit", () => {
+    expect(cibleDuReglage({ llm_choix: "llamacpp", llm_url: "http://hote:8080/v1/chat/completions" }))
+      .toEqual({ cible: { nom: "reglage", style: "openai", base: "http://hote:8080", modele: null } });
+    // une URL composee uniquement de suffixes s'efface -> defaut nomme, pas une base vide
+    expect(cibleDuReglage({ llm_choix: "llamacpp", llm_url: "/v1" })).toEqual({ defaut: "URL_ABSENTE" });
   });
 
   it("un fournisseur en ligne se nomme, il ne s'invente pas", () => {

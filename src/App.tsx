@@ -71,7 +71,7 @@ export default function App() {
   const [settings, setSettings] = useState<any>({
     model_name: "llama3.2-vision",
     custom_model: "gemma-12b-it-qat",
-    ollama_url: "http://localhost:11434/api/generate",
+    ollama_url: "http://127.0.0.1:11434",
     copilot_mode: true,
     auto_pause: true,
     language: "fr",
