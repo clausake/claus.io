@@ -464,9 +464,15 @@ test("GET /api/network-info", async ({ request }) => {
   const res = await request.get(`${BASE}/api/network-info`);
   expect(res.status()).toBe(200);
   const body = await res.json();
-  // en prod : { ip, port, url } ; en dev le catch-all Vite peut renvoyer index.html
-  expect(typeof body.ip).toBe("string");
-  expect(typeof body.url).toBe("string");
+  // P4a : l'IP est CHOISIE (pas « premiere venue ») ; `null` est une reponse
+  // honnete quand aucune candidate LAN n'existe (tailscale seul, conteneur).
+  expect(typeof body.port).toBe("number");
+  if (body.ip === null) {
+    expect(body.url).toBeNull();
+  } else {
+    expect(typeof body.ip).toBe("string");
+    expect(body.url).toBe(`http://${body.ip}:${body.port}`);
+  }
 });
 
 // --- Settings (router settings.ts) -------------------------------------

@@ -85,8 +85,11 @@ export function cibleDuReglage(r: ReglageLlmBrut): ConstructionCible {
   // Intelligence affichera l'état « sans IA »), pas une supposition d'URL.
   if (choix === "sans") return { defaut: "IA_DESACTIVEE" };
   if (choix === "ollama") {
-    const base = (r.llm_url ?? "").trim() || DEFAUT_OLLAMA;
-    return { cible: { nom: "reglage", style: "ollama", base: baseNue(base), modele } };
+    const brut = (r.llm_url ?? "").trim() || DEFAUT_OLLAMA;
+    // Une URL reduite a un seul suffixe s'efface : on retombe sur la base
+    // d'usage, jamais sur une base vide (une base vide ne peut pas etre sondee).
+    const base = baseNue(brut) || DEFAUT_OLLAMA;
+    return { cible: { nom: "reglage", style: "ollama", base, modele } };
   }
   if (choix === "llamacpp") {
     const base = baseNue((r.llm_url ?? "").trim());
