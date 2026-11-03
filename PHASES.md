@@ -1843,3 +1843,28 @@ d'exploitation**, consignée en attente — pas un bug.
   maitre en attente (A/B/C).
 - Cible du pentest Shannon (plan `015`) = l'arbre **v1.0.0** — le prerequis
   « execute apres la release » est desormais rempli.
+
+### P4b — l'exposition LAN, tranchee par le maitre (03/11, option A)
+
+- Le maitre a choisi **A** : opt-in explicite. Le defaut reste le loopback.
+- `server.ts` : `HOST = process.env.HOST || (lireLanAcces() ? "0.0.0.0" : "127.0.0.1")`,
+  avec `lireLanAcces()` = `settingsStore.value?.lan_acces === true` (un champ
+  absent vaut `false`). Lenvironnement `HOST` reste maitre : les sonde et le
+  harnais posent leur propre bind.
+- `src/routes/settings.ts` : `/api/network-info` rend `lan_acces` en plus de
+  `ip`/`port`/`url`, et **`url` est null tant que le LAN n'est pas expose** —
+  le QR ne peut plus annoncer une adresse injoignable. La route resout le bind
+  exactement comme `server.ts` (meme formule), donc les deux ne peuvent pas se
+  contredire.
+- `SettingsView.tsx` : case `lan_acces` + avertissement (visible sur le reseau
+  local / 127.0.0.1 seul / redemarrer apres modification), clefs
+  `lanAccesOptIn` et `lanAccesAvertissement` ajoutees aux **5 langues chargees**
+  (fr, en_a, de_a, es, it).
+- Mesures (serveur du depot, bind lu dans `ss -tln`) :
+  `eteint` → `lan_acces:false, url:null` et ecoute `127.0.0.1:PORT` ;
+  `HOST=0.0.0.0` → `lan_acces:true, url=http://192.168.1.50:PORT` et ecoute
+  `0.0.0.0:PORT` ; `{"lan_acces":true}` en clef → idem.
+- Le contrat e2e `GET /api/network-info` est **re-ecrit pour les deux etats**
+  (il exige `boolean` pour `lan_acces`, `url:null` quand `false`) : 44/44.
+  `tsc` rc=0, `vitest` 208/208, `verify:types`/`bundle`/`auth`/`reglage-llm`/
+  `split` rc=0. La fenetre Electron reste en `127.0.0.1`.

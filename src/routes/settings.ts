@@ -191,9 +191,22 @@ router.get("/api/network-info", (_req, res) => {
   // P4a (plan 014) : l'IP annoncee est CHOISIE (pas « premiere venue »), et
   // si aucune candidate LAN credible n'existe on rend null — jamais une URL
   // inventee. Le QR du panneau ne se rend que si url existe.
+  // P4b : `lan_acces` est le bind REEL, rendu par le serveur lui-meme (la
+  // route n'a pas le `server` sous la main, donc le contrat est pose par le
+  // `HOST` resolu au demarrage — relire hostDeEcoute() dans server.ts).
   const ip = choisirIpLan(os.networkInterfaces());
   const port = Number(process.env.PORT) || 3000;
-  res.json({ ip, port, url: ip === null ? null : `http://${ip}:${port}` });
+  // P4b : le bind REEL. Meme resoluion que `HOST` dans server.ts (lenvironnement
+  // est maitre, sinon lopt-in `lan_acces`), donc la route et l'ecoute ne peuvent
+  // pas se contredire.
+  const lanActif =
+    (process.env.HOST || (settingsStore.value?.lan_acces === true ? "0.0.0.0" : "127.0.0.1")) === "0.0.0.0";
+  res.json({
+    ip,
+    port,
+    lan_acces: lanActif,
+    url: ip !== null && lanActif ? `http://${ip}:${port}` : null,
+  });
 });
 router.get("/api/ollama/status", async (_req, res) => {
   const host = getOllamaHost(settingsStore.value);

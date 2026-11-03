@@ -279,6 +279,9 @@ export const EN_A: Record<string, string> = {
 
     localWifiAddress: "Connection address (Local Wi-Fi)",
     aucuneAdresseLan: "no LAN address detected",
+    lanAccesOptIn: "Expose the app on the local network (Wi-Fi)",
+    lanAccesAvertissement:
+      "On: your inventory is visible on the local network. Off: 127.0.0.1 only. Restart the app after changing this.",
 
     loading: "Loading...",
 

@@ -29,6 +29,8 @@ export interface ReglageLlmActuel {
   llm_choix?: string;
   llm_url?: string;
   llm_modele?: string;
+  /** P4b : opt-in de l'exposition LAN (`true` = bind 0.0.0.0). Absent = false. */
+  lan_acces?: boolean;
   // champs Ollama historiques (model_name, custom_model, ollama_url) :
   // conservés pour la compatibilité des réglages existants.
   model_name?: string;

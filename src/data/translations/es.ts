@@ -60,6 +60,9 @@ export const ES_TRANSLATIONS: Record<string, string> = {
       "Conecte su smartphone a la **misma red Wi-Fi** que este ordenador para escanear facturas y gestionar el inventario en directo.",
     localWifiAddress: "Dirección de conexión (Wi-Fi Local)",
     aucuneAdresseLan: "no se detectó ninguna dirección LAN",
+    lanAccesOptIn: "Exponer la app en la red local (Wi-Fi)",
+    lanAccesAvertissement:
+      "Activado: su inventario es visible en la red local. Desactivado: solo 127.0.0.1. Reinicie la aplicación tras cambiar esto.",
     loading: "Cargando...",
     openCameraToConnect: "Abrir cámara<br/>para conectar",
     today: "Hoy",

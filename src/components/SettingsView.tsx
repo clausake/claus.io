@@ -673,6 +673,43 @@ export function SettingsView({
                             : (t.loading || "Chargement..."))}
                       </code>
                     </div>
+                    {/* P4b : l'opt-in du maitre, plus le rappel de redemarrage
+                        (le bind se resout au demarrage, `app.listen` est fige). */}
+                    <div className="mt-3 space-y-2">
+                      <label className="flex items-center gap-2 text-[11px] text-slate-300">
+                        <input
+                          type="checkbox"
+                          className="accent-emerald-500"
+                          checked={networkInfo?.lan_acces === true}
+                          onChange={async (e) => {
+                            const suivant = e.target.checked;
+                            await fetch("/api/settings", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                ...(settings ?? {}),
+                                lan_acces: suivant,
+                              }),
+                            });
+                            setSettings((s: Record<string, unknown>) => ({
+                              ...(s ?? {}),
+                              lan_acces: suivant,
+                            }));
+                            try {
+                              const r = await fetch("/api/network-info");
+                              setNetworkInfo(await r.json());
+                            } catch (err) {
+                              console.error("network-info", err);
+                            }
+                          }}
+                        />
+                        <span>{t.lanAccesOptIn || "Exposer l'app sur le réseau local (Wi-Fi)"}</span>
+                      </label>
+                      <p className="text-[10px] text-slate-500 leading-relaxed">
+                        {t.lanAccesAvertissement ||
+                          "Actif : votre inventaire est visible sur le réseau local. Inactif : adresse 127.0.0.1 uniquement. Redémarrez l'application après modification."}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
