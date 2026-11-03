@@ -24,6 +24,9 @@ export interface ReglageLlmBrut {
   llm_choix?: string;
   llm_url?: string;
   llm_modele?: string;
+  /** P4b : `true` = le serveur binde aussi le LAN (opt-in du maitre). Le
+   *  defaut (`false`, ou champ absent) laisse le bind `127.0.0.1`. */
+  lan_acces?: boolean;
 }
 
 export interface CibleSonde {

@@ -87,6 +87,9 @@ export const IT_TRANSLATIONS: Record<string, string> = {
 
     localWifiAddress: "Indirizzo di connessione (Wi-Fi Locale)",
     aucuneAdresseLan: "nessun indirizzo LAN rilevato",
+    lanAccesOptIn: "Esponi l'app sulla rete locale (Wi-Fi)",
+    lanAccesAvertissement:
+      "Attivo: il tuo inventario è visibile sulla rete locale. Disattivo: solo 127.0.0.1. Riavvia l'app dopo la modifica.",
 
     loading: "Caricamento...",
 

@@ -467,9 +467,16 @@ test("GET /api/network-info", async ({ request }) => {
   // P4a : l'IP est CHOISIE (pas « premiere venue ») ; `null` est une reponse
   // honnete quand aucune candidate LAN n'existe (tailscale seul, conteneur).
   expect(typeof body.port).toBe("number");
+  // P4b : `url` n'existe QUE si le LAN est reellement expose. Le harnais ne
+  // pose pas `lan_acces`, donc le bind est le loopback et l'URL doit etre null
+  // — le QR du panneau ne ment pas sur une adresse injoignable.
+  expect(typeof body.lan_acces).toBe("boolean");
+  if (body.lan_acces === false) {
+    expect(body.url).toBeNull();
+  }
   if (body.ip === null) {
     expect(body.url).toBeNull();
-  } else {
+  } else if (body.lan_acces === true) {
     expect(typeof body.ip).toBe("string");
     expect(body.url).toBe(`http://${body.ip}:${body.port}`);
   }

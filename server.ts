@@ -23,6 +23,24 @@ import apiRateLimiter from "./src/middleware/api-rate-limiter.js";
 import httpLogger from "./src/middleware/http-logger.js";
 import { ollamaSettingsRef, OllamaSettings } from "./src/shared/ollama.js";
 import { settingsStore } from "./src/services/settings.js";
+
+/** P4b : l'opt-in du maitre, lu une fois au demarrage. `undefined` (champ
+ *  absent) vaut `false` : le defaut est le loopback, jamais une supposition.
+ *  Le `HOST` d'environnement reste maitre (il est pose par le harnais et par
+ *  les sonde, qui jugent une instance precise). */
+function lireLanAcces(): boolean {
+  try {
+    return settingsStore.value?.lan_acces === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Le bind reellement joue par `app.listen` (P4b). Figé au demarrage dans
+ *  `HOST`, donc identique a ce que la route network-info rend au client. */
+function hostDeEcoute(): string {
+  return process.env.HOST || (lireLanAcces() ? "0.0.0.0" : "127.0.0.1");
+}
 import { uploadsDir } from "./src/services/paths.js";
 import { resoudreDist } from "./src/services/chemin-ressources.js";
 import { startDbBackup } from "./src/services/db-backup.js";
@@ -247,7 +265,10 @@ async function startServer() {
     });
   }
 
-  const HOST = process.env.HOST || "127.0.0.1";
+  // P4b (opt-in du maitre) : le bind par defaut reste le loopback. La clef
+  // `lan_acces` du reglage, elle, ne peut agir qu'au DEMARRAGE — un `app.listen`
+  // est fige. C'est pourquoi la UI rappelle le redemarrage quand le champ change.
+  const HOST = hostDeEcoute();
   // Le port SORT d'un environnement absent, mais il a un maitre : quand l'appelant
   // l'a demande Explicitement (PORT dans l'environnement), c'est un CONTRAT et non
   // une suggestion. L'ancien comportement faisait PORT++ en silence sur EADDRINUSE,

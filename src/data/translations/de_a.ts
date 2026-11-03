@@ -697,6 +697,9 @@ export const DE_A: Record<string, string> = {
 
     localWifiAddress: "Verbindungsadresse (Lokales WLAN)",
     aucuneAdresseLan: "keine LAN-Adresse gefunden",
+    lanAccesOptIn: "App im lokalen Netzwerk verfügbar machen (Wi-Fi)",
+    lanAccesAvertissement:
+      "Ein: Ihr Inventar ist im lokalen Netzwerk sichtbar. Aus: nur 127.0.0.1. Nach der Änderung die App neu starten.",
 
     loading: "Laden...",
 

@@ -20,6 +20,9 @@ export const FR_TRANSLATIONS: Record<string, string> = {
       "Connectez votre smartphone au **même réseau Wi-Fi** que cet ordinateur pour scanner les factures et gérer l'inventaire en direct.",
     localWifiAddress: "Adresse de connexion (Wi-Fi Local)",
     aucuneAdresseLan: "aucune adresse LAN détectée",
+    lanAccesOptIn: "Exposer l'app sur le réseau local (Wi-Fi)",
+    lanAccesAvertissement:
+      "Actif : votre inventaire est visible sur le réseau local. Inactif : adresse 127.0.0.1 uniquement. Redémarrez l'application après modification.",
     loading: "Chargement...",
     openCameraToConnect: "Ouvrez l'appareil photo<br/>pour vous connecter",
     today: "Aujourd'hui",
