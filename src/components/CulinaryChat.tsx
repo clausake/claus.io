@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   MessageSquare,
   Mic,
@@ -6,6 +6,7 @@ import {
   Send,
 } from "lucide-react";
 import { historiqueSur } from "../shared/recette-chat";
+import { sAbonner, instantane, envoyer } from "../shared/atelier-chat";
 
 // Le chat culinaire (Sprint 16).
 //
@@ -34,30 +35,16 @@ export function CulinaryChat({
   // (lecture en recette) appartient a l'onglet, pas au chat.
   onProposition?: (contenu: string) => void;
 }) {
-  const [messages, setMessages] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([]);
-  useEffect(() => {
-    setMessages((prev) => {
-      if (
-        prev.length === 0 ||
-        (prev.length === 1 && prev[0].role === "assistant")
-      ) {
-        return [
-          {
-            role: "assistant",
-            content:
-              t.chatWelcome ||
-              "Bonjour ! Je suis votre assistant culinaire. Posez-moi vos questions sur la cuisine, les recettes, ou les techniques !",
-          },
-        ];
-      }
-      return prev;
-    });
-  }, [t.chatWelcome]);
+  // P3 (plan 014) : l'historique et la reponse vivent dans le store de module
+  // (src/shared/atelier-chat.ts), PAS dans le composant. Le fetch y est porte :
+  // l'IA peut finir d'ecrire pendant que l'onglet est demonte — c'est la
+  // reparation du defaut « l'IA ecrit, je change d'onglet, tout est parti ».
+  // Le message d'accueil est l'etat INITIAL du store, plus un effet.
+  const etat = useSyncExternalStore(sAbonner, instantane);
+  const messages = etat.messages;
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const isLoading = etat.enCours;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -120,42 +107,14 @@ export function CulinaryChat({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
     const userMessage = input.trim();
-    // L'historique PORTE est l'echange tel qu'il est AVANT ce tour : le
-    // message en cours part par `message`, pas par l'historique (sinon le
-    // serveur le lirait deux fois).
-    const historiquePorte = historiqueSur(messages);
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, history: historiquePorte }),
-      });
-
-      const data = await response.json();
-      const contenu = response.ok
-        ? data.response
-        : t.chatError || data.response;
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: contenu },
-      ]);
-      // La proposition n'est remise QUE pour une vraie reponse du modele
-      // (pas le texte d'erreur), et BRUTE : l'onglet decide si elle se lit.
-      if (response.ok && onProposition) onProposition(contenu);
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: t.chatServerError || t.chatError },
-      ]);
-    } finally {
-      setIsLoading(false);
+    // Le fetch est dans le store : le composant peut etre demonte, la reponse
+    // atterrit quand meme (et `onProposition` n'est joue que si nous sommes
+    // encore montes — la redrivaison des cartes prend le relais sinon, R3).
+    const r = await envoyer(userMessage, { t, historiqueSur });
+    if (r.envoye && r.contenu !== undefined && !r.erreur && onProposition) {
+      onProposition(r.contenu);
     }
   };
 

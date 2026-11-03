@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { MENU_ROTATION } from "../data/menuData";
+import { instantane as instantaneChat } from "../shared/atelier-chat";
 import { LazyMotion, domAnimation } from "motion/react";
 import * as motionSlim from "motion/react-m";
 import { jsPDF } from "jspdf";
@@ -100,7 +101,12 @@ export function MenuAnalysis({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [fichesTechniques, setFichesTechniques] = useState<FicheScannee[] | null>(null);
   const [guestCount] = useState<number>(1);
+  // P3 (plan 014) : les propositions vivent dans le store du chat. Le parseur
+  // reste ICI (il n'est pas déplace) mais la dérivation est IDEMPOTENTE (R3) :
+  // deux montages successifs sur la même réponse brute rendent le MÊME nombre
+  // de cartes, jamais le double.
   const [propositions, setPropositions] = useState<Proposition[]>([]);
+  const derniereBruteParsee = React.useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const carteLabels: Record<CarteRecette, string> = {
@@ -115,6 +121,7 @@ export function MenuAnalysis({
   // proposition editee dans le chat par le chef est enregistree dans l'etat
   // OU elle est, pas dans un copie-colle perime.
   const handleProposition = (contenu: string) => {
+    derniereBruteParsee.current = contenu;
     const recette = parserRecette(contenu);
     if (!recette) return;
     setPropositions((prev) => {
@@ -131,6 +138,17 @@ export function MenuAnalysis({
       ];
     });
   };
+
+  // P3 (R3) : au REMONTAGE du composant, les cartes sont redérivées de la
+  // dernière réponse brute du store — le travail du chef survit au changement
+  // d'onglet. L'appel passe par handleProposition, donc la garde « même contenu
+  // déjà présent » rend l'opération idempotente : deux montages, même nombre
+  // de cartes.
+  React.useEffect(() => {
+    const brute = instantaneChat().derniereReponse;
+    if (brute && brute !== derniereBruteParsee.current) handleProposition(brute);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ouvrirFormulaire = (p: Proposition) => {
     const recette = parserRecette(p.contenu);
