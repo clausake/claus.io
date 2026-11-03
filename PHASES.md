@@ -1868,3 +1868,39 @@ d'exploitation**, consignée en attente — pas un bug.
   (il exige `boolean` pour `lan_acces`, `url:null` quand `false`) : 44/44.
   `tsc` rc=0, `vitest` 208/208, `verify:types`/`bundle`/`auth`/`reglage-llm`/
   `split` rc=0. La fenetre Electron reste en `127.0.0.1`.
+
+### Shannon — le pentest 015, joue sur l'arbre 1.0.1 (03/11, S0→S2)
+
+- **S0 (prérequis, re-mesurés)** : Docker `29.1.3` (`active`), Node `v26.12.1`,
+  `@keygraph/shannon@3.5.0` (version **figée**, image `keygraph/shannon:3.5.0`),
+  Ollama `gemma4:e4b`. 150 G libres sur `/`.
+- **S1 (l'instance jetable)** : `scripts/instance-pentest.sh` (rc=0) — `USER_DATA_PATH`
+  = `mktemp -d` en `700`, `PORT=4310` (libre, jugé par un bind de test),
+  `NODE_ENV=production`, `HOST=0.0.0.0` (seule exception au loopback, pour que le
+  conteneur joigne la cible), **sans** `COOKDRIVE_AUTH_OFF` ni `COOKDRIVE_RATELIMIT_OFF`.
+  Morsure : le script rougit si `USER_DATA_PATH` est absent.
+  Preuves sur l'instance : `GET /api/settings` = 200 ; `POST` sans cookie = 401
+  `AUTH_REQUISE` ; `setup` = 201 (rôle `maitre`) ; `login` = 200 + cookie `cd_session`.
+  Isolation prouvée : le témoin `stat -c %Y` de `~/.clausio/agent_culinaire.db` ne
+  bouge pas, et le dossier jetable n'est pas `~/.clausio`.
+- **S2 (`--validate-auth`)** : les 3 premières étapes sont vertes au log du worker
+  (`Repository path OK`, `Configuration file OK`, `Model: openai:gpt-5.4`,
+  `Model config: /app/models.json`). La 4ᵉ (`validateCredentials`) rougit en
+  `AgentExecutionError`, `Completed: 0/13` (aucun PDF, aucun SARIF).
+  Le **schéma** de `--models-config` est relevé dans le conteneur :
+  `{"providers": {"<providerId>": {"baseUrl","apiKey","api","models":[…]}}}`,
+  `models` **obligatoirement un tableau**, `providerId` pris dans
+  `CURATED_PROVIDERS = ['anthropic','openai','xai','amazon-bedrock']`.
+- **Cause du rouge, tranchée par re-mesure** : aucune voie IP n'atteint 8092/11434
+  **depuis le réseau du worker** (`shannon-net`) — ni `127.0.0.1`, ni la passerelle
+  `172.18.0.1`, ni `--network host` — alors que les mêmes poids rendent `200` en boucle
+  simple hors conteneur. Ce n'est pas un refus du modèle, c'est une **jointabilité**
+  manquante. Le texte du fournisseur est jeté par `PROVIDER_FAILURE_MESSAGES`
+  (`apps/worker/src/services/error-handling.ts`), d'où les sondes croisées.
+- **0 faille remontée = une ABSTENTION**, pas un vert : le pipeline ne raggiung pas
+  les phases d'agents.
+- **Porte nouvelle** : `verify:pentest-isolation` = `python3 scripts/probe-pentest-isolation.py`,
+  déclarée **à la fois** dans `package.json` **et** dans `DEFAUT` de `run-all-gates.py`.
+  6/6 vertes, rc=0, SANS Docker ni réseau. Le lot passe de 98 à **99 portes**, toujours
+  2 rouges (`verify:ui-tabs`, `verify:reception` = le même `chromium_headless_shell`
+  absent du conteneur, verts dans les jobs `e2e` de la CI, qui fait autorité).

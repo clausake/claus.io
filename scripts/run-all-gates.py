@@ -358,6 +358,11 @@ DEFAUT = ["verify:split",
           # port libre, jeton d'instance verifie) et joue /api/llm/tester avec
           # sa morsure muette — la voie est libre, pas de port fixe partage.
           "verify:reglage-llm",
+          # verify:pentest-isolation (plan 015, S1) : jouée SANS Docker et SANS
+          # réseau — elle prouve que l'instance de pentest n'écrase jamais la base
+          # réelle du maître (levier `USER_DATA_PATH`) et que le script refuse un
+          # `USER_DATA_PATH` absent. Morsure : le rc du script lui-même.
+          "verify:pentest-isolation",
           # verify:assistant (Tache 10) : l'etat machine de l'epreuve, juge par
           # lecteur FABRIQUE (le vrai Paddle n'est jamais joue par une porte —
           # les poids sont hors git, la course dependrait de l'infrastructure

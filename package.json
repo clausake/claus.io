@@ -92,6 +92,7 @@
     "verify:juge-fuseaux": "python3 scripts/juge-couverture-fuseaux-d1.py",
     "verify:fuseau-cost-data": "node scripts/probe-fuseau-cost-data.mjs",
     "verify:reglage-llm": "node test/banc/juge-reglage-llm.mjs",
+    "verify:pentest-isolation": "python3 scripts/probe-pentest-isolation.py",
     "verify:assistant": "node test/banc/juge-assistant.mjs",
     "verify:ocr-moteur": "python3 scripts/juge-ocr.py paddle",
     "verify:ocr-moteur-mord": "python3 test/banc/juge-ocr-b.py",
