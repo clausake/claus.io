@@ -1707,3 +1707,95 @@ workflow à une release séparée — aucune collision avec v0.1.2.
 - Les trois `high` retirés (`pdf-to-img`/`xlsx`/`pdf2pic`) l'ont été comme
   dépendances mortes : si une fonction revient, re-monter les successeurs
   (pdf-to-img 7.0.2, SheetJS ≥0.20) et re-fumer, pas réintroduire à l'aveugle.
+
+## Campagne 03/11 — plan 014 : le poste Windows du maitre (04/11)
+
+Trois défauts rapportés sur le poste Windows, tous reproduits et mesurés AVANT
+correction. Un quatrième point (l'accès smartphone) est une **décision
+d'exploitation**, consignée en attente — pas un bug.
+
+### Les trois défauts, leurs causes mesurées, ce qui a été corrigé
+
+1. **URL du moteur en 404** (capture du 02/11 : `…/api/generate/api/generate`).
+   - Cause mesurée : le réglage porte l'URL complétée par l'endpoint, et le
+     client rajoute le sien — chemin doublé → 404. Rejoué : le chemin doublé
+     rend **404**, le chemin simple rend **200** (Ollama 11434, `/api/tags` 200,
+     donc moteur vivant : seul le chemin testé était faux).
+   - Le défaut vient aussi des **défauts embarqués** : `App.tsx:74` et
+     `services/settings.ts:45` portaient `http://localhost:11434/api/generate`.
+   - Corrigé (P1, commit `2fdda1f`) : fonction pure `baseNue()` dans
+     `reglage-llm.ts` — retire en boucle `/api/generate`, `/api/chat`,
+     `/v1/chat/completions`, `/v1`, `/api` et les `/` de fin ; **sans `new URL`**
+     (qui réussit sur une URL à chemin et ne normalise rien : le piège mesuré).
+     Appliquée aux branches `ollama` ET `llamacpp` de `cibleDuReglage`.
+     R1 respecté : `https://proxy.exemple/ollama` reste **inchangé** (un préfixe
+     de proxy n'est jamais retiré). Défauts → `http://127.0.0.1:11434` (base nue).
+     `getOllamaHost` et `DEFAUT_OLLAMA` non touchés.
+   - Preuves : 12 tests verts dans `test/unit/reglage-llm.test.ts`,
+     `verify:reglage-llm` vert, `verify:llm-fournisseur` vert, tsc 0, build ok,
+     CI 7/7 (`41594054793`). Bounded E2E : `POST /api/settings` avec
+     `llm_url="…/api/generate"` → la cible sondée porte la base nue (le 404 du
+     chemin doublé a disparu ; `HTTP_404` sur `/api/generate` simple = Ollama
+     sans modèle installé, `ollama list` vide, défaut de terrain nommé).
+2. **Le nom du modèle était à retaper** (détection ne tournant qu'au montage,
+   `SettingsView.tsx:157` — R2).
+   - Corrigé (P2, commit `128d38f`) : le champ « Nom du modèle » reçoit
+     `list="modeles-detectes"` + un `<datalist>` peuplé par
+     `serveursDetectes.flatMap(s => s.modeles.map(m => m.nom))`. Le champ reste
+     **libre** (un chemin `.gguf` n'est pas un nom Ollama), aucune valeur
+     imposée, aucun appel réseau nouveau ; la détection est **rejouée au
+     « Tester »** (R2 : si Ollama démarre après l'ouverture de l'app).
+   - Preuves : CI 7/7 (`41596838405`), `verify:types` (0 `:any` backend, seuil 0),
+     `verify:bundle` vert.
+3. **L'historique du chat (et les cartes) mourait au changement d'onglet.**
+   - Cause mesurée : le `fetch("/api/ai/chat")` et les messages vivaient dans le
+     composant (`CulinaryChat.tsx:134`, `MenuAnalysis.tsx:103`) ; démonter =
+     réponse perdue.
+   - Corrigé (P3, commit `e289294`) : store de module `src/shared/atelier-chat.ts`
+     (`sAbonner`/`instantane`/`envoyer`/`reinitialiser`, compatible
+     `useSyncExternalStore`). Le fetch vit **dans le store** : l'IA finit
+     d'écrire onglet fermé. R3 : la re-dérivation des cartes est **idempotente**
+     (la garde « même contenu déjà présent » + `derniereBruteParsee` → deux
+     montages, même nombre de cartes). R4 : borne `CAP_MESSAGES = 200` (les plus
+     vieux sortent), la fenêtre **envoyée** au serveur reste `historiqueSur` (12,
+     contrat serveur). Rien sur le disque (aucun localStorage introduit).
+     `CulinaryChat` ne garde que `input`/`isListening` en state ; l'accueil est
+     l'état initial du store, plus un effet.
+   - Preuves : 8 nouveaux tests `test/unit/atelier-chat.test.ts`, 206 tests
+     locaux, CI 7/7 (`41608437380`).
+4. **Le QR « Accès Smartphone Wi-Fi » mentait** (annonçait une IP morte).
+   - Cause mesurée : `/api/network-info` prenait la **première** IPv4 non
+     interne venue. Rejoué ici : l'algorithme rend `172.17.0.1` (docker0) ; sur
+     le PC du maitre il est tombé juste **par chance**.
+   - Corrigé (P4a, commit `df226b0`) : fonction pure `choisirIpLan()` dans
+     `src/shared/reseau.ts` — écarte `internal`, `169.254.*` et les ponts
+     (docker, br-, veth, wsl, vEthernet, VirtualBox, tailscale, utun/tun/tap) ;
+     préfère `192.168.*` puis `10.*` puis `172.16-31.*` ; rend **null** si
+     aucune candidate. La route rend `{ ip: null, port, url: null }` — jamais une
+     URL inventée ; le panneau affiche « aucune adresse LAN détectée ».
+   - Preuves : 7 tests `test/unit/reseau.test.ts` (dont la mesure rejouée :
+     docker0 **jamais** rendu), mesure live `GET /api/network-info` →
+     `{"ip":"192.168.1.50", …}` (la vraie carte, pas un pont), `verify:routes`
+     46/46, CI 7/7 (`41617668110`).
+
+### Ce qui a été REFUSÉ, et pourquoi
+
+- **P4b (l'exposition LAN) n'est pas implémentée** — décision du maitre
+  requise, consignée en attente. Les deux issues (A : opt-in `lan_acces` +
+  pare-feu Privé + avertissement ; B : vérité sans exposition) sont écrites
+  dans le plan 014. En attendant : le bind reste `127.0.0.1` (`server.ts:250`,
+  `HOST` par défaut loopback, vérifié ce jour) et le panneau ne ment plus (P4a).
+  Ce qui reste interdit dans les deux cas : binder `0.0.0.0` par défaut,
+  désactiver auth ou rate-limit, changer `HOST` en test/CI.
+- **P1 ne touche pas** `getOllamaHost` (déjà juste) ni `DEFAUT_OLLAMA` (déjà
+  base nue) : la normalisation se fait **à la lecture**, donc les installations
+  existantes — dont le poste du maitre — sont réparées sans réinitialiser sa
+  configuration.
+- **P2 ne remplace pas** l'input par un `<select>` (casserait llama.cpp et les
+  modèles non listés) et n'écrit aucune valeur par défaut dans `llm_modele`.
+- **P3 ne persiste rien** en base ni en `localStorage`, et ne touche pas la
+  fenêtre envoyée au serveur (`historiqueSur`, 12).
+- `pdf-parse` **non touché** (4 routes métier l'importent).
+- Limite nommée : les e2e locaux ne sont pas fiables sur ce poste
+  (`requestAnimationFrame` = 0) — la CI est la source de vérité, et c'est elle
+  qui a jugé chaque commit.
