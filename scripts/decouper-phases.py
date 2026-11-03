@@ -176,17 +176,25 @@ def verify():
         parts.append(open(chemin, encoding="utf-8").read())
     got = sha256("".join(parts).encode("utf-8"))
     ok = got == m["original_sha256"]
+    # Les shas sont rendus COMPLETS (64): le manifeste exige 64 caracteres, un
+    # verdict en 12 ne laisse pas reporter l'ancre a la main (piege constate).
     print("VERDICT anti-perte: %s | recolle %s | original consigne %s"
-          % ("OK" if ok else "ECHEC", got[:12], m["original_sha256"][:12]))
+          % ("OK" if ok else "ECHEC", got, m["original_sha256"]))
     # L'ancre du .orig est jugee dans la MEME porte (constat D3): une porte separee
     # serait oubliee, et une porte non jouee est pire qu'une porte absente -- elle
     # fait croire a une surveillance qui n'a pas eu lieu.
-    if ok:
-        ok = _ancre_externe()
+    # Elle est jouee MEME si l'ancre est perimee: le court-circuit masquait un
+    # .orig incoherent derriere une ancre simplement decalee (constat 016 / D1).
+    ancre = _ancre_externe()
     if not ok:
-        print("   -> une ligne du journal a bouge. Restaure depuis "
-               "phases/.pre-split/PHASES.md.orig et rejoue.")
-    return 0 if ok else 4
+        # Deux fautes differentes, deux mots differents.
+        print("   -> ANCRE PERIMEE: le recolle a change (consigne ajoutee au chaud ?).")
+        print("      reporte CE sha dans phases/manifest.json -> original_sha256:")
+        print("      %s" % got)
+    if not ancre:
+        print("   -> LIGNE PERDUE ou .orig incoherent: restaure depuis "
+              "phases/.pre-split/PHASES.md.orig et rejoue.")
+    return 0 if (ok and ancre) else 4
 
 
 def main(argv):
