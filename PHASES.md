@@ -1819,3 +1819,27 @@ d'exploitation**, consignée en attente — pas un bug.
 - Les deux chiffres du journal releves par l'audit sont corriges ici : le run
   `41594054793` est **6/7** (job `gates` annule par la vague suivante) et
   `verify:routes` juge **44** tests.
+
+### Publication 1.0.0 (03/11, soir)
+
+- Le maitre a ordonne : « efface les autres versions et les details, et tu
+  appelles ce version 1.0 ». Execute en deux temps pour ne jamais laisser le
+  client sans release : d'abord publier 1.0, ensuite retirer les 0.1.x.
+- `b794e97` = version 1.0.0 (`package.json`) + README rebranche sur la release
+  courante (le bloc historique v0.1.0 remplacé par la note « versions 0.1.x
+  retirées »). CI **7/7** (`41668499131`), jobs `gates` inclus.
+- Tag `v1.0.0` pose sur `b794e97` **apres** la CI verte — pas avant. Run
+  installateurs `41673289004` : attempt 1 a vu `build-mac` **cancelle** sans un
+  seul step execute (sans concurrence declaree dans le workflow, cause non
+  nommee — un cancel-ghost) ; re-run de l'attempt, 3/3 jobs success.
+  **4 assets** datees 16:40–16:43Z, apres le push du tag ; smoke AppImage a
+  l'etape 8 avant l'attach a l'etape 10.
+- Releases **v0.1.0 → v0.1.4 supprimees** (`gh release delete`) avec leurs tags
+  distants et locaux. Reste : `v1.0.0` seule release, plus le tag `demo-media`
+  (pas une version, laisse). L'historique git et le journal ne se reecrient pas :
+  les 0.1.x restent lisibles dans l'arbre, seul le telechargement public est
+  repris en 1.0.
+- **P4b reste non livre** : bind `127.0.0.1` (`server.ts:250`), decision du
+  maitre en attente (A/B/C).
+- Cible du pentest Shannon (plan `015`) = l'arbre **v1.0.0** — le prerequis
+  « execute apres la release » est desormais rempli.
