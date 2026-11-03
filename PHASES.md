@@ -1733,7 +1733,8 @@ d'exploitation**, consignée en attente — pas un bug.
      `getOllamaHost` et `DEFAUT_OLLAMA` non touchés.
    - Preuves : 12 tests verts dans `test/unit/reglage-llm.test.ts`,
      `verify:reglage-llm` vert, `verify:llm-fournisseur` vert, tsc 0, build ok,
-     CI 7/7 (`41594054793`). Bounded E2E : `POST /api/settings` avec
+     CI 6/7 (`41594054793` : le job `gates` a ete ANNULE par la vague
+     suivante, pas echoue ; le lot complet est vert sur `41621401346`). Bounded E2E : `POST /api/settings` avec
      `llm_url="…/api/generate"` → la cible sondée porte la base nue (le 404 du
      chemin doublé a disparu ; `HTTP_404` sur `/api/generate` simple = Ollama
      sans modèle installé, `ollama list` vide, défaut de terrain nommé).
@@ -1776,7 +1777,8 @@ d'exploitation**, consignée en attente — pas un bug.
    - Preuves : 7 tests `test/unit/reseau.test.ts` (dont la mesure rejouée :
      docker0 **jamais** rendu), mesure live `GET /api/network-info` →
      `{"ip":"192.168.1.50", …}` (la vraie carte, pas un pont), `verify:routes`
-     46/46, CI 7/7 (`41617668110`).
+     44/44 (mesure : 44 tests verts ; la vitrine en annonce 46, cf. la lecon
+     deja consignee), CI 7/7 (`41617668110`).
 
 ### Ce qui a été REFUSÉ, et pourquoi
 
@@ -1799,3 +1801,21 @@ d'exploitation**, consignée en attente — pas un bug.
 - Limite nommée : les e2e locaux ne sont pas fiables sur ce poste
   (`requestAnimationFrame` = 0) — la CI est la source de vérité, et c'est elle
   qui a jugé chaque commit.
+
+### Correction du 03/11 — l'ancre du journal (audit 016)
+
+- Le commit `11834ec` annonçait « le .orig est re-ancre » : **c'etait faux**.
+  La recette dit que le `.orig` et `sha256_original_avant_reancrage` **ne bougent
+  pas** ; seul `original_sha256` suit la recollee.Etat restaure : `.orig` =
+  2 134 lignes / 133 404 octets / sha `0360a1fe902e…`, `sha256_original_avant_reancrage`
+  inchange, `original_sha256` = la recollee. La porte le prouve par la preuve
+  exterieure (`ANCRE .orig: OK`, blob `4e4388d6e87d`).
+- Piege d'outil nomme (pour ne pas le refaire) : `--verify` ne rendait que
+  **12** caracteres de sha alors que le manifeste en exige **64**, et
+  `_ancre_externe()` n'etait joue que si l'ancre etait deja bonne — une ancre
+  perimee masquait donc un `.orig` incoherent. Repare en A1 : shas complets,
+  ancre toujours jouee, et deux verdicts distincts (`ANCRE PERIMEE` /
+  `LIGNE PERDUE`).
+- Les deux chiffres du journal releves par l'audit sont corriges ici : le run
+  `41594054793` est **6/7** (job `gates` annule par la vague suivante) et
+  `verify:routes` juge **44** tests.
