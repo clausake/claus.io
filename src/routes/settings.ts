@@ -191,7 +191,7 @@ router.get("/api/network-info", (_req, res) => {
   // P4a (plan 014) : l'IP annoncee est CHOISIE (pas « premiere venue »), et
   // si aucune candidate LAN credible n'existe on rend null — jamais une URL
   // inventee. Le QR du panneau ne se rend que si url existe.
-  const ip = choisirIpLan(os.networkInterfaces() as unknown as Record<string, CandidateInterface[] | undefined>);
+  const ip = choisirIpLan(os.networkInterfaces());
   const port = Number(process.env.PORT) || 3000;
   res.json({ ip, port, url: ip === null ? null : `http://${ip}:${port}` });
 });

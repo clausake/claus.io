@@ -10,8 +10,10 @@
 // juge au banc, sans dependre du poste qui l'exerce.
 
 export interface CandidateInterface {
-  /** nom d'interface (Linux/Windows) — sert a ecarter les ponts virtuels */
-  name: string;
+  /** nom d'interface (Linux/Windows) — sert a ecarter les ponts virtuels.
+   *  Optionnel : `os.networkInterfaces()` ne le porte pas, et la fonction se
+   *  sert de la CLE du dictionnaire (le nom), jamais de ce champ. */
+  name?: string;
   family?: string;
   address?: string;
   internal?: boolean;
@@ -21,7 +23,7 @@ export interface CandidateInterface {
 // le NOM (minuscules) : c'est la seule chose qui distingue un pont docker d'une
 // vraie carte, et il n'est pas lie au poste d'un utilisateur particulier.
 const NOMS_ECARTES = [
-  "docker", "br-", "veth", "wsl", "verEthernet", "virtualbox",
+  "docker", "br-", "veth", "wsl", "vEthernet", "virtualbox",
   "tailscale", "utun", "tun", "tap",
 ];
 

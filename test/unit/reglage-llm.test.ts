@@ -45,6 +45,12 @@ describe("cibleDuReglage (le reglage lu, la cible de la sonde)", () => {
       .toEqual({ cible: { nom: "reglage", style: "ollama", base: "http://localhost:11434", modele: null } });
     expect(cibleDuReglage({ llm_choix: "ollama", llm_url: "http://192.168.1.8:11434/api/generate/" }))
       .toEqual({ cible: { nom: "reglage", style: "ollama", base: "http://192.168.1.8:11434", modele: null } });
+    // A6 : une URL reduite a un suffixe ne laisse JAMAIS une base vide
+    // (une base vide ne peut pas etre sondee) -> on retombe sur la base d'usage.
+    expect(cibleDuReglage({ llm_choix: "ollama", llm_url: "/v1" }))
+      .toEqual({ cible: { nom: "reglage", style: "ollama", base: DEFAUT_OLLAMA, modele: null } });
+    expect(cibleDuReglage({ llm_choix: "ollama", llm_url: "/api" }))
+      .toEqual({ cible: { nom: "reglage", style: "ollama", base: DEFAUT_OLLAMA, modele: null } });
   });
 
   it("un reglage llamacpp porte l'endpoint est normalise idem, et URL_ABSENTE survit", () => {
