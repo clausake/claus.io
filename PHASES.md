@@ -1904,3 +1904,15 @@ d'exploitation**, consignée en attente — pas un bug.
   6/6 vertes, rc=0, SANS Docker ni réseau. Le lot passe de 98 à **99 portes**, toujours
   2 rouges (`verify:ui-tabs`, `verify:reception` = le même `chromium_headless_shell`
   absent du conteneur, verts dans les jobs `e2e` de la CI, qui fait autorité).
+
+### Correction du 04/11 — la verification du pentest 015 par le maitre
+
+- Le rapport `docs/pentest-2026-11-03.md` est complete sur **deux points**, sans
+  en changer un constat :
+  1. Le harnais sert aussi une jointabilite reseau —Had jugee au V16, le serveur
+     `scripts/instance-pentest.sh` est un « poser-prouver-couper » son enfant
+     (re-mesure par : apres la sortie du script, `GET /api/settings` → connexion
+     refusée), pas un lanceur de longue durée.
+  2. Les runs du scan S2 (`--validate-auth`) ont été joués par spawn manuel avec
+     le même env, jamais derrière le script. Le rapport ne relevait pas cette
+     limite; elle est inscrite noir sur blanc depuis.
