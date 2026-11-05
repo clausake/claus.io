@@ -1970,3 +1970,12 @@ cible isolée `http://172.18.0.1:4311/` (instance jetable, base neuve, maitre
   nouvelle règle a été rejouée sur le code d'`HEAD` pour prouver qu'elle rougit :
   A4 `llm_clef = 'SK-doit-ne-jamais-sortir'`, A6 `200 / 290 816 o`, B10
   `403 MAITRE_REQUIS` (la route, pas la gate). Mesure finale : 19 PASS.
+
+- **Fin du run, nommee** : arrêt par `SIGTERM` au CLI le 05/11 à 07 h 22 (7 h 48
+  de run, dernière activité d'agent 06 h 22), xss 4/4 et les autres en échec ou
+  reprise sur la même cause (limite du modèle). Le run n'a donc **pas** de
+  « Scan COMPLETE/FAILED » : le rapport §8.1 le dit noir sur blanc, pour que
+  personne ne lise cet arrêt comme un scan abouti.
+- **Nettoyage mesuré** : 0 conteneur `shannon-*`, plus aucune écoute
+  (4311/4312/18092/11234), worktree `wt-head` retiré, et le témoin
+  `~/.clausio/agent_culinaire.db` reste à `mtime=1790247072` du début à la fin.
