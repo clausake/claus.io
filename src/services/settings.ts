@@ -25,6 +25,36 @@ export interface AppSettings extends ReglageFournisseur {
   [key: string]: unknown;
 }
 
+/** Les RACINES de noms qui portent un secret. Le nom est NORMALISE
+ *  (minuscules, sans tiret ni souligne) puis juge par SUFFIXE : `llm_clef`,
+ *  `webhook_token`, `openai_api_key`, `db_password` sont des secrets — la
+ *  premiere version comparait le nom ENTIER a une liste fermee, donc
+ *  `llm_clef` (« llmclef ») ne matchait pas `clef` et la clef du prestataire
+ *  restait servie en clair par GET /api/settings (trouvaille du scan 015,
+ *  mesuree sur une instance reelle). */
+const RACINES_SECRETES = [
+  "clef", "apikey", "token", "secret", "password", "motdepasse", "passphrase",
+] as const;
+
+/** Vrai si le NOM du champ annonce un secret (a ne jamais rendre ni ecrire). */
+export function estNomSecret(clef: string): boolean {
+  const n = String(clef ?? "").trim().toLowerCase().replace(/[-_\s]/g, "");
+  return RACINES_SECRETES.some((r) => n.endsWith(r));
+}
+
+/** La vue PUBLIQUE des reglages : tout sauf les champs dont le nom annonce un
+ *  secret. La lecture est libre (contrat A1) — un secret n'est pas une donnee
+ *  metier : il ne sort pas, meme sur un settings.json herite d'une version qui
+ *  l'y avait laisse (le coffre systeme est la seule place de la clef). */
+export function sansSecrets<T extends Record<string, unknown>>(valeur: T): Record<string, unknown> {
+  const sortie: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(valeur ?? {})) {
+    if (estNomSecret(k)) continue;
+    sortie[k] = v;
+  }
+  return sortie;
+}
+
 function resolveDataDir(): string {
   let storageDir = process.env.USER_DATA_PATH;
   if (!storageDir) {

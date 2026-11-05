@@ -86,9 +86,15 @@ export function sessionGate(): RequestHandler {
     // L'agent ecrit SEULEMENT via son exemption §8, et SEULEMENT si l'agent
     // est active (COOKDRIVE_AGENT_OFF=1 ferme l'exemption : il ne propose
     // plus rien, la boite lui rend 404 et la gate 403 sur toute ecriture).
+    // MATCH EXACT, jamais `startsWith` : les routes exemptees sont des routes
+    // EXACTES ; un prefixe laissait passer `/suggestions/<id>/appliquer` et
+    // `/suggestions/<id>/rejeter` (mesure du scan 015 — ces deux routes
+    // re-jugent le role en interne, donc pas d'exploit ce jour, mais la gate
+    // ne tenait sa promesse que par accident, et la prochaine route posee
+    // sous ce prefixe aurait ete ouverte a l'agent par defaut).
     const agentAutorise =
       user.role === "agent" && process.env.COOKDRIVE_AGENT_OFF !== "1" &&
-      [...ECRITURES_AGENT].some((p) => req.path.startsWith(p));
+      ECRITURES_AGENT.has(req.path);
     if (user.role === "agent" && !agentAutorise) {
       return res.status(403).json({
         error: "AGENT_LECTURE_SEULE",
