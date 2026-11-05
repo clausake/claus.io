@@ -1979,3 +1979,7 @@ cible isolée `http://172.18.0.1:4311/` (instance jetable, base neuve, maitre
 - **Nettoyage mesuré** : 0 conteneur `shannon-*`, plus aucune écoute
   (4311/4312/18092/11234), worktree `wt-head` retiré, et le témoin
   `~/.clausio/agent_culinaire.db` reste à `mtime=1790247072` du début à la fin.
+- **Vérification finale (05/11)** : lot local `PORTES=99 ROUGES=0`
+  (`python3 scripts/lire-gates.py`), `verify:auth` 19/19, `verify:routes` 44/44
+  (le contrat db-download juge désormais les deux états), vitest 208/208, tsc 0,
+  build OK ; CI GitHub `41981102714` **success** sur les 7 jobs (`cb374e4`).
