@@ -25,21 +25,29 @@ export interface AppSettings extends ReglageFournisseur {
   [key: string]: unknown;
 }
 
-/** Les RACINES de noms qui portent un secret. Le nom est NORMALISE
- *  (minuscules, sans tiret ni souligne) puis juge par SUFFIXE : `llm_clef`,
- *  `webhook_token`, `openai_api_key`, `db_password` sont des secrets — la
- *  premiere version comparait le nom ENTIER a une liste fermee, donc
+/** Les RACINES de noms qui portent un secret. Deux lectures, parce que les
+ *  deux formes existent dans le produit et dans les fichiers herites :
+ *    - par SUFFIXE sur le nom colle : `llm_clef` -> `llmclef` finit par `clef`,
+ *      `openai_api_key` -> `openaiapikey` finit par `apikey` ;
+ *    - par SEGMENT : `clef_api`, `injected_key`, `webhook_token` — le nom
+ *      decoupe sur `-`/`_`/espace contient le mot seul.
+ *  La premiere version comparait le nom ENTIER a une liste fermee, donc
  *  `llm_clef` (« llmclef ») ne matchait pas `clef` et la clef du prestataire
  *  restait servie en clair par GET /api/settings (trouvaille du scan 015,
- *  mesuree sur une instance reelle). */
+ *  mesuree sur une instance reelle). La liste fermee, elle, ne connaissait que
+ *  `clefapi` : `clef_api` lui echappait (mesure : test/banc/juge-reglage-llm). */
 const RACINES_SECRETES = [
-  "clef", "apikey", "token", "secret", "password", "motdepasse", "passphrase",
+  "clef", "apikey", "token", "secret", "password", "motdepasse", "passphrase", "key",
 ] as const;
 
 /** Vrai si le NOM du champ annonce un secret (a ne jamais rendre ni ecrire). */
 export function estNomSecret(clef: string): boolean {
-  const n = String(clef ?? "").trim().toLowerCase().replace(/[-_\s]/g, "");
-  return RACINES_SECRETES.some((r) => n.endsWith(r));
+  const brut = String(clef ?? "").trim().toLowerCase();
+  if (brut === "") return false;
+  const colle = brut.replace(/[-_\s]/g, "");
+  const segments = brut.split(/[-_\s]+/).filter(Boolean);
+  return RACINES_SECRETES.some((r) => colle.endsWith(r)) ||
+    segments.some((s) => (RACINES_SECRETES as readonly string[]).includes(s));
 }
 
 /** La vue PUBLIQUE des reglages : tout sauf les champs dont le nom annonce un
