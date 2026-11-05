@@ -6,6 +6,18 @@
 //   A1  GET /api/settings sans session       -> 200   (contrat license : lecture libre)
 //   A2  POST /api/inventory sans session     -> 401 AUTH_REQUISE (la gate mord)
 //   A3  GET /api/auth/me sans session        -> 401   (pas d'identite inventee)
+//   A4  GET /api/settings                    -> AUCUN secret (nom ou valeur) ;
+//       un settings.json herite peut porter `llm_clef` : la lecture libre ne
+//       doit pas le rendre (scan 015 : la clef sortait en clair)
+//   A5  GET /api/settings                    -> les champs non secrets REVIENNENT
+//       (le filtre de A4 ne doit pas vider les reglages)
+//   A6  GET /api/admin/db-download sans session -> 403 MAITRE_REQUIS (la base
+//       porte les hachages argon2, les sessions et l'audit ; mesure du scan 015 :
+//       un anonyme recevait les 290 816 o du fichier SQLite en 200)
+//   B10 agent POST /suggestions/<id>/appliquer -> 403 AGENT_LECTURE_SEULE : la
+//       liste §8 est EXACTE, pas un prefixe (la version `startsWith` laissait
+//       franchir la gate a toute route posee sous /suggestions)
+//   B11 agent POST /api/suggestions           -> 201 (sa seule ecriture reste ouverte)
 //   B1  POST /api/auth/setup (0 compte)      -> 201 + role maitre + cookie httpOnly
 //   B2  POST /api/auth/setup (2e fois)       -> 409 SETUP_DEJA_FAIT (sinon
 //       quiconque atteint le serveur reprendrait la main sur une install existante)
@@ -25,7 +37,7 @@
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { rmSync, mkdirSync, openSync } from "node:fs";
+import { rmSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
@@ -54,6 +66,23 @@ const TOKEN_INSTANCE = "verify-auth";
 const DATA = join(RACINE, "test", "tmp-auth");
 rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
+
+// A4/A5 : un settings.json HERITE d'une version ou la clef du prestataire
+// vivait encore dans la table (le coffre systeme est la seule place depuis la
+// tache 12). Sans ce semis, A4 passerait au vert sur un dossier VIDE et ne
+// mesurerait rien : la regle doit pouvoir rougir sur l'etat exact qu'elle
+// interdit (la faute mesuree par le scan 015 : `llm_clef` sortait au GET).
+const SECRET_SEME = "SK-doit-ne-jamais-sortir-9f3a";
+writeFileSync(
+  join(DATA, "settings.json"),
+  JSON.stringify({
+    model_name: "llama3.2-vision",     // donnee metier : doit REVENIR (A5)
+    language: "fr",
+    llm_clef: SECRET_SEME,             // clef heritee : doit DISPARAITRE
+    webhook_token: "tok-doit-ne-jamais-sortir", // suffixe `token`
+    openai_api_key: "sk-doit-ne-jamais-sortir", // suffixe `apikey`
+  }, null, 2),
+);
 
 const tsx = join(RACINE, "node_modules", ".bin", "tsx");
 const ERRLOG = join(DATA, "serveur-stderr.log");
@@ -175,6 +204,37 @@ try {
   const a1 = await call("GET", "/api/settings");
   check("A1 GET sans session 200 (lecture libre)", a1.status === 200, `status=${a1.status}`);
 
+  // A4 un secret herite ne sort JAMAIS par la lecture libre. Le nom normalise
+  // est juge par SUFFIXE (clef/token/apikey/secret/password) ET aucune valeur
+  // semee ne doit apparaitre dans le corps rendu — la seconde mesure attrape
+  // un secret renomme (`parametre_1`) que la premiere laisserait passer.
+  const corpsA4 = JSON.stringify(a1.json ?? {});
+  const nomsSecrets = Object.keys(a1.json ?? {}).filter((k) =>
+    ["clef", "token", "apikey", "secret", "password", "motdepasse"]
+      .some((r) => k.toLowerCase().replace(/[-_\s]/g, "").endsWith(r)));
+  const valeursFuitives = ["SK-doit-ne-jamais-sortir-9f3a", "tok-doit-ne-jamais-sortir",
+    "sk-doit-ne-jamais-sortir"].filter((v) => corpsA4.includes(v));
+  check("A4 GET /api/settings ne rend aucun secret (nom ou valeur)",
+    nomsSecrets.length === 0 && valeursFuitives.length === 0,
+    `champs=${nomsSecrets.join(",") || "aucun"} valeurs=${valeursFuitives.join(",") || "aucune"}`);
+
+  // A5 le filtre ne vide pas les reglages : la donnee metier revient
+  check("A5 GET /api/settings rend encore les champs non secrets",
+    a1.json?.model_name === "llama3.2-vision" && a1.json?.language === "fr",
+    `model_name=${a1.json?.model_name} language=${a1.json?.language}`);
+
+  // A6 la base entiere n'est pas de la lecture libre : hachages argon2, sessions
+  // vivantes et journal d'audit y sont. La gate exempte les GET (A1), donc la
+  // garde doit exister DANS la route. Mesure du scan 015 : un anonyme recevait
+  // 290 816 o de SQLite en 200 — cette regle rougissait sur cet etat exact.
+  const a6 = await fetch(`${BASE}/api/admin/db-download`, {
+    headers: { "X-Cookdrive-Instance": TOKEN_INSTANCE },
+  }).then(async (r) => ({ status: r.status, type: r.headers.get("content-type") ?? "",
+                          debut: (await r.arrayBuffer()).byteLength }))
+    .catch((e) => ({ status: 0, type: String(e), debut: 0 }));
+  check("A6 GET /api/admin/db-download sans session -> 403 MAITRE_REQUIS",
+    a6.status === 403, `status=${a6.status} type=${a6.type} octets=${a6.debut}`);
+
   // A2 la gate mord sur mutation anonyme
   const a2 = await call("POST", "/api/inventory", { name: "x", quantity: 1, unit: "kg", category: "test" });
   check("A2 POST sans session -> 401 AUTH_REQUISE", a2.status === 401 && a2.json?.error === "AUTH_REQUISE",
@@ -234,6 +294,24 @@ try {
   // B9 l'agent lit tout
   const b9 = await call("GET", "/api/settings");
   check("B9 GET avec session agent -> 200 (il lit tout)", b9.status === 200, `status=${b9.status}`);
+
+  // B10 l'exemption §8 est une liste de routes EXACTES : l'agent ne doit pas
+  // franchir la gate sur `/suggestions/<id>/appliquer` (prefixe). Mesure : la
+  // route rend aujourd'hui MAITRE_REQUIS de son propre chef, mais la GATE doit
+  // refuser AVANT elle — sinon une future route sous ce prefixe serait ouverte.
+  const b10propose = await call("POST", "/api/suggestions", {
+    type: "stock", priorite: "basse", titre: "Sonde 015 : exemption exacte",
+    action_route: "/api/inventory", action_payload: { name: "x", quantity: 1, unit: "kg", category: "test" },
+  });
+  const b10id = b10propose.json?.id;
+  const b10 = await call("POST", `/api/suggestions/${b10id}/appliquer`, {});
+  check("B10 agent POST /suggestions/<id>/appliquer -> 403 AGENT_LECTURE_SEULE (gate)",
+    b10propose.status === 201 && b10.status === 403 && b10.json?.error === "AGENT_LECTURE_SEULE",
+    `propose=${b10propose.status} appliquer=${b10.status} error=${b10.json?.error}`);
+  // B11 la morsure inverse : l'exemption VRAIE reste ouverte (un correctif qui
+  // fermerait tout passerait B10 en cassant le produit).
+  check("B11 agent POST /api/suggestions -> 201 (sa seule ecriture reste ouverte)",
+    b10propose.status === 201, `status=${b10propose.status} id=${b10id ?? "aucun"}`);
 
   // C1 la gestion des comptes n'est pas ouverte a l'agent non plus
   const c1 = await call("GET", "/api/users");

@@ -572,7 +572,29 @@ test("CRUD supplier-prices : depend de inventory + calcul prix/ref", async ({ re
 // un echo comme une extraction » et « sans panier rend 400 »); l'item
 // xvfb du journal chaud est donc RE-JUGE comme FEUILLE STALE: la route ne
 // demarre plus de navigateur, xvfb n'est plus une voie necessaire.
-test("GET /api/admin/db-download telecharge la base", async ({ request }) => {
+test("GET /api/admin/db-download : anonyme 403, maitre 200", async ({ request }) => {
+  // La base emporte les hachages argon2 des comptes, les hachages des sessions
+  // VIVANTES et le journal d'audit : ce n'est pas de la lecture metier libre,
+  // meme si la gate exempte les GET (contrat A1 du chantier 1). Mesure du scan
+  // 015 : un anonyme recevait 290 816 o de SQLite en 200, sans aucune garde.
+  const anonyme = await request.get(`${BASE}/api/admin/db-download`);
+  expect(anonyme.status(), "anonyme = 403 MAITRE_REQUIS (jamais le fichier)")
+    .toBe(403);
+  expect((await anonyme.json()).error).toBe("MAITRE_REQUIS");
+
+  // Le maitre, lui, telecharge : l'ecran Reglages passe par un <a href> qui
+  // porte son cookie. Setup tolerate d'un run a l'autre (409 = deja fait).
+  const setup = await request.post(`${BASE}/api/auth/setup`, {
+    data: { username: "maitre-harnais", password: "passe-harnais-2026" },
+  });
+  expect([201, 409]).toContain(setup.status());
+  const login = setup.status() === 201
+    ? { status: () => 200 }
+    : await request.post(`${BASE}/api/auth/login`, {
+      data: { username: "maitre-harnais", password: "passe-harnais-2026" },
+    });
+  expect([200, 409]).toContain(login.status());
+
   const res = await request.get(`${BASE}/api/admin/db-download`);
   // la base existe (creee au demarrage) → 200 + en-tete d'attachment
   expect(res.status()).toBe(200);

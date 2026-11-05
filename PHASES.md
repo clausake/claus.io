@@ -1916,3 +1916,57 @@ d'exploitation**, consignée en attente — pas un bug.
   2. Les runs du scan S2 (`--validate-auth`) ont été joués par spawn manuel avec
      le même env, jamais derrière le script. Le rapport ne relevait pas cette
      limite; elle est inscrite noir sur blanc depuis.
+
+## Chantier 21 — le scan complet du 04–05/11 a rendu trois trouvailles, toutes corrigées et mises en porte (05/11)
+
+Suite du chantier 015 : le scan Shannon v3.5.0 est relancé pour de vrai sur la
+cible isolée `http://172.18.0.1:4311/` (instance jetable, base neuve, maitre
+`pentest-maitre`), avec le modèle local `openai:qwen3.8-flash-next` derrière un
+**pont filtrant** `172.18.0.1:18092 → 127.0.0.1:8092`.
+
+- **Le pont, et pourquoi il existe** : le proxy de cerveaux rend des chunks SSE
+  avec des clés non standard (`exact_mode`, `tensorfold`, `speculative`,
+  `requested_model`) que le parseur strict de pi refuse, et sans
+  `Transfer-Encoding: chunked` undici suspend la lecture du corps. Le pont
+  supprime `accept-encoding`, filtre les clés inconnues et ré-encadre le flux en
+  chunked. Mesuré : `HTTP 200 | ct: text/event-stream`, 5 chunks, et le préflight
+  du worker rend `TOUT VERT`. Sans lui, **aucun** agent ne démarre.
+- **Ce que le scan a rendu** : `validate-authentication` Completed (5 m 21 s,
+  `login_success: true`), `pre-recon` Completed 46 m 42 s (après un
+  `OUTPUT_VALIDATION_FAILED` de 120 m), `recon` Completed 57 m 46 s. Les quatre
+  agents de vulnérabilité sont morts sur la limite du modèle local
+  (`OUTPUT_VALIDATION_FAILED` 120 m ; `AGENT_EXECUTION_FAILED` 6–108 m), **pas**
+  sur un refus de la cible : le scan n'a donc **rien prouvé** sur les failles, et
+  « 0 faille » reste une abstention nommée. Les deux livrables écrits
+  (`pre_recon_deliverable.md` 54 646 o, `recon_deliverable.md` 78 346 o) sont la
+  cartographie.
+- **Trois trouvailles mesurées à la main** (worktree jetable de `6966da4` en 4312
+  pour l'« avant », code patché en 4311 pour l'« après » — le détail et les
+  sorties sont au §8 de `docs/pentest-2026-11-03.md`) :
+  1. **CRITIQUE** — `GET /api/admin/db-download` rendait **la base entière**
+     (290 816 o, 26 tables, hachages argon2 des comptes, 56 sessions vivantes,
+     141 lignes d'audit) à un anonyme, parce que la gate exempte tous les GET et
+     que la route n'avait aucune garde. Correctif : garde `role === "maitre"`
+     dans la route + trace d'audit. Après : anonyme 403, maître 200 (l'UI passe
+     par un `<a href>` avec cookie, elle n'est pas cassée).
+  2. **MOYEN** — `GET /api/settings` rendait `llm_clef` en clair : le filtre du
+     POST comparait le nom ENTIER à une liste fermée, donc `llm_clef` →
+     `llmclef` ne matchait pas `clef`. Correctif : règle unique dans
+     `services/settings.ts`, jugée par **suffixe**, appliquée à la lecture
+     (`sansSecrets`) **et** à l'écriture. Limite résiduelle mesurée : un secret
+     rangé sous un nom anodin sort encore (`injected_key`), le remède de fond
+     reste « aucun secret dans `settings.json` » (coffre système).
+  3. **FAIBLE (latent)** — l'exemption d'écriture de l'agent était un
+     `startsWith` : `/suggestions/<id>/appliquer` franchissait la gate et n'était
+     arrêtée que par le contrôle de rôle interne de la route. Correctif :
+     correspondance **exacte** ; après, la gate refuse elle-même en
+     `403 AGENT_LECTURE_SEULE`.
+- **Faux positif écarté par mesure** : « un staff peut créer un maître » —
+  `POST /api/users` juge déjà `actor?.role !== "maitre"` (auth.ts:142) ; mesuré
+  `403 MAITRE_REQUIS`.
+- **La porte grandit de 5 règles** : `verify:auth` passe de 14 à **19** contrôles
+  (A4 secret absent, A5 réglages non vidés, A6 base interdite à l'anonyme,
+  B10 exemption exacte côté gate, B11 exemption vraie toujours ouverte). Chaque
+  nouvelle règle a été rejouée sur le code d'`HEAD` pour prouver qu'elle rougit :
+  A4 `llm_clef = 'SK-doit-ne-jamais-sortir'`, A6 `200 / 290 816 o`, B10
+  `403 MAITRE_REQUIS` (la route, pas la gate). Mesure finale : 19 PASS.

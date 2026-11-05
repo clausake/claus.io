@@ -6,7 +6,7 @@ import path from "path";
 import { spawn } from "child_process";
 import { getOllamaHost } from "../shared/util.js";
 import { ollama, ollamaSettingsRef } from "../shared/ollama.js";
-import { settingsStore, updateSettings } from "../services/settings.js";
+import { settingsStore, updateSettings, estNomSecret, sansSecrets } from "../services/settings.js";
 import {
   cibleDuReglage, argvDeCible, parseSortieSonde, detecterServeursLocaux,
   type ReglageLlmBrut,
@@ -156,21 +156,19 @@ router.get("/api/llm/detecter", async (_req, res) => {
 });
 
 router.get("/api/settings", (_req, res) => {
-  res.json(settingsStore.value);
+  // La lecture est libre (contrat A1), pas les SECRETS : un settings.json
+  // herite peut encore porter `llm_clef` (la clef vit dans le coffre systeme
+  // depuis la tache 12) et l'ancien filtre ne la reconnaissait pas.
+  res.json(sansSecrets(settingsStore.value as Record<string, unknown>));
 });
 
 /** Les noms de champs qui portent un secret. Quel qu soit l'emmeteur du POST,
  *  ces clefs NE PASSENT PAS : la clef du prestataire vit dans le trousseau du
  *  systeme (Tache 12, safeStorage), jamais dans settings.json — la table est
  *  lisible par tout fichier de la sauvegarde (le contrat le dit mot pour mot).
- *  Comparaison par NOM EXACT normalise (minuscules, sans tiret/souligne). */
-const CLEFS_SECRETES = new Set([
-  "clefapi", "clefdapi", "apikey", "clef", "token", "secret",
-  "motdepasse", "password",
-]);
-function estNomSecret(clef: string): boolean {
-  return CLEFS_SECRETES.has(clef.trim().toLowerCase().replace(/[-_]/g, ""));
-}
+ *  La regle (par SUFFIXE, pas par nom entier) vit dans services/settings.ts :
+ *  une seule definition pour la lecture ET l'ecriture, sinon les deux vues
+ *  divergent (la faute mesuree : `llm_clef` passait le POST et sortait au GET). */
 
 router.post("/api/settings", async (req, res) => {
   // Le corps est le reglage complet (App.tsx poste l'objet entier). On le

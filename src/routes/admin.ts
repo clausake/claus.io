@@ -22,8 +22,22 @@ if (guidePath) {
 });
 
 router.get("/api/admin/db-download", (req, res) => {
+// La base porte les hachages argon2 des comptes, les hachages des sessions
+// VIVANTES et tout le journal d'audit : ce n'est PAS de la lecture metier.
+// La gate laisse passer les GET par contrat (A1, lecture libre) — donc la
+// garde se pose ICI, dans la route, comme /api/users. Mesure du scan 015 :
+// 290 816 o de base (users + sessions + audit_log) rendus a un anonyme, car
+// aucune garde n'existait sur cette route.
+const user = (res.locals as Record<string, unknown>).user as { role?: string } | undefined;
+if (user?.role !== "maitre") {
+  return res.status(403).json({
+    error: "MAITRE_REQUIS",
+    message: "Le telechargement de la base est reserve au maitre.",
+  });
+}
 const dbFile = path.join(storageDir, "agent_culinaire.db");
 if (fs.existsSync(dbFile)) {
+  logAudit(req, res, { route: "/api/admin/db-download", action: "telecharger" }).catch(() => {});
   res.download(dbFile, "agent_culinaire.db");
 } else {
   res.status(404).json({ error: "Database file not found" });

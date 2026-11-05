@@ -92,16 +92,38 @@ async function startServer() {
   // corps du <script> de dist/index.html). Pas d'`unsafe-inline` : la CSP reste
   // stricte pour tout le reste. Si le script inline change, la porte
   // verify:livrable... le recalcule — voir scripts/verify-csp-inline.py.
+  // Pentest 015 (mesure du 04/11) : sous une cible http:// locale, la directive
+  // `upgrade-insecure-requests` (defauts helmet) et le header HSTS forcent le
+  // navigateur de l'agent a recharger chaque asset en https:// sur un serveur
+  // sans TLS -> ERR_SSL_PROTOCOL_ERROR sur le CSS/JS, #root reste vide. Le
+  // sous-marin COOKDRIVE_PENTEST_HTTP=1 (pose SEULEMENT sur l'instance jetable
+  // du pentest, jamais en production) desarme ces deux elements pour que l'app
+  // se monte en http clair. Tout le reste de la CSP (hash du script inline,
+  // 'self', object-src...) reste identique.
+  const pentestHttp = process.env.COOKDRIVE_PENTEST_HTTP === "1";
   app.use(
     helmet({
       host: false,
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          scriptSrc: ["'self'", "'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='"],
-        },
-      },
-    } as Parameters<typeof helmet>[0]),
+      ...(pentestHttp
+        ? {
+            contentSecurityPolicy: {
+              useDefaults: true,
+              directives: {
+                scriptSrc: ["'self'", "'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='"],
+                upgradeInsecureRequests: null,
+              },
+            },
+            hsts: false as const,
+          }
+        : {
+            contentSecurityPolicy: {
+              useDefaults: true,
+              directives: {
+                scriptSrc: ["'self'", "'sha256-bWNh3YTBgq0ftjA41Bp/xlsgGSwtjfZEdeS2cQbJMT4='"],
+              },
+            },
+          }),
+    } as unknown as Parameters<typeof helmet>[0]),
   );
   app.use(express.json({ limit: "10mb" }));
   // Compression HTTP (gzip). L'audit relevait que `compression` etait absent de
