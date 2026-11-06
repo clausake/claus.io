@@ -79,9 +79,11 @@ export function sessionGate(): RequestHandler {
     // C5 : le webhook IoT s'authentifie par SON jeton de webhook (comparaison
     // dans src/routes/haccp.ts:334), pas par une session. Il est donc exempte
     // de la gate, comme /auth/* ; le jeton reste le seul controle.
-    if (req.path === "/api/haccp/webhook/iot-report") return next();
+    // sessionGate est montee sous /api (server.ts), donc req.path est RELATIF
+    // au prefixe /api : "/haccp/webhook/iot-report", pas "/api/haccp/...".
+    if (req.path === "/haccp/webhook/iot-report") return next();
     // C13 : le module anti-gaspillage n'a pas besoin de session pour la lecture
-    if (req.path === "/api/anti-waste/critical") return next();
+    if (req.path === "/anti-waste/critical") return next();
     const user = (res.locals as Record<string, unknown>).user as SessionUser | undefined;
     if (!user) {
       return res.status(401).json({
