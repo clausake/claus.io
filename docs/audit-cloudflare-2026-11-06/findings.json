@@ -1,0 +1,468 @@
+[
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cd-backup-zip-staff-access",
+    "title": "POST /api/backup transfere la base entiere a une session staff (incoherence avec la garde maitre de db-download)",
+    "description": "POST /api/backup (backup.ts:15-31) construit backup.zip depuis TOUT le dossier de donnees (agent_culinaire.db + settings.json) puis rend le fichier dans la reponse du POST. La gate n'interdit que les anonymes et les agents: une session STAFF peut emporter la base. Le correctif F1 du matin a mis GET /api/admin/db-download sous garde maitre pour la MEME donnee; backup.ts n'a aucune garde. De plus une route POST /api/backup duale (sante seule) existe dans admin.ts:48-57 mais est morte: backupRouter est monte avant adminRouter (server.ts:216/228).",
+    "root_cause": "backup.ts:21-22 archive storageDir et appelle res.download sans garde role=maitre; la route admin.ts:48-57 duale est injoignable (ordre de montage).",
+    "intended_behavior": "la meme barriere que admin db-download: role maitre + trace d'audit; le ZIP est garde comme le .db puisqu'il l'emporte.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/routes/backup.ts",
+        "line": 15,
+        "scope": "route express POST",
+        "description": "mutation: session requise, agent refuse, staff accepte"
+      },
+      {
+        "kind": "propagation",
+        "file": "src/routes/backup.ts",
+        "line": 21,
+        "scope": "archiver",
+        "description": "archive.directory(storageDir, false)"
+      },
+      {
+        "kind": "sink",
+        "file": "src/routes/backup.ts",
+        "line": 22,
+        "scope": "res.download",
+        "description": "reponse HTTP = le zip"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/routes/backup.ts",
+        "line": 21,
+        "description": "archive du dossier de donnees"
+      },
+      {
+        "file": "src/routes/backup.ts",
+        "line": 22,
+        "description": "remise HTTP du zip"
+      },
+      {
+        "file": "server.ts",
+        "line": 216,
+        "description": "ordre des routers"
+      },
+      {
+        "file": "src/middleware/auth.ts",
+        "line": 91,
+        "description": "gate mutations: bloque anonymes/agents, PAS les staff"
+      },
+      {
+        "file": "src/routes/admin.ts",
+        "line": 24,
+        "description": "garde maitre + trace sur db-download"
+      },
+      {
+        "file": "src/routes/admin.ts",
+        "line": 48,
+        "description": "route duale morte"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "session staff vivante"
+      },
+      {
+        "kind": "network_routing",
+        "description": "cible joinable: boucle locale ou LAN si lan_acces"
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "un chef non-maitre (session staff), ou un compte staff collecte depuis un poste partage",
+      "payloads": [
+        "POST /api/backup avec le cookie cd_session staff"
+      ],
+      "instructions": [
+        "curl -X POST --cookie <session staff> http://<hote>:<port>/api/backup -o backup.zip puis unzip et sqlite3 sur la base jetable"
+      ],
+      "observed_result": "source-only: le zip est construit depuis storageDir et remis en HTTP sans barriere de role; execution non tentee dans ce run."
+    },
+    "remediation": {
+      "strategy": "posser la garde maitre sur POST /api/backup et retirer la route morte de admin.ts.",
+      "code_changes": [
+        {
+          "file_name": "src/routes/backup.ts",
+          "fixed_code": "garde role=maitre + logAudit (pattern admin.ts:24-31)"
+        },
+        {
+          "file_name": "src/routes/admin.ts",
+          "fixed_code": "retirer la route POST /api/backup morte (48-57)"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "session staff necessaire"
+      },
+      "impact": {
+        "score": "high",
+        "reason": "base complete hors de l'app"
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "ordre de montage, contenu d'archive et absence de garde: faits de source"
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cd-error-message-internal-leak",
+    "title": "Les corps 500 rendent String(e) : le detail interne d'une erreur sort au client",
+    "description": "Plusieurs catch-blocks du perimetre rendent message:String(e) dans le corps HTTP (auth.ts:59/85/123, suggestions.ts:111/124/134, hermes.ts:105). String(e) sur une Error vaut 'Type: message' (ex. 'Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: users...') : un appelant anonyme (POST /api/auth/setup ou /api/auth/login, GET /api/hermes/contexte) recupere des fragments internes (noms de tables, contraintes, chemins). Severite low: aucune donnee hachee ni secret ne transite par ces messages (le correctif du matin A4/A5 couvre les noms de secret de settings).",
+    "root_cause": "convention de catch reprise de route en route: res.status(500).json({error: NOM, message: String(e)}) sans distinction interne/externe du message.",
+    "intended_behavior": "le corps 500 porte le NOM d'erreur du produit (deja present) et un message STABLE non technique; le detail String(e) reste dans logError/console (error-logger.ts deja en place).",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/routes/auth.ts",
+        "line": 41,
+        "scope": "route express POST /api/auth/setup (sans session)",
+        "description": "le bloc catch est atteignable par des appelants anonymes"
+      },
+      {
+        "kind": "propagation",
+        "file": "src/routes/auth.ts",
+        "line": 59,
+        "scope": "catch",
+        "description": "message:String(e) assemble"
+      },
+      {
+        "kind": "sink",
+        "file": "src/routes/auth.ts",
+        "line": 59,
+        "scope": "res.status(500).json",
+        "description": "le fragment interne sort dans le corps HTTP"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/routes/auth.ts",
+        "line": 59,
+        "description": "SETUP_ERREUR + message:String(e)"
+      },
+      {
+        "file": "src/routes/auth.ts",
+        "line": 85,
+        "description": "LOGIN_ERREUR + String(e)"
+      },
+      {
+        "file": "src/routes/suggestions.ts",
+        "line": 111,
+        "description": "SUGGESTION_ERREUR + String(e)"
+      },
+      {
+        "file": "src/routes/hermes.ts",
+        "line": 105,
+        "description": "CONTEXTE_ERREUR + String(e) sur un GET anonyme"
+      },
+      {
+        "file": "src/middleware/error-logger.ts",
+        "line": 10,
+        "description": "le logger console existe deja: le detail a sa place cote serveur"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "/setup et /login sont anonymes par construction; les 500 n'appellent pas d'entree privilegie"
+      },
+      {
+        "kind": "data_state",
+        "description": "l'erreur doit survenir a l'execution (contrainte SQLite, fichier manquant...): la STRUCTURE de la fuite est de source, l'occurrence depend de l'etat"
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "un appelant anonyme de la boucle locale ou du LAN si lan_acces",
+      "payloads": [
+        "POST /api/auth/setup provoque volontairement une violation de contrainte (setup deja fait, id duplique...) et lit le body 500"
+      ],
+      "instructions": [
+        "curl -s -X POST http://<hote>:<port>/api/auth/setup -d '{}' : lire le champ message du corps 500 (sonde observee: message:String(e))"
+      ],
+      "observed_result": "source-only: le chemin catch->res.json est rectiligne dans les 7 sites reperees; occurrence reelle depend d'une erreur runtime (plan de reproduction dans NEEDS-VALIDATION reste applicable au site setup)."
+    },
+    "remediation": {
+      "strategy": "remplacer String(e) par des messages stables du produit dans les 7 sites reperees (le NOM d'erreur est deja informatif) - logError/error-logger garde le detail cote serveur.",
+      "code_changes": [
+        {
+          "file_name": "src/routes/auth.ts, src/routes/suggestions.ts, src/routes/hermes.ts",
+          "fixed_code": "remplacer message:String(e) par un message nomme stable (ou l'omettre) dans les 7 catch reperees"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "conditionne a une erreur runtime, mais des erreurs banales suffisent (setup re-joue, SQLite busy...)"
+      },
+      "impact": {
+        "score": "low",
+        "reason": "fragments internes (tables, contraintes, chemins), pas de secret ni de hachage"
+      },
+      "overall_severity": "low"
+    },
+    "confidence": {
+      "score": "medium",
+      "reason": "structure de source certaine; l'exposition reelle depend de la frequence des erreurs runtime"
+    }
+  },
+  {
+    "verdict": "rejected",
+    "fingerprint": "cd-hermes-contexte-anon-readable",
+    "title": "GET /api/hermes/contexte lisible anonyme (risque accepte du produit, pas une violation)",
+    "description": "GET /api/hermes/contexte expose resume stock/DLC/temperatures/suggestions a un lecteur anonyme (src/routes/hermes.ts:101-106 -> services/hermes.ts:48+).",
+    "claimed_root_cause": "exposition du resume sans authentification.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/routes/hermes.ts",
+        "line": 101,
+        "scope": "route GET",
+        "description": "composition du contexte"
+      },
+      {
+        "kind": "sink",
+        "file": "src/services/hermes.ts",
+        "line": 48,
+        "scope": "resume",
+        "description": "stats/DLC/temperatures"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/routes/hermes.ts",
+        "line": 103,
+        "description": "res.json(await construireContexte(db))"
+      }
+    ],
+    "reason": "Aucune frontiere franchie: lecture libre des GET est le CONTRAT explicite du produit (src/middleware/auth.ts). Rejete au titre de ce mode d'audit, note dans les risques acceptes du rapport; reste une decision produit si le maitre veut fermer ce GET."
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "cd-iot-webhook-token-disclosure",
+    "title": "Le jeton d'ingestion des capteurs IoT sort par un GET anonyme",
+    "description": "GET /api/haccp/iot-sensors (lecture libre anonyme, contrat A1) recopie webhook_token dans la reponse HTTP. Le meme token est le SEUL secret qui authentifie POST /api/haccp/webhook/iot-report: un lecteur anonyme peut rediger des releves de temperature dans le registre HACCP.",
+    "root_cause": "src/routes/haccp.ts recopie la colonne webhook_token dans la vue publique du GET alors que le POST d'ingestion (ligne 334) exige ce meme token.",
+    "intended_behavior": "le token n'est rendu QUE dans la reponse du POST qui le cree; les GET listent id/name/type/equipment_type/battery/temperature sans secret.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/routes/haccp.ts",
+        "line": 226,
+        "scope": "route express GET",
+        "description": "liste des capteurs, aucune session requise"
+      },
+      {
+        "kind": "propagation",
+        "file": "src/routes/haccp.ts",
+        "line": 240,
+        "scope": "mapping",
+        "description": "webhook_token recopie tel quel"
+      },
+      {
+        "kind": "sink",
+        "file": "src/routes/haccp.ts",
+        "line": 241,
+        "scope": "res.json(mapped)",
+        "description": "le secret sort dans le corps HTTP"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/routes/haccp.ts",
+        "line": 226,
+        "description": "router.get sans controle de session"
+      },
+      {
+        "file": "src/routes/haccp.ts",
+        "line": 240,
+        "description": "webhook_token rendu"
+      },
+      {
+        "file": "src/routes/haccp.ts",
+        "line": 334,
+        "description": "comparaison du token a l'ingestion"
+      },
+      {
+        "file": "src/middleware/auth.ts",
+        "line": 85,
+        "description": "sessionGate exempte GET/HEAD/OPTIONS"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "client atteignant l'app: boucle locale, machine de service, ou LAN si lan_acces=true (deploiement)"
+      },
+      {
+        "kind": "authorization_role",
+        "description": "aucun controle de role: le GET n'obeit qu'a l'exemption A1"
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "un client local (boucle) ou LAN si lan_acces",
+      "payloads": [
+        "GET http://<hote>:<port>/api/haccp/iot-sensors",
+        "POST /api/haccp/webhook/iot-report avec token recupere"
+      ],
+      "instructions": [
+        "curl -s http://<hote>:<port>/api/haccp/iot-sensors → lire webhook_token",
+        "rejouer POST /api/haccp/webhook/iot-report AVEC ce token sur l'instance jetable, emission nommee"
+      ],
+      "observed_result": "source-only: le token est rendu tel quel (ligne 240) et reconnu comme l'unique secret a l'ingestion (ligne 334). Execution non tentee dans ce run (aucune sandbox OS-enforced): plan dans NEEDS-VALIDATION."
+    },
+    "remediation": {
+      "strategy": "retirer webhook_token de la vue GET, garder sa remise dans la reponse du POST de creation.",
+      "code_changes": [
+        {
+          "file_name": "src/routes/haccp.ts",
+          "fixed_code": "retirer le champ webhook_token du mapping du GET (lignes 229-240)"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "aucune session aucune config; boucle locale suffit"
+      },
+      "impact": {
+        "score": "high",
+        "reason": "integrite du registre HACCP"
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "les deux cotes du controle sont dans le meme fichier source"
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "cd-ssrf-probe-anon-trigger-staff-target",
+    "title": "Sondes reseau sortantes declenchables par un GET anonyme sur une cible staff-configurable",
+    "description": "GET /api/ollama/status (settings.ts:207) et GET /api/llm/tester (settings.ts:39) declenchent une requete SORTANTE vers une cible lue dans settings (ollama_url via util.ts:213; llm_url libre pour ollama|llamacpp reglage-llm.ts:91-103). La gate exempte les GET. Une session staff configure la cible; ensuite tout client anonyme obtient un verdict de reachabilite (vivant, duree_ms) depuis l'espace reseau du serveur.",
+    "claimed_root_cause": "cible sortante configurable (POST settings) + declencheur GET anonyme non journalise rendant vivant+duree_ms: prober de connectivite interne.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/routes/settings.ts",
+        "line": 39,
+        "scope": "route GET sonde LLM",
+        "description": "spawn sans shell, timeout 20 s"
+      },
+      {
+        "kind": "propagation",
+        "file": "src/shared/fournisseur/reglage-llm.ts",
+        "line": 91,
+        "scope": "construction cible",
+        "description": "base libre pour ollama|llamacpp"
+      },
+      {
+        "kind": "sink",
+        "file": "scripts/sonde-fournisseur.mjs",
+        "line": 47,
+        "scope": "fetch sortant",
+        "description": "la sonde fetch la base"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/routes/settings.ts",
+        "line": 39,
+        "description": "route GET declenchant la sonde"
+      },
+      {
+        "file": "src/shared/fournisseur/reglage-llm.ts",
+        "line": 91,
+        "description": "base libre"
+      },
+      {
+        "file": "scripts/sonde-fournisseur.mjs",
+        "line": 47,
+        "description": "fetch sans verif scheme/allowlist"
+      },
+      {
+        "file": "src/routes/settings.ts",
+        "line": 207,
+        "description": "onne.list() sur cible configurable"
+      }
+    ],
+    "blockers": [
+      "reachabilite interne depuis l espace net du serveur: fait de deploiement",
+      "pas de politique de sortie observable depuis la source seule"
+    ],
+    "validation_plan": {
+      "local": "sur l'instance jetable: settings llm_choix=ollama + llm_url=http://169.254.169.254:80 puis GET /api/llm/tester; observer le delta duree_ms entre ECONNREFUSED et timeout (canal de timing)",
+      "deployment": "cataloguer les cibles internes joignables en production et journaliser ces GET dans l'audit (IP source, cible, duree)"
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "cd-upload-disk-exhaustion",
+    "title": "Budget d'ecriture cumule ~187 Mo / 5 min sans quota global (upload 25 Mo x 5 x 150 mutations)",
+    "description": "POST /api/haccp/documents (multer memoryStorage, 25 Mo x 5; upload.ts:5-22) et express.json (10 Mo, server.ts:128) acceptent des corps lourds avec session staff. Rate-limit mutate 150/5 min: ~187 Mo par fenetre et par IP. Aucun budget cumule de taille de base ni de purge en source.",
+    "claimed_root_cause": "les limites par requete et par fenetre ne bornent PAS la taille totale: la base n'a aucun quota cumule en source.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/shared/upload.ts",
+        "line": 8,
+        "scope": "multer limits",
+        "description": "25 Mo x 5 par requete"
+      },
+      {
+        "kind": "propagation",
+        "file": "server.ts",
+        "line": 128,
+        "scope": "body limit express",
+        "description": "10 Mo JSON"
+      },
+      {
+        "kind": "propagation",
+        "file": "src/middleware/api-rate-limiter.ts",
+        "line": 35,
+        "scope": "budget par IP",
+        "description": "150 mutations / 5 min, cle = IP socket"
+      },
+      {
+        "kind": "sink",
+        "file": "src/routes/haccp.ts",
+        "line": 277,
+        "scope": "base SQLite",
+        "description": "insertion persistante"
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/shared/upload.ts",
+        "line": 6,
+        "description": "25 Mo x 5 fichiers en memoire"
+      },
+      {
+        "file": "src/middleware/api-rate-limiter.ts",
+        "line": 35,
+        "description": "150 mutations par fenetre"
+      },
+      {
+        "file": "server.ts",
+        "line": 128,
+        "description": "interface 10 Mo"
+      }
+    ],
+    "blockers": [
+      "quota disque reel - fait de deploiement",
+      "taille max de la base SQLite en prod - fait de deploiement",
+      "politique de purge - fait de deploiement"
+    ],
+    "validation_plan": {
+      "local": "sur l'instance jetable: mesurer la croissance du fichier base pour N uploads limites (100 uploads x 25 Mo) et fixer un budget cumule",
+      "deployment": "mesurer l'espace disque de production et la politique de purge, puis fixer un quota cumule source"
+    }
+  }
+]

@@ -1,0 +1,52 @@
+{
+  "run_id": "clausio-cf-quick-1",
+  "repo": "claus.io",
+  "target": "/home/clausake/.clausio/claus.io",
+  "source_ref": {
+    "commit": "7e66d4e45cd4e30379cf376e99c18e05c2dc7e1e",
+    "worktree_dirty": false,
+    "dirty_files": 0
+  },
+  "profile": "quick",
+  "scope_paths": [
+    "src/middleware",
+    "src/routes",
+    "electron"
+  ],
+  "budget": 16,
+  "execution_policy": "sandboxed-source-and-local-only",
+  "companion_files": [
+    "ATTACK-CLASSES.md",
+    "WEB-PROTOCOL-AND-AUTH.md",
+    "DATA-ISOLATION-AND-LIFECYCLE.md",
+    "DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+    "SUPPLY-CHAIN-AND-RELEASE.md"
+  ],
+  "prior_run": null,
+  "shared_file_owners": {
+    "architecture.md": "parent",
+    "coverage-ledger.json": "parent",
+    "findings.json": "parent",
+    "REPORT.md": "parent",
+    "FINDINGS-DETAIL.md": "parent",
+    "NEEDS-VALIDATION.md": "parent"
+  },
+  "run_status": "complete",
+  "started_at": "2026-11-05T08:00:00+01:00",
+  "sandbox_capability": "NONE enforced: agents run in the host environment; target code execution is therefore prohibited and any execution-dependent claim must be needs_validation",
+  "completed_at": "2026-11-06T00:00:00+01:00",
+  "mode_deviation": "sessions-enfants indisponibles pendant tout le run ('Free usage limit reached' - 4 essais consecutifs): la phase RECONNAISSANCE et les phases de chasse/validation ont ete executees par le parent seul (single-owner declared). Le budget 16 est porte par le DETAIL des unites (13 unites de couverture), pas par des invocations de sous-agents (0 sous-agent). Le critique final et la re-verification adversariale par fingerprint ont ete executes par le parent avec preuve de commande a chaque citation.",
+  "budget_used": {
+    "subagent_invocations": 0,
+    "coverage_units": 13,
+    "wave_count": 1,
+    "note": "degradation declaree CI-DESSUS: solo parent, aucun sous-agent"
+  },
+  "phases": {
+    "reconnaissance": "done (parent-solo, mesures grep/sed posees dans coverage-ledger.json et architecture.md)",
+    "hunting_waves": "wave 1 complete (10 unites in-scope, 13 au total)",
+    "critic_final": "done (revue anti-boucle: ajout de l'unite error-logger/String(e) manquante; re-verification par fingerprint de chaque candidat)",
+    "verification": "done (chaque candidat re-attaque pour etre DISPROUVE; 1 rejete: cd-hermes-contexte-anon-readable)",
+    "report": "done"
+  }
+}

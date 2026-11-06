@@ -1983,3 +1983,42 @@ cible isolée `http://172.18.0.1:4311/` (instance jetable, base neuve, maitre
   (`python3 scripts/lire-gates.py`), `verify:auth` 19/19, `verify:routes` 44/44
   (le contrat db-download juge désormais les deux états), vitest 208/208, tsc 0,
   build OK ; CI GitHub `41981102714` **success** sur les 7 jobs (`cb374e4`).
+
+## 06/11 — Audit statique Cloudflare (run clausio-cf-quick-1), parent-solo declare
+
+Lancement de l'audit statique (complément du pentest dynamique §8) sur le HEAD
+`7e66d4e` : profil `quick`, périmètre `src/middleware` + `src/routes` + `electron`,
+mode **source-only** (sandbox `NONE` — aucune exécution du code cible). Deviation
+déclarée dans `run-metadata.json` : les sessions-enfants ont rendu
+`Free usage limit reached` (4 essais consécutifs), donc le run a été exécuté
+**par le parent seul**, budget 16 porté par les unités de couverture (13), 0
+sous-agent — et non caché comme un run multi-agent.
+
+- **Livrables** engage dans `docs/audit-cloudflare-2026-11-06/` :
+  `architecture.md` (≤ 1 000 mots), `coverage-ledger.json` (PASS du validateur du
+  skill : 13 unités = 10 in-scope + 3 out_of_scope nommées), `findings.json`
+  (PASS : 6 candidats triés), `REPORT.md`, `FINDINGS-DETAIL.md`,
+  `NEEDS-VALIDATION.md`, `run-metadata.json` (statut complete).
+- **3 candidats confirmés (source)** : `cd-iot-webhook-token-disclosure` (high —
+  `GET /api/haccp/iot-sensors` rend `webhook_token` anonymement, haccp.ts:240,
+  le même token authentifie l'ingestion :334) ; `cd-backup-zip-staff-access`
+  (medium — `POST /api/backup` archive TOUT `storageDir` et rend le zip sans garde
+  maître, backup.ts:21-22, la route duale admin.ts:48-57 est morte par l'ordre de
+  montage server.ts:216/228) ; `cd-error-message-internal-leak` (low — 7 catch
+  rendent `message:String(e)`, auth.ts:59/85/123 et al.).
+- **2 needs_validation (faits de déploiement)** : sondes sortantes par GET
+  anonyme sur cible staff-configurable (`cd-ssrf-probe…`), budget écriture
+  cumulé ~187 Mo/5 min/IP non borné (`cd-upload-disk-exhaustion`) — plans de
+  reproduction exacts dans `NEEDS-VALIDATION.md`.
+- **1 rejeté** : `cd-hermes-contexte-anon-readable` — la lecture libre des GET
+  est le CONTRAT du produit, pas une violation de frontière (risque accepté
+  consigné).
+- **Porte `verify:audit-findings`** : les validateurs zero-dépendance du skill
+  sont copiés dans `scripts/audit-cf/` (avec `report-schema.json`) et la porte
+  `node scripts/verify-audit-findings.mjs` juge LES LIVRABLES COMMITS (ledger
+  13 unités + 6 candidats, tri et fingerprint) ; déclarée dans `package.json`
+  ET dans `DEFAUT` de `run-all-gates.py` (le lot passe à 100 portes). Verte en
+  local avant commit.
+- **Pentest dynamique à suivre** : la correction des 3 confirmés passe d'abord
+  par la mesure dynamique sur instance jetable (même recette §8, HOST=0.0.0.0 +
+  COOKDRIVE_PENTEST_HTTP=1) — un candidat source n'est pas un défaut mesuré.

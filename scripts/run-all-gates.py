@@ -134,7 +134,14 @@ DEFAUT = ["verify:split",
           # un tmpdir — JAMAIS l'arbre de travail. Une barriere qui ne peut pas
           # rougir n'est pas une mesure (AGENTS.md §2).
           "verify:audit-barriere-mord",
-          # T3.3 (produit/tests) : la regle « aucun test muet ». Elle rougit sur
+          # verify:audit-findings (run statique clausio-cf-quick-1) : juge les
+          # LIVRABLES de l'audit Cloudflare engage dans docs/audit-cloudflare-
+          # 2026-11-06 (registre de couverture 13 unites + 6 candidats) par les
+          # validateurs zero-dependance copies dans scripts/audit-cf/. Toute
+          # edition a la main qui casse le schema, un tri ou un fingerprint
+          # rougit — la piste d'audit reste machine-checkable.
+          "verify:audit-findings",
+          # T3.3 (produit/tests): la regle « aucun test muet ». Elle rougit sur
           # tout .skip/.only/.todo vitest/playwright dans test/ et src/. Le fait
           # 13 du planning (« 7 .skip », commande grep -rn "\\.skip\\( test src")
           # etait un FAUX POSITIF : rejouee elle rend 0, le motif est une
