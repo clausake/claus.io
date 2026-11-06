@@ -274,14 +274,22 @@ async function startServer() {
     // que l'ETag par defaut): chaque rechargement re-telechargeait les assets.
     // index.html, lui, n'a pas de hash dans son nom: il garde la revalidation par
     // ETag (no-cache), et c'est elle qui libere le nouveau bundle.
+    // C24 : cache des assets statiques.
+    // Vite génère des noms de fichiers avec hash (index-*.js, style-*.css).
+    // Pour ces fichiers hashés, on définit un cache long avec "immutable"
+    // afin que le navigateur ne les re-télécharge jamais.
+    // Pour index.html (pas de hash), on garde le cache no-cache (revalidation ETag).
     app.use(
       express.static(distPath, {
         etag: true,
-        maxAge: "1y",
-        immutable: true,
+        maxAge: "1y", // 1 an de cache maximal
+        immutable: true, // indique au navigateur que le fichier ne changera jamais
         setHeaders(res, filePath) {
-          if (!filePath.includes("/assets/")) {
-            // Tout ce qui n'est pas content-hashed doit etre revalide.
+          if (filePath.includes("/assets/")) {
+            // Assets hashés : cache long + immutable
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          } else {
+            // index.html et autres : revalidation via ETag
             res.setHeader("Cache-Control", "no-cache");
           }
         },

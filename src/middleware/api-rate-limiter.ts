@@ -24,7 +24,7 @@
 import rateLimit from "express-rate-limit";
 import type { Request, RequestHandler, Response, NextFunction } from "express";
 
-export type Bucket = "read" | "mutate" | "delete" | "auth" | "ai";
+export type Bucket = "read" | "mutate" | "delete" | "auth" | "ai" | "upload";
 
 type Budget = { windowMs: number; limit: number };
 
@@ -36,6 +36,7 @@ export const BUDGETS: Record<Bucket, Budget> = {
   delete: { windowMs: 5 * MIN, limit: 40 },
   auth: { windowMs: 15 * MIN, limit: 20 },
   ai: { windowMs: 5 * MIN, limit: 60 },
+  upload: { windowMs: 5 * MIN, limit: 10 },
 };
 
 // Les routes qui ne sont pas comptees : le flux SSE est une connexion unique

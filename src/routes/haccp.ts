@@ -7,6 +7,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
+import rateLimit from "express-rate-limit";
 import { generer } from "../shared/llm.js";
 import { ollamaSettingsRef } from "../shared/ollama.js";
 import { uploadsDir } from "../services/paths.js";
@@ -15,6 +16,15 @@ import { requireString, optionalString } from "../middleware/validate.js";
 import { sensorHub } from "../services/sensor-hub.js";
 import type { SensorReading, StaleSensor } from "../services/sensor-hub.js";
 import type { AuditLogger } from "../services/audit.js";
+
+// C23 : bucket rate-limit pour les uploads : 10 fichiers / 5 min
+const uploadLimiter = rateLimit({
+  windowMs: 5 * 60_000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Trop d'uploades, bucket 'upload' saturé" },
+});
 import {
   TEMPERATURE_MIN, TEMPERATURE_MAX, RECEPTION_TEMP_MIN, RECEPTION_TEMP_MAX,
   QUANTITE_LOT_MAX, TYPES_CAPTEUR, TYPES_EQUIPEMENT, TYPES_ENTREE, MODES_CAPTEUR,
@@ -435,9 +445,7 @@ try {
   res.status(500).json({ error: "DB error" });
 }
 });
-router.post("/api/haccp/documents/upload",
-upload.single("file"),
-async (req, res) => {
+router.post("/api/haccp/documents/upload", uploadLimiter, upload.single("file"), async (req, res) => {
   try {
     const type = req.body.type || "AUTRE";
     const name = req.body.name || "Document Scann\xE9";
