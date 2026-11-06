@@ -9,6 +9,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { safeJsonParse, calculatePricePerRef, prixOuNul, nouvelId, ExtractedDocumentData } from "../shared/util.js";
 import { findMatchingInventoryItem } from "../shared/fuzzy.js";
 import { upload } from "../shared/upload.js";
+import rateLimit from "express-rate-limit";
 import { generer } from "../shared/llm.js";
 import { ollamaSettingsRef } from "../shared/ollama.js";
 import {
@@ -17,6 +18,15 @@ import {
   totalOuNul,
 } from "../shared/document-items.js";
 import type { AuditLogger } from "../services/audit.js";
+
+// C23 : bucket rate-limit pour les uploads : 10 fichiers / 5 min
+const uploadLimiter = rateLimit({
+  windowMs: 5 * 60_000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Trop d'uploades, bucket 'upload' saturé" },
+});
 
 import { DOCUMENT_UPLOAD_ES, DOCUMENT_UPLOAD_DE, DOCUMENT_UPLOAD_IT, DOCUMENT_UPLOAD_EN, DOCUMENT_UPLOAD_FR,
   DOCUMENT_EXTRACT_ES, DOCUMENT_EXTRACT_DE, DOCUMENT_EXTRACT_IT, DOCUMENT_EXTRACT_EN, DOCUMENT_EXTRACT_FR } from "../prompts/documents-prompts";
@@ -483,7 +493,7 @@ try {
   res.status(500).json({ status: "error", message: "Validation failed" });
 }
 });
-router.post("/api/documents/upload", upload.single("file"), async (req, res) => {
+router.post("/api/documents/upload", uploadLimiter, upload.single("file"), async (req, res) => {
 try {
   if (fs.existsSync(settingsPath)) {
     try {
