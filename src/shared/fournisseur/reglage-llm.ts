@@ -98,6 +98,10 @@ export function cibleDuReglage(r: ReglageLlmBrut): ConstructionCible {
     const base = baseNue((r.llm_url ?? "").trim());
     // llama.cpp ne publie rien d'auto-detectable ici : sans URL, rien a sonder.
     if (base === "") return { defaut: "URL_ABSENTE" };
+    // C2 : coherence — le port d'usage d'Ollama (11434) sous `llamacpp` est la
+    // confusion mesuree sur le poste (erreurs « fetch failed »). Le defaut est
+    // NOMME, la UI l'affiche ; on ne devine pas le style a la place du reglage.
+    if (/:(11434)(\/|$)/.test(base)) return { defaut: "PORT_OLLAMA_SOUS_LLAMACPP" };
     return { cible: { nom: "reglage", style: "openai", base, modele } };
   }
   // « en ligne » : `llm_choix` est le NOM du fournisseur de la liste blanche

@@ -24,8 +24,11 @@ try {
   res.status(500).json({ status: "error", message: "Search failed" });
 }
 });
-router.get("/api/alerts", async (req, res) => {
-try {
+// C7 : le GET est PUR (lecture seule). La regeneration (DELETE + INSERT) est
+// deplacee dans POST /api/alerts/scan, appelee par l'UI apres les ecritures
+// metier. Un GET qui n'ecrit plus se juge aussi plus vite (pas d'attente de
+// statement prepare).
+async function regenererAlertesStock(): Promise<void> {
   const lowStockItems = await db.all(
     "SELECT id, name, quantity, minStock, unit FROM inventory WHERE quantity <= minStock",
   );
@@ -49,6 +52,9 @@ try {
   } finally {
     await stmtAlerts.finalize();
   }
+}
+router.get("/api/alerts", async (req, res) => {
+try {
   const alerts = await db.all(
     'SELECT * FROM alerts WHERE status = "active" ORDER BY id DESC LIMIT 10',
   );
@@ -58,6 +64,18 @@ try {
   res
     .status(500)
     .json({ status: "error", message: "Failed to fetch alerts" });
+}
+});
+// C7 : le scan qui recompte les alertes de stock. Mutating : la gate de
+// session le juge (401 sans cookie, agent refuse par la liste §8 exacte).
+router.post("/api/alerts/scan", async (req, res) => {
+try {
+  await regenererAlertesStock();
+  const n = await db.get("SELECT COUNT(*) AS n FROM alerts WHERE status = 'active'");
+  res.json({ success: true, alertes_actives: (n as { n: number }).n });
+} catch (error) {
+  console.error(error);
+  res.status(500).json({ status: "error", message: "Alert scan failed" });
 }
 });
 router.post("/api/alerts/:id/resolve", async (req, res) => {

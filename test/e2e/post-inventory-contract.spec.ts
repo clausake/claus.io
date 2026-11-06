@@ -237,6 +237,8 @@ test("P2 un texte dans une colonne REAL est REFUSE (et ne disparait plus de /api
   const okVide = await creer(request, payloadAudit(idVide, { name: "Rupture V1", quantity: 0, minStock: 5, status: undefined }));
   expect(okVide.status()).toBe(200);
 
+  // C7 : le GET ne regere plus — le contrat declenche le scan, puis relit.
+  expect((await request.post(`${BASE}/api/alerts/scan`)).status()).toBe(200);
   const alertes = await (await request.get(`${BASE}/api/alerts`)).json();
   expect(Array.isArray(alertes)).toBe(true);
   const parMot = (clef: string) =>

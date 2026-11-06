@@ -21,6 +21,8 @@ export function QualityControl({ t }: { t: Record<string, string> }) {
 
   const fetchAlerts = async () => {
     try {
+      // C7 : le recomptage est un scan explicite (POST) puis la lecture (GET).
+      await fetch("/api/alerts/scan", { method: "POST" });
       const res = await fetch("/api/alerts");
       const data = await res.json();
       setAlerts(data);

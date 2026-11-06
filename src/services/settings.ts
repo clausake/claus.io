@@ -78,7 +78,9 @@ function resolveDataDir(): string {
 export const settingsPath = path.join(resolveDataDir(), "settings.json");
 
 const defaults: AppSettings = {
-  model_name: "llama3.2-vision",
+  // C2 : le defaut est le modele installe sur le poste (gemma4, mesure du scan
+  // 015) ; « llama3.2-vision » n'etait jamais present => « fetch failed ».
+  model_name: "gemma4:e4b-it-qat",
   custom_model: "gemma-12b-it-qat",
   ollama_url: "http://127.0.0.1:11434",
   copilot_mode: true,

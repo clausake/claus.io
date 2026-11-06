@@ -852,6 +852,8 @@ test("POST /api/alerts/:id/ignore : une alerte stock ne reapparait pas apres ign
   const invRow = await low.json();
   const alertId = `stock_${invRow.id}`;
 
+  // C7 : le GET ne regere plus ; le contrat appelle le scan explicite.
+  expect((await request.post(`${BASE}/api/alerts/scan`)).status()).toBe(200);
   const avant = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
   const ligne = avant.find((a: any) => a.id === alertId);
   expect(ligne, "l'alerte stock est presente avant ignore").toBeTruthy();
@@ -879,6 +881,8 @@ test("POST /api/alerts/:id/resolve : une alerte stock resolue quitte la liste ac
   const invRow = await low.json();
   const alertId = `stock_${invRow.id}`;
 
+  // C7 : scan explicite avant lecture (le GET ne regere plus).
+  expect((await request.post(`${BASE}/api/alerts/scan`)).status()).toBe(200);
   const avant = (await (await request.get(`${BASE}/api/alerts`)).json()) as any[];
   const ligne = avant.find((a: any) => a.id === alertId);
   expect(ligne, "l'alerte stock est presente avant resolve").toBeTruthy();
