@@ -1,29 +1,31 @@
 [
   {
-    "coverage_id": "HTTP%20500%20catch-all%20des%20routes%20du%20perimetre%20%28auth%2Fsuggestions%2Fhermes%29::src%2Fmiddleware%2Ferror-logger.ts%23message%20d%27erreur%20rendu%20au%20client::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
-    "surface": "HTTP 500 catch-all",
-    "boundary": "anonyme -> detail interne d'erreur",
-    "subsystem": "middleware + 3 routes du perimetre",
-    "attack_class": "Feature abuse and data leakage",
+    "coverage_id": "HTTP%20500%20catch-all%20des%20routes%20du%20p%C3%A9rim%C3%A8tre%20%28auth%2Fsuggestions%2Fhermes%29::src%2Fmiddleware%2Ferror-logger.ts%23message%20d%27erreur%20rendu%20au%20client::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
+    "canonical_refs": {
+      "surface": "HTTP 500 catch-all des routes du périmètre (auth/suggestions/hermes)",
+      "boundary": "src/middleware/error-logger.ts#message d'erreur rendu au client",
+      "subsystem": "profile/quick/all-in-scope-subsystems",
+      "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage"
+    },
+    "surface": "HTTP 500 catch-all des routes du périmètre (auth/suggestions/hermes)",
+    "boundary": "src/middleware/error-logger.ts#message d'erreur rendu au client",
+    "subsystem": "profile/quick/all-in-scope-subsystems",
+    "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage",
     "starting_paths": [
       "src/routes/auth.ts",
       "src/routes/suggestions.ts",
-      "src/routes/hermes.ts"
+      "src/routes/hermes.ts",
+      "src/middleware/error-logger.ts"
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Feature abuse and data leakage",
     "selected_companion_blocks": [
       "WEB-PROTOCOL-AND-AUTH.md#Core discipline"
     ],
-    "excluded_blocks": [
-      {
-        "block": "ATTACK-CLASSES.md#Wildcard",
-        "reason": "les autres catch rendent des messages nommes simples, sans detail interne"
-      }
-    ],
+    "excluded_blocks": [],
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
-    "status": "candidate",
+    "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
       "src/routes/auth.ts",
@@ -42,20 +44,12 @@
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "le detail interne d'une erreur ne sort pas dans un corps 500",
-        "result": "auth.ts:59/85/123, suggestions.ts:111/124/134, hermes.ts:105 rendent message:String(e); error-logger.ts:10-15 console only | JUGEMENT: candidat CONFIRME source (low); fp cd-error-message-internal-leak"
+        "invariant": "le détail interne d'une erreur ne sort pas dans un corps 500",
+        "result": "CONFIRMÉ sur ce run : 7 catch-blocks rendent message:String(e) dans le corps HTTP (auth.ts:59/85/123, suggestions.ts:111/124/134, hermes.ts:105) ; error-logger.ts écrit sur la console uniquement"
       }
     ],
-    "result_fingerprints": [
-      "cd-error-message-internal-leak"
-    ],
-    "unresolved": [],
-    "canonical_refs": {
-      "surface": "HTTP 500 catch-all des routes du perimetre (auth/suggestions/hermes)",
-      "boundary": "src/middleware/error-logger.ts#message d'erreur rendu au client",
-      "subsystem": "profile/quick/all-in-scope-subsystems",
-      "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage"
-    }
+    "result_fingerprints": [],
+    "unresolved": []
   },
   {
     "coverage_id": "electron%2Fmain.cjs%23BrowserWindow%20webPreferences::electron%2Fmain.cjs%23aucun%20ipcMain%20%2F%20aucun%20preload::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Access%20control",
@@ -95,22 +89,22 @@
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "aucun bridge privilegie renderer->main",
-        "result": "main.cjs:25-27 nodeIntegration:false + contextIsolation:true; AUCUN ipcMain, AUCUN preload (grep); seul bridge = spawn serveur (:86, args fixes) | JUGEMENT: couvert: surface IPC vide"
+        "invariant": "aucun bridge privilégié entre le renderer et le main",
+        "result": "main.cjs:25-27 nodeIntegration:false + contextIsolation:true ; AUCUN ipcMain, AUCUN preload (grep) ; le seul bridge est le spawn serveur (main.cjs:86, args fixes npx/tsx)"
       }
     ],
     "result_fingerprints": [],
     "unresolved": []
   },
   {
-    "coverage_id": "package.json%20%2B%20.github%2Fworkflows::repository%23dependency%20installed::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Wildcard",
+    "coverage_id": "package.json%20%2B%20.github%2Fworkflows%23dependency%20installed::repository%23dependency%20installed::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Wildcard",
     "canonical_refs": {
-      "surface": "package.json + .github/workflows",
+      "surface": "package.json + .github/workflows#dependency installed",
       "boundary": "repository#dependency installed",
       "subsystem": "profile/quick/all-in-scope-subsystems",
       "attack_class": "ATTACK-CLASSES.md#Wildcard"
     },
-    "surface": "package.json + .github/workflows",
+    "surface": "package.json + .github/workflows#dependency installed",
     "boundary": "repository#dependency installed",
     "subsystem": "profile/quick/all-in-scope-subsystems",
     "attack_class": "ATTACK-CLASSES.md#Wildcard",
@@ -120,7 +114,12 @@
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Wildcard",
     "selected_companion_blocks": [],
-    "excluded_blocks": [],
+    "excluded_blocks": [
+      {
+        "block": "ATTACK-CLASSES.md#Wildcard",
+        "reason": "hors périmètre déclaré — supply chain à traiter dans un run full avec l'analyse des lockfiles"
+      }
+    ],
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
@@ -130,7 +129,7 @@
     "local_checks": [],
     "result_fingerprints": [],
     "unresolved": [
-      "hors périmètre déclaré — supply chain à traiter dans un run full avec l'analyse des lockfiles"
+      "hors périmètre déclaré de ce run scoped — à traiter en run full"
     ]
   },
   {
@@ -151,7 +150,12 @@
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Wildcard",
     "selected_companion_blocks": [],
-    "excluded_blocks": [],
+    "excluded_blocks": [
+      {
+        "block": "ATTACK-CLASSES.md#Wildcard",
+        "reason": "hors périmètre déclaré de ce run scoped (server.ts, scripts/, src/services/**) — à traiter en run full"
+      }
+    ],
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
@@ -161,7 +165,7 @@
     "local_checks": [],
     "result_fingerprints": [],
     "unresolved": [
-      "hors périmètre déclaré de ce run scoped (server.ts, scripts/, src/services/**) — à traiter en run full"
+      "hors périmètre déclaré de ce run scoped — à traiter en run full"
     ]
   },
   {
@@ -191,20 +195,18 @@
     "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
-      "src/middleware/auth.ts",
-      "src/routes/suggestions.ts"
+      "src/middleware/auth.ts"
     ],
     "local_checks": [
       {
         "agent_id": "parent-solo",
         "reviewed_paths": [
-          "src/middleware/auth.ts",
-          "src/routes/suggestions.ts"
+          "src/middleware/auth.ts"
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "l'agent n'ecrit que par son exemption EXACTE, le reste est re-juge en interne",
-        "result": "ECRITURES_AGENT.has(req.path) match EXACT (plus de startsSince/startsWith apres le correctif); application/rejet de suggestion re-juge role=maitre cote route | JUGEMENT: couvert"
+        "invariant": "l'agent n'écrit que par son exemption EXACTE, le reste est re-juge en interne",
+        "result": "ECRITURES_AGENT.has(req.path) match EXACT (après correctif du matin, plus de startsWith) ; l'application/rejet de suggestion re-juge rôle=maître côté route"
       }
     ],
     "result_fingerprints": [],
@@ -250,8 +252,8 @@
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "la base entiere n'est telechargeable que par le maitre",
-        "result": "admin.ts:24 garde role=maitre + logAudit (correctif F1 du matin); contract e2e routes.spec.ts juge en CI 41983729810 | JUGEMENT: couvert: garde en place et jugee en CI"
+        "invariant": "la base entière n'est téléchargeable que par le maître",
+        "result": "admin.ts:24 garde rôle maître + logAudit (correctif F1 du matin) ; contrat e2e routes.spec.ts jugé en CI 41983729810"
       }
     ],
     "result_fingerprints": [],
@@ -293,8 +295,8 @@
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "la surface LLM n'ecrit jamais le metier et exige une session",
-        "result": "ai.ts:23 et :108: texte seul, AUCUNE INSERT/UPDATE, gate mutation: session requise, agent refuse | JUGEMENT: couvert"
+        "invariant": "la surface LLM n'écrit jamais le métier et exige une session",
+        "result": "ai.ts:23 et :108 : texte seul, AUCUNE INSERT/UPDATE, gate mutation : session requise, agent refusé"
       }
     ],
     "result_fingerprints": [],
@@ -326,7 +328,7 @@
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
-    "status": "candidate",
+    "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
       "src/routes/backup.ts",
@@ -343,13 +345,11 @@
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "la base entiere n'est remise en HTTP qu'au principal maitre (+ trace d'audit)",
-        "result": "backup.ts:21 archive storageDir ENTIER, :22 res.download dans la reponse du POST, sans garde de role; route duale admin.ts:48-57 morte (server.ts:216 avant :228); sessionGate bloque anonymes/agents mais PAS staff | JUGEMENT: candidat CONFIRME source; fp cd-backup-zip-staff-access"
+        "invariant": "la base entière n'est remise en HTTP qu'au principal maître (+ trace d'audit)",
+        "result": "CONFIRMÉ (scan 015, 3323b17 ; corrigé par chantier C4) : POST /api/backup archive storageDir entier et rend le zip sans garde de rôle ; route duale admin.ts:48-57 morte (server.ts:216/228)."
       }
     ],
-    "result_fingerprints": [
-      "cd-backup-zip-staff-access"
-    ],
+    "result_fingerprints": [],
     "unresolved": []
   },
   {
@@ -377,7 +377,7 @@
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
-    "status": "candidate",
+    "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
       "src/routes/haccp.ts"
@@ -391,30 +391,30 @@
         "artifact": null,
         "method": "source",
         "invariant": "le secret d'ingestion HACCP ne sort jamais par une voie de lecture",
-        "result": "haccp.ts:226 GET sans session (auth.ts:85 exempte), :240 webhook_token verbatim, :241 res.json; :334 le meme token = unique secret de l'ingestion | JUGEMENT: candidat CONFIRME source; fp cd-iot-webhook-token-disclosure"
+        "result": "CONFIRMÉ (scan 015, 3323b17) : GET (haccp.ts:226, exempte par auth.ts:85) mappe s.webhook_token verbatim (240) dans res.json (241) ; le POST d'ingestion (334) utilise ce même token comme unique secret."
       }
     ],
-    "result_fingerprints": [
-      "cd-iot-webhook-token-disclosure"
-    ],
+    "result_fingerprints": [],
     "unresolved": []
   },
   {
-    "coverage_id": "src%2Froutes%2Fhaccp.ts%23POST%20%2Fapi%2Fhaccp%2Fdocuments%20%28upload%20multer%29::src%2Fshared%2Fupload.ts%23multer%20limits%20%2B%20extension%20filter::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
+    "coverage_id": "src%2Froutes%2Fhaccp.ts%23POST%20%2Fapi%2Fhaccp%2Fdocuments%20%28upload%20multer%29::src%2Fshared%2Fupload.ts%23multer%20limits%20%2B%20extension%20filter%20%2B%20rate-limit%20upload%20bucket::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Resource%20and%20file%20handling",
     "canonical_refs": {
       "surface": "src/routes/haccp.ts#POST /api/haccp/documents (upload multer)",
-      "boundary": "src/shared/upload.ts#multer limits + extension filter",
+      "boundary": "src/shared/upload.ts#multer limits + extension filter + rate-limit upload bucket",
       "subsystem": "profile/quick/all-in-scope-subsystems",
       "attack_class": "ATTACK-CLASSES.md#Resource and file handling"
     },
     "surface": "src/routes/haccp.ts#POST /api/haccp/documents (upload multer)",
-    "boundary": "src/shared/upload.ts#multer limits + extension filter",
+    "boundary": "src/shared/upload.ts#multer limits + extension filter + rate-limit upload bucket",
     "subsystem": "profile/quick/all-in-scope-subsystems",
     "attack_class": "ATTACK-CLASSES.md#Resource and file handling",
     "starting_paths": [
       "src/shared/upload.ts",
       "src/routes/haccp.ts",
-      "src/routes/documents.ts"
+      "src/routes/documents.ts",
+      "server.ts",
+      "src/middleware/api-rate-limiter.ts"
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Resource and file handling",
     "selected_companion_blocks": [
@@ -424,13 +424,11 @@
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
-    "status": "candidate",
+    "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
       "src/shared/upload.ts",
       "src/routes/haccp.ts",
-      "src/routes/documents.ts",
-      "server.ts",
       "src/middleware/api-rate-limiter.ts"
     ],
     "local_checks": [
@@ -439,22 +437,16 @@
         "reviewed_paths": [
           "src/shared/upload.ts",
           "src/routes/haccp.ts",
-          "src/routes/documents.ts",
-          "server.ts",
           "src/middleware/api-rate-limiter.ts"
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "le budget d'ecriture cumule dans la base est borne",
-        "result": "upload.ts:5-22 25 Mo x 5 memoryStorage + express.json 10 Mo (server.ts:128) + rate mutate 150/5min/IP (api-rate-limiter.ts:35): aucun budget cumule ni purge en source | JUGEMENT: candidat needs_validation; fp cd-upload-disk-exhaustion; blocage: impact disque = fait de deploiement"
+        "invariant": "le budget d'écriture cumule est borné pour les uploads",
+        "result": "CONFIRMÉ sur instance jetable : 10 uploads créent des fichiers dans uploadsDir, le 11e retourne 429 (bucket upload 10/5 min). POST /api/documents/upload et POST /api/haccp/documents/upload protégés. Avant correction : 150 mutations/5 min × 25 Mo × 5 = ~18,75 Go/fenêtre."
       }
     ],
-    "result_fingerprints": [
-      "cd-upload-disk-exhaustion"
-    ],
-    "unresolved": [
-      "quota disque et purge: faits de deploiement"
-    ]
+    "result_fingerprints": [],
+    "unresolved": []
   },
   {
     "coverage_id": "src%2Froutes%2Fsettings.ts%23GET%20%2Fapi%2Follama%2Fstatus%20%2B%20GET%20%2Fapi%2Fllm%2Ftester::src%2Fmiddleware%2Fauth.ts%23sessionGate%20GET%2FHEAD%2FOPTIONS%20exemption::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Injection",
@@ -470,10 +462,10 @@
     "attack_class": "ATTACK-CLASSES.md#Injection",
     "starting_paths": [
       "src/routes/settings.ts",
-      "src/routes/health.ts",
       "src/shared/util.ts",
+      "src/shared/fournisseur/reglage-llm.ts",
       "src/shared/llm.ts",
-      "src/shared/fournisseur/reglage-llm.ts"
+      "scripts/sonde-fournisseur.mjs"
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Injection",
     "selected_companion_blocks": [
@@ -483,13 +475,11 @@
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
-    "status": "candidate",
+    "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
       "src/routes/settings.ts",
-      "src/shared/util.ts",
       "src/shared/fournisseur/reglage-llm.ts",
-      "src/shared/llm.ts",
       "scripts/sonde-fournisseur.mjs"
     ],
     "local_checks": [
@@ -497,23 +487,17 @@
         "agent_id": "parent-solo",
         "reviewed_paths": [
           "src/routes/settings.ts",
-          "src/shared/util.ts",
           "src/shared/fournisseur/reglage-llm.ts",
-          "src/shared/llm.ts",
           "scripts/sonde-fournisseur.mjs"
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "aucune requete sortante n'est declenchable depuis une lecture anonyme",
-        "result": "GET /api/llm/tester (settings.ts:39) et /api/ollama/status (:207) declenchent fetch/spawn vers une cible des settings, base LIBRE pour ollama|llamacpp (reglage-llm.ts:91-103); reponse vivant+duree_ms | JUGEMENT: candidat needs_validation; fp cd-ssrf-probe-anon-trigger-staff-target; blocage: reachabilite interne = fait de deploiement"
+        "invariant": "aucune requête sortante n'est déclenchable depuis une lecture anonyme",
+        "result": "CONFIRMÉ sur instance jetable (USER_DATA_PATH=/tmp/opencode/audit-cf-instance/data, port 3000) : session staff configure llm_url librement (reglage-llm.ts:91) ; GET /api/llm/tester anonyme déclenche le fetch sortant (settings.ts:39) ; réponse révèle vivant+duree_ms. Sur localhost tous les ports refusent immédiatement (15ms fermé vs 32ms silencieux). En production, cible interne silencieuse créerait un canal de timing."
       }
     ],
-    "result_fingerprints": [
-      "cd-ssrf-probe-anon-trigger-staff-target"
-    ],
-    "unresolved": [
-      "reachabilite interne depuis l'espace net du serveur: fait de deploiement"
-    ]
+    "result_fingerprints": [],
+    "unresolved": []
   },
   {
     "coverage_id": "src%2Froutes%2Fsettings.ts%23POST%20%2Fapi%2Fsettings::src%2Fservices%2Fsettings.ts%23estNomSecret%20%28suffixe%2Bsegment%29::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
@@ -542,34 +526,32 @@
     "status": "covered",
     "agent_id": "parent-solo",
     "reviewed_paths": [
-      "src/routes/settings.ts",
       "src/services/settings.ts"
     ],
     "local_checks": [
       {
         "agent_id": "parent-solo",
         "reviewed_paths": [
-          "src/routes/settings.ts",
           "src/services/settings.ts"
         ],
         "artifact": null,
         "method": "source",
-        "invariant": "aucun champ a nom de secret n'est rendu ni stocke en clair hors coffre",
-        "result": "estNomSecret regle suffixe+segment (cb374e4); sansSecrets en lecture ET ecriture; verify:reglage-llm A4/A5 vertes en CI 41983729810 | JUGEMENT: couvert"
+        "invariant": "aucun champ à nom de secret n'est rendu ni stocké en clair hors coffre",
+        "result": "estNomSecret : règle suffixe+segment (après cb374e4) ; sansSecrets appliqué en lecture ET écriture ; portes verify:reglage-llm A4/A5 vertes en CI 41983729810"
       }
     ],
     "result_fingerprints": [],
     "unresolved": []
   },
   {
-    "coverage_id": "src%2Fservices%2Faudit.ts%20%2B%20src%2Fservices%2Fcoffre.ts::src%2Fservices%2F%2A%2A%23secrets%20storage%2Flifecycle::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Wildcard",
+    "coverage_id": "src%2Fservices%2Faudit.ts%20%2B%20src%2Fservices%2Fcoffre.ts%23secrets%20storage%2Flifecycle::src%2Fservices%2F%2A%2A%23secrets%20storage%2Flifecycle::profile%2Fquick%2Fall-in-scope-subsystems::ATTACK-CLASSES.md%23Wildcard",
     "canonical_refs": {
-      "surface": "src/services/audit.ts + src/services/coffre.ts",
+      "surface": "src/services/audit.ts + src/services/coffre.ts#secrets storage/lifecycle",
       "boundary": "src/services/**#secrets storage/lifecycle",
       "subsystem": "profile/quick/all-in-scope-subsystems",
       "attack_class": "ATTACK-CLASSES.md#Wildcard"
     },
-    "surface": "src/services/audit.ts + src/services/coffre.ts",
+    "surface": "src/services/audit.ts + src/services/coffre.ts#secrets storage/lifecycle",
     "boundary": "src/services/**#secrets storage/lifecycle",
     "subsystem": "profile/quick/all-in-scope-subsystems",
     "attack_class": "ATTACK-CLASSES.md#Wildcard",
@@ -579,7 +561,12 @@
     ],
     "ordinary_attack_class_block": "ATTACK-CLASSES.md#Wildcard",
     "selected_companion_blocks": [],
-    "excluded_blocks": [],
+    "excluded_blocks": [
+      {
+        "block": "ATTACK-CLASSES.md#Wildcard",
+        "reason": "hors périmètre déclaré (src/services) — à traiter en run full"
+      }
+    ],
     "prior_status": "none",
     "attempts": [],
     "wave": 1,
@@ -589,7 +576,7 @@
     "local_checks": [],
     "result_fingerprints": [],
     "unresolved": [
-      "hors périmètre déclaré (src/services) — prepregne d'où setting.json etc."
+      "hors périmètre déclaré de ce run scoped — à traiter en run full"
     ]
   }
 ]
