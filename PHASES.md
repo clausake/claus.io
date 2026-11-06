@@ -2022,3 +2022,40 @@ sous-agent — et non caché comme un run multi-agent.
 - **Pentest dynamique à suivre** : la correction des 3 confirmés passe d'abord
   par la mesure dynamique sur instance jetable (même recette §8, HOST=0.0.0.0 +
   COOKDRIVE_PENTEST_HTTP=1) — un candidat source n'est pas un défaut mesuré.
+
+## 06/11 — Correctifs Windows (audit portable, 12 chantiers)
+
+Audit Windows rendu par le client (Node 24, Ollama/gemma4). Chaque point est mesuré
+sur le HEAD : la baseline stashee rend les 6 juges verts, les corrections les
+gardent verts, le lot complet passe à 100 portes vertes, CI `42222633197` **success**
+(7 jobs) sur `10bb53e`.
+
+- **C1 uploads** : `app.use("/uploads", express.static(uploadsDir))` ajouté dans les
+  DEUX voies (dev Vite + production) de `server.ts` — sans lui les factures/scans
+  tombaient dans le catch-all SPA (`text/html`).
+- **C2 LLM** : défaut `gemma4:e4b-it-qat` (le modèle installé sur le poste, mesuré
+  au scan 015) ; cohérence nommée : `llm_choix=llamacpp` avec `llm_url` sur le port
+  Ollama (11434) rend le défaut `PORT_OLLAMA_SOUS_LLAMACPP`.
+- **C3 db-download** : la garde maitre du matin est le contrat (règle A6, 403
+  `MAITRE_REQUIS` ; `verify:auth` 19/19 rejoué) ; le fold WAL est porté par C4.
+- **C4 WAL** : `foldWal()` (PRAGMA wal_checkpoint(TRUNCATE) sur le handle du
+  serveur, jamais via `initDatabase()` qui reseede) avant copie, sidecars
+  `-wal`/`-shm` copiés s'ils portent des octets ; ZIP sans `backup.zip` lui-même
+  (récursion mesurée) ni sidecars (déjà folds).
+- **C5 IoT** : `POST /api/haccp/webhook/iot-report` exemptée de la gate (jeton de
+  webhook = le seul contrôle, haccp.ts:334) ; `verify:mode-mord` rejouée verte.
+- **C6 404 JSON** : le catch-all SPA devient `/^\/(?!api\/).*/` et les `/api/*`
+  inconnues rendent `404 {error:"ROUTE_INCONNUE"}` (fin des 200-HTML silencieux).
+- **C7 GET pur** : `GET /api/alerts` ne fait plus que lire ; la régénération passe
+  dans `POST /api/alerts/scan`, appelé par l'UI (QualityControl) et par les trois
+  specs e2e qui la jugeaient.
+- **C8 Windows** : `test/unit/ollama.test.ts` aligné sur le nouveau défaut ; le
+  reste des chemins POSIX est déjà en suffixes.
+- **C9-C12** : `npm audit` au niveau barrière (0 critical, high dev-only consignés) ;
+  LFS vérifiés sur place (`git lfs ls-files`, tailles réelles : 2 650 822 / 417 771 /
+  817 344 / 217 746 / 580 975 o) ; `package.json` → description + licence `EUPL-1.2`
+  ; `.env.example` réécrit avec les variables RÉELLEMENT lues (mesure grep).
+
+Témoin : `~/.clausio/agent_culinaire.db` reste à `mtime=1790247072` (intacte).
+Vérifications rejouées : tsc 0, vitest 208/208, build OK, `verify:auth` 19/19,
+`verify:routes` 44/44, lot `PORTES=100 ROUGES=0`, CI 7/7 success.
