@@ -20,14 +20,12 @@ const MAX_BACKUPS = 5;
 // dans le .db avant copie. Si aucun handle n'est passe (juge qui appelle la
 // fonction directement), on FOLDE via un handle ephemere ferme immediatement
 // — jamais le handle du serveur, jamais `initDatabase()`.
-function foldWal(db: { exec(sql: string): Promise<unknown> } | undefined): void {
+async function foldWal(db: { exec(sql: string): Promise<unknown> } | undefined): Promise<void> {
   // Le fold n'a de sens QUE dans le process du serveur (le handle y est
   // ouvert). Sans handle, la copie du seul .db reste lisible — le WAL peut
   // porter les dernieres écritures, defaut NOMMÉ, pas une exception.
   if (!db) return;
-  void db.exec("PRAGMA wal_checkpoint(TRUNCATE);").catch((e: unknown) => {
-    console.error("[BACKUP] wal_checkpoint ignore :", e);
-  });
+  await db.exec("PRAGMA wal_checkpoint(TRUNCATE);");
 }
 
 function timestampLocal(): string {
@@ -40,19 +38,21 @@ function timestampLocal(): string {
 }
 
 // Copie la base et supprime les backups au-delà des 5 derniers.
-export function runDbBackup(
+export async function runDbBackup(
   dataDir: string,
   dbPath: string,
   db?: { exec(sql: string): Promise<unknown> },
-): void {
+): Promise<void> {
   const backupDir = path.join(dataDir, "backups");
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }
   if (!fs.existsSync(dbPath)) return;
 
-  // C4 : fold du WAL dans le fichier principal, puis copie des trois fichiers.
-  foldWal(db);
+  // C4 : fold du WAL dans le fichier principal (await obligatoire : sans
+  // attendre, le .db est copie avant que le checkpoint WAL ne soit termine
+  // et le backup reste incomplet), puis copie des trois fichiers.
+  await foldWal(db);
 
   const backupName = `db-${timestampLocal()}.db`;
   const backupPath = path.join(backupDir, backupName);
@@ -90,11 +90,9 @@ export function startDbBackup(
   db?: { exec(sql: string): Promise<unknown> },
 ): () => void {
   const timer = setInterval(() => {
-    try {
-      runDbBackup(dataDir, dbPath, db);
-    } catch (err) {
+    void runDbBackup(dataDir, dbPath, db).catch((err) => {
       console.error("[BACKUP] Erreur lors de la sauvegarde :", err);
-    }
+    });
   }, BACKUP_INTERVAL_MS);
   return () => clearInterval(timer);
 }
