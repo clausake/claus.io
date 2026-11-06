@@ -1,6 +1,6 @@
 {
   "name": "clausio",
-  "description": "claus.io — assistant culinaire IA open source (AGPL-3.0)",
+  "description": "claus.io — assistant culinaire IA open source (EUPL-1.2)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
   "version": "1.0.1",
