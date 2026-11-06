@@ -22,7 +22,19 @@ router.post("/api/backup", async (req, res) => {
       res.download(path.join(storageDir, "backup.zip")),
     );
     archive.pipe(output);
-    archive.directory(storageDir, false, { date: new Date() });
+    // C4 : exclusion des artefacts qui faussent l'archive — backup.zip lui-
+    // même (récursion mesurée) et les sidecars WAL (-wal/-shm), folds dans le
+    // .db par le checkpoint ; les recopier double l'état sans rien ajouter.
+    const exclus = new Set(["backup.zip", "agent_culinaire.db-wal", "agent_culinaire.db-shm"]);
+    for (const nom of fs.readdirSync(storageDir)) {
+      if (exclus.has(nom)) continue;
+      const p = path.join(storageDir, nom);
+      if (fs.statSync(p).isDirectory()) {
+        archive.directory(p, nom);
+      } else {
+        archive.file(p, { name: nom });
+      }
+    }
     archive.finalize();
     logAudit(req, res, { route: "/api/backup", action: "backup" }).catch(() => {});
   } catch (error) {

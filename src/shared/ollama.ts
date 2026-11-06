@@ -27,11 +27,11 @@ export interface OllamaModelInfo {
 }
 
 export function getModel(s: OllamaSettings | undefined) {
-  if (!s) return "llama3.2-vision";
+  if (!s) return "gemma4:e4b-it-qat";
   if (s.model_name === "custom" && s.custom_model) {
     return s.custom_model;
   }
-  return s.model_name || "llama3.2-vision";
+  return s.model_name || "gemma4:e4b-it-qat";
 }
 
 export const ollama = {

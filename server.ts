@@ -188,7 +188,8 @@ async function startServer() {
   const { db, storageDir } = await initDatabase();
 
   // Backup automatique horaire de la base SQLite (rotation 5 backups).
-  startDbBackup(storageDir, path.join(storageDir, "agent_culinaire.db"));
+  // C4 : le handle `db` du serveur est passe au backup pour le fold WAL.
+  startDbBackup(storageDir, path.join(storageDir, "agent_culinaire.db"), db);
 
   // Synchronise la référence partagée des settings (utilisée par le client Ollama
   // et les routes qui ont besoin de model_name/language sans dépendre de la base).
@@ -254,6 +255,10 @@ async function startServer() {
       server: { middlewareMode: true, allowedHosts: true },
       appType: "spa",
     });
+    // C1 (symetrie avec la voie production) : les uploads sont hors dist, le
+    // middleware vite ne les sert pas. Sans ce static, la voie dev ne rend
+    // aucune image (même défaut mesuré que la voie production).
+    app.use("/uploads", express.static(uploadsDir));
     app.use(vite.middlewares);
   } else {
     // Le dossier dist ne se devine pas depuis le cwd : empaqueté, il vit DANS
@@ -282,8 +287,20 @@ async function startServer() {
         },
       }),
     );
-    app.get("*", (req, res) => {
+    // C1 : les uploads vivent HORS dist (dossier de données), donc un second
+    // static est nécessaire — sinon toute image de facture/HACCP tombe dans le
+    // catch-all SPA et revient en text/html (images invisibles, mesure Windows).
+    app.use("/uploads", express.static(uploadsDir));
+    // C6 : le catch-all SPA ne doit plus happer les routes /api/* inconnues :
+    // une mutation ou un GET API mal orthographié rendait le HTML du SPA en
+    // 200 (erreur silencieuse, contrat e2e impossible à juger). Les /api/*
+    // inconnues tombent désormais dans un 404 JSON nommé, le reste du SPA
+    // garde son index.html (deep links).
+    app.get(/^\/(?!api\/).*/, (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
+    });
+    app.use(/^\/api\/.*/, (_req, res) => {
+      res.status(404).json({ error: "ROUTE_INCONNUE" });
     });
   }
 

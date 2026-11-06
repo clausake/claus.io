@@ -7,11 +7,11 @@ describe("getModel", () => {
   });
 
   it("utilise model_name sinon", () => {
-    expect(getModel({ model_name: "llama3.2-vision" })).toBe("llama3.2-vision");
-  });
+    expect(getModel({ model_name: "llama3.2-vision" })).toBe("llama3.2-vision");  });
 
   it("défaut si settings vides/absents", () => {
-    expect(getModel({})).toBe("llama3.2-vision");
-    expect(getModel(undefined)).toBe("llama3.2-vision");
+    // C2 : le defaut est le modele installe sur le poste (gemma4, mesure 015).
+    expect(getModel({})).toBe("gemma4:e4b-it-qat");
+    expect(getModel(undefined)).toBe("gemma4:e4b-it-qat");
   });
 });

@@ -76,6 +76,10 @@ export function sessionGate(): RequestHandler {
     if (process.env.COOKDRIVE_AUTH_OFF === "1") return next();
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
     if (req.path.startsWith("/auth/")) return next();
+    // C5 : le webhook IoT s'authentifie par SON jeton de webhook (comparaison
+    // dans src/routes/haccp.ts:334), pas par une session. Il est donc exempte
+    // de la gate, comme /auth/* ; le jeton reste le seul controle.
+    if (req.path === "/api/haccp/webhook/iot-report") return next();
     const user = (res.locals as Record<string, unknown>).user as SessionUser | undefined;
     if (!user) {
       return res.status(401).json({
