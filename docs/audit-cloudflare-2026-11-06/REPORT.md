@@ -18,8 +18,8 @@
 | 1 | `cd-iot-webhook-token-disclosure` | le token d'ingestion HACCP sort par un GET anonyme | high | confirmed |
 | 2 | `cd-backup-zip-staff-access` | POST /api/backup emporte la base pour une session staff | medium | confirmed |
 | 3 | `cd-error-message-internal-leak` | les 500 rendent String(e) (fragment interne) | low | confirmed |
-| 4 | `cd-ssrf-probe-anon-trigger-staff-target` | sondes sortantes GET anonyme × cible staff | medium | needs_validation |
-| 5 | `cd-upload-disk-exhaustion` | ~187 Mo/5 min/IP sans budget cumulé | medium | needs_validation |
+| 4 | `cd-ssrf-probe-anon-trigger-staff-target` | sondes sortantes GET anonyme × cible staff | medium | confirmed |
+| 5 | `cd-upload-disk-exhaustion` | ~187 Mo/5 min/IP sans budget cumulé | medium | confirmed |
 | 6 | `cd-hermes-contexte-anon-readable` | GET /hermes/contexte lisible anonyme | — | rejected (risque accepté) |
 
 ## Couverture

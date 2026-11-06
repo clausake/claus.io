@@ -1,10 +1,8 @@
-// Porte verify:audit-findings — juge les LIVRABLES de l'audit statique Cloudflare
-// (run clausio-cf-quick-1, commit 7e66d4e) par les validateurs ZERO-DEPENDANCE du
-// skill (copies dans scripts/audit-cf/). La porte ne juge PAS la justesse securite
-// des candidats (c'est le travail du pentest dynamique) : elle garantit que le
-// registre de couverture et le registre de candidats restent VALIDES et TRIES —
-// toute edition a la main qui casse le schema, un tri, ou un fingerprint fait
-// rougir la porte.
+// Porte verify:audit-findings - juge les livrables de l'audit statique Cloudflare
+// (run clausio-cf-quick-1, commit 7e66d4e) par les validateurs zero-dependance du
+// skill (copies dans scripts/audit-cf/). La porte ne juge pas la justesse securite
+// des candidats : elle garantit que le registre de couverture et le registre de
+// candidats restent valides et tries.
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -22,7 +20,7 @@ for (const v of validateurs) {
   const r = spawnSync(process.execPath, [script, cible], { encoding: "utf8" });
   const sortie = (r.stdout || "") + (r.stderr || "");
   const pass = /PASS/.test(sortie) && r.status === 0;
-  console.log(`[audit-findings] ${v.nom}: ${pass ? "PASS" : "ROUGE"} — ${sortie.trim().split("\n").pop()}`);
+  console.log(`[audit-findings] ${v.nom}: ${pass ? "PASS" : "ROUGE"} - ${sortie.trim().split("\n").pop()}`);
   if (!pass) rouge = true;
 }
 if (rouge) {

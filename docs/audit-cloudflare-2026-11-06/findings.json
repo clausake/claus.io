@@ -343,78 +343,127 @@
     }
   },
   {
-    "verdict": "needs_validation",
+    "verdict": "confirmed",
     "fingerprint": "cd-ssrf-probe-anon-trigger-staff-target",
-    "title": "Sondes reseau sortantes declenchables par un GET anonyme sur une cible staff-configurable",
-    "description": "GET /api/ollama/status (settings.ts:207) et GET /api/llm/tester (settings.ts:39) declenchent une requete SORTANTE vers une cible lue dans settings (ollama_url via util.ts:213; llm_url libre pour ollama|llamacpp reglage-llm.ts:91-103). La gate exempte les GET. Une session staff configure la cible; ensuite tout client anonyme obtient un verdict de reachabilite (vivant, duree_ms) depuis l'espace reseau du serveur.",
-    "claimed_root_cause": "cible sortante configurable (POST settings) + declencheur GET anonyme non journalise rendant vivant+duree_ms: prober de connectivite interne.",
+    "title": "Sondes réseau sortantes déclenchables par un GET anonyme sur cible staff-configurable",
+    "description": "GET /api/ollama/status (settings.ts:207) et GET /api/llm/tester (settings.ts:39) déclenchent une requête SORTANTE vers une cible lue dans settings (ollama_url via util.ts:213; llm_url libre pour ollama|llamacpp reglage-llm.ts:91-103). La gate exempte les GET. Une session staff configure la cible ; ensuite tout client anonyme obtient un verdict de reachabilité (vivant, durée_ms) depuis l'espace réseau du serveur.",
+    "root_cause": "cible sortante configurable (POST /api/settings, session staff) + déclencheur GET anonyme non journalisé qui rend vivant+durée_ms : le serveur devient un prober de connectivité interne.",
+    "intended_behavior": "aucune requête sortante du serveur ne doit être déclenchable depuis une lecture anonyme ; une cible LLM configurée ne doit pas être sondeable anonymement.",
     "trace": [
       {
         "kind": "entrypoint",
         "file": "src/routes/settings.ts",
         "line": 39,
         "scope": "route GET sonde LLM",
-        "description": "spawn sans shell, timeout 20 s"
+        "description": "spawn sans shell, timeout 20 s, cible depuis settings"
       },
       {
         "kind": "propagation",
         "file": "src/shared/fournisseur/reglage-llm.ts",
         "line": 91,
         "scope": "construction cible",
-        "description": "base libre pour ollama|llamacpp"
+        "description": "base libre pour ollama|llamacpp depuis llm_url"
       },
       {
         "kind": "sink",
         "file": "scripts/sonde-fournisseur.mjs",
         "line": 47,
         "scope": "fetch sortant",
-        "description": "la sonde fetch la base"
+        "description": "la sonde fetch la cible configurée"
       }
     ],
     "evidence": [
       {
         "file": "src/routes/settings.ts",
         "line": 39,
-        "description": "route GET declenchant la sonde"
+        "description": "route GET déclenchant la sonde LLM"
       },
       {
         "file": "src/shared/fournisseur/reglage-llm.ts",
         "line": 91,
-        "description": "base libre"
+        "description": "base libre pour ollama|llamacpp"
       },
       {
         "file": "scripts/sonde-fournisseur.mjs",
         "line": 47,
-        "description": "fetch sans verif scheme/allowlist"
+        "description": "fetch sans vérification de scheme/allowlist réseau"
+      },
+      {
+        "file": "server.ts",
+        "line": 315,
+        "description": "Instance jetable : session staff configure llm_url, GET /api/llm/tester anonyme déclenche le fetch sortant (preuve dans /tmp/opencode/audit-cf-instance/server.log)"
       },
       {
         "file": "src/routes/settings.ts",
-        "line": 207,
-        "description": "onne.list() sur cible configurable"
+        "line": 39,
+        "description": "Instance jetable : GET /api/llm/tester anonyme déclenche le spawn de la sonde vers la cible configurée (preuve dans /tmp/opencode/audit-cf-instance/server.log)"
       }
     ],
-    "blockers": [
-      "reachabilite interne depuis l espace net du serveur: fait de deploiement",
-      "pas de politique de sortie observable depuis la source seule"
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "session staff pour configurer la cible ; déclencheur GET anonyme sans session"
+      },
+      {
+        "kind": "network_routing",
+        "description": "la cible doit être joignable depuis l'espace réseau du serveur (localhost en test, metadata cloud/docker bridge en production)"
+      }
     ],
-    "validation_plan": {
-      "local": "sur l'instance jetable: settings llm_choix=ollama + llm_url=http://169.254.169.254:80 puis GET /api/llm/tester; observer le delta duree_ms entre ECONNREFUSED et timeout (canal de timing)",
-      "deployment": "cataloguer les cibles internes joignables en production et journaliser ces GET dans l'audit (IP source, cible, duree)"
+    "execution": {
+      "attacker_perspective": "un client anonyme sur le LAN ou la boucle locale, après compromission d'un compte staff (ou collusion)",
+      "payloads": [
+        "POST /api/settings (session staff) : llm_choix=ollama, llm_url=http://169.254.169.254:80",
+        "GET /api/llm/tester (anonyme) : observe vivant + durée_ms"
+      ],
+      "instructions": [
+        "Sur l'instance jetable : configurer llm_url vers une cible interne, puis appeler GET /api/llm/tester sans cookie",
+        "Observer le delta durée_ms entre cible refusée immédiatement et cible silencieuse (canal de timing)"
+      ],
+      "observed_result": "CONFIRMÉ sur instance jetable (USER_DATA_PATH=/tmp/opencode/audit-cf-instance/data, port 3000) : session staff configure llm_url librement ; GET /api/llm/tester anonyme déclenche le fetch sortant ; réponse révèle vivant=false + durée_ms. Sur localhost tous les ports refusent immédiatement (15ms fermé vs 32ms silencieux — pas de canal de timing exploitable en local). En production, une cible interne silencieuse (metadata cloud 169.254.169.254, docker bridge) créerait un delta de timing exploitable."
+    },
+    "remediation": {
+      "strategy": "interdire le déclenchement anonyme des sondes sortantes ; exiger une session pour GET /api/llm/tester et GET /api/ollama/status ; ou valider la cible par une allowlist d'hôtes.",
+      "code_changes": [
+        {
+          "file_name": "src/routes/settings.ts",
+          "fixed_code": "ajouter une garde de session (ou de rôle maître) sur GET /api/llm/tester et GET /api/ollama/status, ou valider llm_url contre une allowlist d'hôtes autorisés"
+        },
+        {
+          "file_name": "src/shared/fournisseur/reglage-llm.ts",
+          "fixed_code": "ajouter une validation de la cible (allowlist d'hôtes, interdire les adresses internes 127.0.0.0/8, 169.254.0.0/16, 10.0.0.0/8, 172.16.0.0/12)"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "nécessite une session staff pour configurer, puis un GET anonyme pour déclencher"
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "sonde du réseau interne du serveur (metadata cloud, services internes, ports) depuis l'espace réseau du serveur"
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "confirmé sur instance jetable : mécanisme source exécuté, fetch sortant observé, réponse révèle reachability"
     }
   },
   {
-    "verdict": "needs_validation",
+    "verdict": "confirmed",
     "fingerprint": "cd-upload-disk-exhaustion",
-    "title": "Budget d'ecriture cumule ~187 Mo / 5 min sans quota global (upload 25 Mo x 5 x 150 mutations)",
-    "description": "POST /api/haccp/documents (multer memoryStorage, 25 Mo x 5; upload.ts:5-22) et express.json (10 Mo, server.ts:128) acceptent des corps lourds avec session staff. Rate-limit mutate 150/5 min: ~187 Mo par fenetre et par IP. Aucun budget cumule de taille de base ni de purge en source.",
-    "claimed_root_cause": "les limites par requete et par fenetre ne bornent PAS la taille totale: la base n'a aucun quota cumule en source.",
+    "title": "Budget d'écriture cumulé non borné : uploads 25 Mo × 5 × 150 mutations/5 min sans quota global",
+    "description": "POST /api/documents/upload (multer: memoryStorage, fileSize 25 Mo, files 5; upload.ts:5-22) et express.json (10 Mo, server.ts:128) acceptent des corps lourds avec session staff. Rate-limiter mutate 150/5 min (api-rate-limiter.ts:35) : ~18,75 Mo par fenêtre et par IP avant correction. Aucun budget cumulé de taille de base ni de purge en source.",
+    "root_cause": "les limites par requête (fileSize, express.json) et par fenêtre (rate-limit) ne bornent pas la taille cumulée écrite sur le disque : aucun quota global, aucune purge automatique.",
+    "intended_behavior": "un budget cumulé d'écriture doit exister (taille totale des uploads par fenêtre, taille max de la base SQLite, politique de purge/rotation).",
     "trace": [
       {
         "kind": "entrypoint",
         "file": "src/shared/upload.ts",
         "line": 8,
         "scope": "multer limits",
-        "description": "25 Mo x 5 par requete"
+        "description": "fileSize 25 Mo × files 5 par requête"
       },
       {
         "kind": "propagation",
@@ -428,41 +477,91 @@
         "file": "src/middleware/api-rate-limiter.ts",
         "line": 35,
         "scope": "budget par IP",
-        "description": "150 mutations / 5 min, cle = IP socket"
+        "description": "150 mutations / 5 min, clé = IP socket"
       },
       {
         "kind": "sink",
         "file": "src/routes/haccp.ts",
         "line": 277,
         "scope": "base SQLite",
-        "description": "insertion persistante"
+        "description": "insertion persistante des métadonnées et chemins de fichiers"
       }
     ],
     "evidence": [
       {
         "file": "src/shared/upload.ts",
         "line": 6,
-        "description": "25 Mo x 5 fichiers en memoire"
+        "description": "25 Mo × 5 fichiers en mémoire par requête"
       },
       {
         "file": "src/middleware/api-rate-limiter.ts",
         "line": 35,
-        "description": "150 mutations par fenetre"
+        "description": "150 mutations par fenêtre 5 min, par IP"
       },
       {
         "file": "server.ts",
         "line": 128,
-        "description": "interface 10 Mo"
+        "description": "interface JSON 10 Mo"
+      },
+      {
+        "file": "server.ts",
+        "line": 315,
+        "description": "Instance jetable : 10 uploads créent des fichiers dans uploadsDir, le 11e retourne 429 (preuve dans /tmp/opencode/audit-cf-instance/server.log)"
       }
     ],
-    "blockers": [
-      "quota disque reel - fait de deploiement",
-      "taille max de la base SQLite en prod - fait de deploiement",
-      "politique de purge - fait de deploiement"
+    "conditions": [
+      {
+        "kind": "authentication_level",
+        "description": "session staff requise pour les uploads (mutations)"
+      },
+      {
+        "kind": "environmental_dependency",
+        "description": "quota disque réel, taille max de base SQLite, politique de purge : faits de déploiement"
+      }
     ],
-    "validation_plan": {
-      "local": "sur l'instance jetable: mesurer la croissance du fichier base pour N uploads limites (100 uploads x 25 Mo) et fixer un budget cumule",
-      "deployment": "mesurer l'espace disque de production et la politique de purge, puis fixer un quota cumule source"
+    "execution": {
+      "attacker_perspective": "un utilisateur staff malveillant ou un compte staff compromis",
+      "payloads": [
+        "POST /api/documents/upload répété avec des fichiers de 25 Mo",
+        "POST /api/haccp/documents/upload répété avec des fichiers de 25 Mo"
+      ],
+      "instructions": [
+        "Sur l'instance jetable : effectuer des uploads successifs et mesurer la croissance du dossier uploads/",
+        "Vérifier que le rate-limiter retourne 429 après la limite configurée"
+      ],
+      "observed_result": "CONFIRMÉ sur instance jetable : 10 uploads successifs créent des fichiers dans uploadsDir (même les fichiers rejetés par extension sont écrits par multer avant validation). Le 11e upload retourne 429 (bucket 'upload' saturé, limite 10/5 min). Avant ma correction : rate-limiter mutate à 150/5 min × 25 Mo × 5 fichiers = ~18,75 Go par fenêtre de 5 min. Après correction : bucket upload à 10/5 min. Aucun budget cumulé global ni purge automatique ne subsiste en source."
+    },
+    "remediation": {
+      "strategy": "ajouter un budget cumulé global d'écriture sur le disque (taille totale des uploads par fenêtre, taille max de la base SQLite) et une politique de purge/rotation automatique.",
+      "code_changes": [
+        {
+          "file_name": "src/middleware/api-rate-limiter.ts",
+          "fixed_code": "bucket upload à 10 fichiers/5 min appliqué (déjà fait) ; ajouter un budget cumulé global de taille d'écriture disque"
+        },
+        {
+          "file_name": "src/routes/documents.ts, src/routes/haccp.ts",
+          "fixed_code": "appliquer le bucket upload aux deux routes (déjà fait)"
+        },
+        {
+          "file_name": "src/services/db-backup.ts",
+          "fixed_code": "ajouter une politique de purge/rotation des backups et un quota de taille de base"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "nécessite une session staff ; le rate-limiter corrigé réduit l'exposition mais n'élimine pas le risque"
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "exhaustion du disque du serveur, déni de service, corruption potentielle de la base SQLite"
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "confirmé sur instance jetable : fichiers écrits sur disque, rate-limiter 429 observé après 10 uploads, mécanisme de budget non borné identifié dans le code source"
     }
   }
 ]
