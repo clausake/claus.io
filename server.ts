@@ -68,6 +68,8 @@ import aiRouter from "./src/routes/ai.js";
 import suggestionsRouter from "./src/routes/suggestions.js";
 import surveillanceRouter from "./src/routes/surveillance.js";
 import hermesRouter from "./src/routes/hermes.js";
+import demoRouter from "./src/routes/demo.js";
+import { metierVierge, dejaSeme, semer } from "./src/routes/demo.js";
 import healthRouter from "./src/routes/health.js";
 
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -240,6 +242,22 @@ async function startServer() {
   // Cerveau Hermes (chantier 5) : contexte -> consigne -> LLM injecte ->
   // propositions validees -> suggestions. LLM JAMAIS juge par une porte.
   app.use(hermesRouter(db, logAudit));
+  // Kit d'exemples (chantier 39-B) : 1 exemple par onglet, effacable par le
+  // client (POST /api/demo/supprimer). Aucune IA, deterministe.
+  app.use(demoRouter(db, logAudit));
+  // Auto-semage : sur une base VIERGE sans marque, le kit est pose au
+  // demarrage (regle 4 : fait mesurable, pas d'intention). Apres une purge
+  // cliente, la marque demeure et le kit ne revient PAS tout seul.
+  try {
+    if ((await metierVierge(db)) && !(await dejaSeme(db))) {
+      const { creees } = await semer(db);
+      if (creees.length) {
+        console.log(`[demo] kit d'exemples seme (${creees.length} lignes)`);
+      }
+    }
+  } catch (e) {
+    console.error("[demo] semence impossible :", e);
+  }
   // /health est à la racine (pas sous /api)
   app.use(healthRouter);
 

@@ -398,6 +398,13 @@ DEFAUT = ["verify:split",
           "verify:extraction",
           "verify:langues-formats",
           "verify:etiquettes-dlc",
+          # Chantier 39 (feuille de route §8, lot 07/11) : le store qui porte
+          # le fetch (l'extraction survit au changement d'onglet, C38-B/C39-A)
+          # et le kit d'exemples par onglet, effaçable par le client
+          # (C39-B : semé AUTO sur base vierge, purge = exactement les lignes
+          # tracées, jamais de re-semage après purge). Les retirer rend ces
+          # contrats jugeables partiellement sans qu'aucun lot ne le voie.
+          "verify:extraction-suivi", "verify:demo-kit",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,

@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { PackageSearch, Thermometer, ScanLine, FileCheck, AlertTriangle, CheckCircle2, Droplets, CalendarClock, Printer, Expand, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { MediaDisplay } from "../lib/helpers";
 import { useToast, ConfirmDialog } from "./ui/Toast";
+// C39 : le scan HACCP porte son fetch par le meme store que l'extraction de
+// documents — le pre-remplissage survit au changement d'onglet.
+import {
+  lancer as lancerExtraction,
+  sAbonner as sAbonnerExtraction,
+  instantane as instantaneExtraction,
+  accuserDelivre as accuserDelivreExtraction,
+  marquerErreurLue as marquerErreurLueExtraction,
+} from "../shared/extraction-suivi.js";
 
 export const AdmissionModule = ({ t, translateIngredient }: { t: Record<string, string>, translateIngredient?: (name: string, lang: string) => string }) => {
   const toast = useToast();
@@ -43,41 +52,92 @@ export const AdmissionModule = ({ t, translateIngredient }: { t: Record<string, 
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
-          setIsScanning(true);
-          try {
-            const formData = new FormData();
-            formData.append('image', e.target.files[0]);
-            const res = await fetch('/api/haccp/scan', { method: 'POST', body: formData });
-            const data = await res.json();
-            
-            if (!res.ok || data.error || data.status === 'error') {
-               toast(t.error ? t.error + ": " + (data.error || data.message || "Scan failed", "error") : "Error: Scan failed. Provide a better picture format.");
-            } else {
-              // Try to find matching product in inventory
-              if (data.product) {
-                setProductName(data.product);
-                const match = inventory.find(i => i.name.toLowerCase().includes(data.product.toLowerCase()) || data.product.toLowerCase().includes(i.name.toLowerCase()));
-                if (match) setSelectedInventoryId(match.id);
-              } else {
-                toast(t.error ? t.error + ": Could not read product" : "Error: Could not read product details.", "error");
-              }
-              if (data.lot) setLot(data.lot);
-              if (data.dlc) setDlc(data.dlc);
-              if (data.quantity) setQuantity(data.quantity.toString());
-              if (data.unit) setUnit(data.unit);
-              if (data.source_image_url) setSourceImageUrl(data.source_image_url);
-              if (data.allergens && Array.isArray(data.allergens)) {
-                setDetectedAllergens(data.allergens);
-              }
-            }
-          } catch (err) {
-            console.error(err);
-            toast(t.iaScanError || "Error during AI scan", "error");
-          } finally {
-            setIsScanning(false);
+          // C39 : le fetch est PORTE par le store extraction-suivi (regle
+          // d'atelier-chat.ts) — en changeant d'onglet l'etiquette scannee
+          // arrive quand meme, pre-remplie au remontage par l'effet de
+          // livraison ci-dessous (genre "haccp").
+          const fichier = e.target.files[0];
+          const lance = await lancerExtraction("haccp-scan", "Étiquette produit (scan HACCP)", {
+            genre: "haccp",
+            transport: () =>
+              fetch("/api/haccp/scan", {
+                method: "POST",
+                body: (() => {
+                  const formData = new FormData();
+                  formData.append("image", fichier);
+                  return formData;
+                })(),
+              }),
+          });
+          if (!lance.lance && lance.erreur === "EXTRACTION_EN_COURS") {
+            toast(t.erreurScanLance ||
+              "Une extraction IA est deja en cours (document ou etiquete).", "info");
           }
+          // la fin (reponse OU erreur) atterrira dans l'instantane ; la
+          // livraison (pre-remplissage) est faite par l'effet ci-dessous.
       }
   };
+
+  // C39 : livraison de la reponse — le composant peut remonter APRES la fin
+  // du fetch (changement d'onglet pendant le scan) : les champs se
+  // pre-remplissent depuis l'instantane, puis la reponse est accuse
+  // (idempotent). Seule la chaine HACCP se livre ici.
+  const suiviExtraction = useSyncExternalStore(
+    sAbonnerExtraction,
+    instantaneExtraction,
+  );
+  React.useEffect(() => {
+    const reponse = suiviExtraction.reponse;
+    if (!reponse || suiviExtraction.delivre) return;
+    if (suiviExtraction.genre !== "haccp") return;
+    const data = reponse.corps as Record<string, unknown>;
+    setIsScanning(false);
+    if (data.error || data.status === "error") {
+      toast("Erreur scan : " + (String(data.error || data.message)), "error");
+      accuserDelivreExtraction(reponse.documentId);
+      return;
+    }
+    if (data.product) {
+      setProductName(String(data.product));
+      const match = inventory.find(
+        (i) =>
+          i.name.toLowerCase().includes(String(data.product).toLowerCase()) ||
+          String(data.product).toLowerCase().includes(i.name.toLowerCase()),
+      );
+      if (match) setSelectedInventoryId(match.id);
+    } else {
+      toast(
+        t.error
+          ? t.error + ": Could not read product"
+          : "Error: Could not read product details.",
+        "error",
+      );
+    }
+    if (data.lot) setLot(String(data.lot));
+    if (data.dlc) setDlc(String(data.dlc));
+    if (data.quantity) setQuantity(String(data.quantity));
+    if (data.unit) setUnit(String(data.unit));
+    if (data.source_image_url)
+      setSourceImageUrl(String(data.source_image_url));
+    if (data.allergens && Array.isArray(data.allergens)) {
+      setDetectedAllergens(data.allergens as string[]);
+    }
+    accuserDelivreExtraction(reponse.documentId);
+  }, [suiviExtraction, inventory]);
+
+  // C39 : l'erreur est toasTEE par ce composant quand il est vivant (une
+  // seule fois — l'accuse empeche la banniere globale de la rejouer).
+  React.useEffect(() => {
+    if (
+      suiviExtraction.erreur !== null &&
+      !suiviExtraction.erreurLue &&
+      !suiviExtraction.enCours &&
+      suiviExtraction.genre === "haccp"
+    ) {
+      toast(`Erreur du scan HACCP : ${suiviExtraction.erreur}`, "error");
+      marquerErreurLueExtraction();
+    }
+  }, [suiviExtraction]);
 
   const saveBatch = async (e: React.FormEvent) => {
       e.preventDefault();
