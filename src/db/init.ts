@@ -486,6 +486,21 @@ export async function initDatabase(): Promise<DbInitResult> {
     );
     CREATE INDEX IF NOT EXISTS idx_suggestions_statut ON suggestions(statut);
   `);
+
+  // Chantier 39-B — kit d'exemples pré-rempli (1 élément par onglet, effaçable
+  // par le client). Une ligne par entité semée + une ligne-marque « marque »
+  // qui SURVIT à la purge : elle empêche le re-semage automatique après une
+  // purge voulue. La purge ne supprime QUE les lignes tracées ici.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS demo_kit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite TEXT NOT NULL,
+      entite_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_demo_kit_entite ON demo_kit(entite);
+  `);
+
   // Purge des sessions expirees : la table ne doit pas grossir sans limite
   // sur une installation qui tourne des mois.
   await db.run("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);

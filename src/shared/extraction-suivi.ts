@@ -35,6 +35,9 @@ export interface InstantaneExtraction {
   documentId: string | null;
   /** Nom affichable du document (type + fournisseur si connu). */
   documentNom: string | null;
+  /** La CHAINE qui a lance le fetch (documents | haccp) : chaque composant
+   *  vivant ne livre que LE genre qui le concerne (C39). */
+  genre: "documents" | "haccp";
   /** Reponse du serveur en attente de livraison (null si nothing). */
   reponse: ReponseExtraction | null;
   /** true des qu'un composant vivant a applique la reponse. */
@@ -49,6 +52,7 @@ let etatCourant: InstantaneExtraction = {
   enCours: false,
   documentId: null,
   documentNom: null,
+  genre: "documents",
   reponse: null,
   delivre: false,
   erreur: null,
@@ -111,6 +115,8 @@ export async function lancer(
   documentId: string,
   documentNom: string,
   opts: {
+    /** La chaine qui porte le fetch. Defaut : "documents". */
+    genre?: "documents" | "haccp";
     transport?: (id: string) => Promise<{ ok: boolean; json: () => Promise<Record<string, unknown>> }>;
   } = {},
 ): Promise<{ lance: boolean; erreur?: string }> {
@@ -121,6 +127,7 @@ export async function lancer(
     enCours: true,
     documentId,
     documentNom,
+    genre: opts.genre ?? "documents",
     reponse: null,
     delivre: false,
     erreur: null,

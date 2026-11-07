@@ -328,6 +328,9 @@ export function DocumentManager({ t }: DocumentManagerProps) {
     }
     const reponse = suiviExtraction.reponse;
     if (!reponse || suiviExtraction.delivre) return;
+    // C39 : ce composant ne livre que la chaine DOCUMENTS — une reponse
+    // HACCP en vol (scan d'etiquette) lui appartient a HaccpModules.
+    if (suiviExtraction.genre !== "documents") return;
     const data = (
       reponse.corps as { data?: Record<string, unknown> } | undefined
     )?.data;

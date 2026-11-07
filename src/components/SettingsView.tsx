@@ -43,6 +43,50 @@ export function SettingsView({
   t: Record<string, string>;
 }) {
   const toast = useToast();
+  // C39-B : kit d'exemples (1 par onglet, effaçable par le client).
+  const [demoEtat, setDemoEtat] = React.useState<{
+    present: boolean;
+    seme: boolean;
+    entites: string[];
+  } | null>(null);
+  const relireDemoEtat = React.useCallback(async () => {
+    try {
+      const r = await fetch("/api/demo/etat");
+      const j = await r.json();
+      setDemoEtat({
+        present: !!j.present,
+        seme: !!j.seme,
+        entites: Array.isArray(j.entites) ? j.entites : [],
+      });
+    } catch {
+      /* pas d'etat — les boutons restent utilisables */
+    }
+  }, []);
+  useEffect(() => {
+    relireDemoEtat();
+  }, [relireDemoEtat]);
+  const actionDemo = async (url: "/api/demo/semence" | "/api/demo/supprimer") => {
+    try {
+      const r = await fetch(url, { method: "POST" });
+      const j = await r.json();
+      const n = Array.isArray(j.creees)
+        ? j.creees.length
+        : Array.isArray(j.supprimees)
+        ? j.supprimees.length
+        : 0;
+      toast(
+        url.endsWith("semence")
+          ? n
+            ? `Kit semé (${n} lignes)`
+            : "Kit déjà en place"
+          : `Kit effacé (${n} lignes)`,
+        "success",
+      );
+      relireDemoEtat();
+    } catch {
+      toast("Kit de démonstration : serveur injoignable", "error");
+    }
+  };
   const [ollamaStatus, setOllamaStatus] = React.useState<
     "idle" | "checking" | "connected" | "error"
   >("idle");
@@ -742,6 +786,51 @@ export function SettingsView({
                     }}
                   ></span>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="led-glow-container">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <div className="p-2 bg-purple-500/10 text-purple-400 rounded-xl mr-4">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              Kit de démonstration
+            </h3>
+            <div className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Un exemple pré-rempli pour chaque onglet : 1 élément en stock,
+                1 fiche en production, 1 document scanné, 1 doc HACCP.
+                Le kit est posé au premier lancement sur une base vierge, et
+                s'efface ici à tout moment.
+              </p>
+              <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                  État du kit
+                </p>
+                <p className="font-bold text-white">
+                  {demoEtat === null
+                    ? "…"
+                    : demoEtat.present
+                    ? `Présent — ${demoEtat.entites.length} lignes`
+                    : demoEtat.semé
+                    ? "Purgé (marque conservée)"
+                    : "Vierge, jamais semé"}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => actionDemo("/api/demo/semence")}
+                  className="flex-1 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-brand-500/20"
+                >
+                  Semer les exemples
+                </button>
+                <button
+                  onClick={() => actionDemo("/api/demo/supprimer")}
+                  className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Effacer le kit
+                </button>
               </div>
             </div>
           </section>

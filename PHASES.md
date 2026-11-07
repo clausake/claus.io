@@ -2128,3 +2128,50 @@ MÊME demonter = les fiches SONT persistees dans Fiches Techniques de toute faç
 la carte persiste, un second bac de livraison (store) serait redondant.
 Sans IA :ARCHI identique (OCR/PDF texte -> MATERIEL du prompt llm seul ->
 pre-remplissage) : PaddleOCR/Tesseract ne remplissent JAMAIS les cases.
+
+## Chantier 39 — Scan HACCP suit la meme regle, kit d'exemples par onglet (07/11)
+
+Deux sous-travaux demandes par le maitre, tous deux juges par commande.
+
+**C39-A — le scan d'etiquette HACCP survit au changement d'onglet.** Le defaut
+mesure etait le meme que C38-B : `handleScan` de HaccpModules.tsx portait son
+fetch en local, demonter = etiquette perdue. Repare par la MEME regle
+(atelier-chat.ts, plan P3) : le fetch est PORTE par le module
+`src/shared/extraction-suivi.ts`, qui gagne un champ `genre`
+("documents" | "haccp") — chaque composant vivant ne livre que LE genre qui le
+concerne (garde de genre dans les effets de livraison de DocumentManager et
+HaccpModules). Le garde « une seule extraction a la fois » est partage par les
+deux chaines (un seul cerveau LLM a la fois, contrat identique a envoyer()
+d'atelier-chat). Preuve : `test/unit/extraction-suivi.test.ts` etendu a 8 cas
+(7 : defaut « documents » ; 8 : chaine « haccp » porte jusqu'a l'accuse) ;
+`verify:extraction-suivi` vert.
+
+**C39-B — kit d'exemples pre-remplie pour chaque onglet, effacable par le
+client.** Un seul exemple par surface, SEME AUTOMATIQUEMENT au demarrage sur
+une base VIERGE (les 4 tables metier a 0 ligne et aucune marque), et effacable
+a la main depuis Réglages (carte « Kit de démonstration », deux boutons) :
+1. Inventaire — « Filet de canard (exemple) », 4 kg, min 2, Viandes, 18,90 ;
+2. Production — fiche « Magret de canard aux navets (exemple) » (is_saved=1,
+   1 ingredient lie) + 1 ligne menu_planning du jour (lunch, 4 couverts) ;
+3. Documents — facture PENDING « Auguste (exemple) » 45,80 avec 2 lignes ;
+4. HACCP — doc « Exemple — plan de nettoyage » (type PLAN).
+Le kit est TRACE dans la table `demo_kit` (init.ts, 8 lignes + 1 ligne-marque
+qui SURVIT a la purge : apres une purge voulue, le redemarrage ne re-seme
+PAS). Routes : GET /api/demo/etat, POST /api/demo/semence (idempotent par la
+marque), POST /api/demo/supprimer — les trois tracees dans audit_log, aucune
+IA, INSERT deterministes dans le meme ordre de colonnes que les routes metier.
+Preuve : `test/e2e/demo-kit.spec.ts` 3/3 (semis auto + les 4 surfaces relues
+par leurs routes metier, purge = exactement les 8 lignes tracees et collections
+vides apres, marque conservee, semence idempotente) ; `verify:demo-kit` vert.
+Les DEUX portes sont au lot (package.json ET DEFAUT de run-all-gates.py,
+regle 6) ; `verify:capteur-orphelines` rend SONDES=53 PORTEE=53, RC=0.
+
+Proces : le premier jet de demo.ts avait un `createDemoRouter` redondant avec
+le defaut default — jete, un seul export default sur le modele de
+suggestions.ts. Le GET /api/documents/:id n'existe pas (mesure : les items
+sont injectes par GET /api/documents a documents.ts:42) — la spec relit les
+items par la VRAIE voie, pas par un chemin invente.
+Preuves finales : tsc 0 err ; vitest 216/216 (214 + 2 du genre) ; build OK ;
+`verify:ui-tabs` 13/13 ; `verify:routes` 44/44 ; `verify:bundle` TOUT PASS ;
+`verify:auth` vert ; `verify:types` ANY=0/71 ; `verify:csp-inline` OK ;
+`verify:no-mute` OK ; `verify:demo-kit` 3/3 ; temoin mtime 1790247072 intouche.

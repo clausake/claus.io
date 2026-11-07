@@ -29,6 +29,7 @@ beforeEach(() => {
     enCours: false,
     documentId: null,
     documentNom: null,
+    genre: "documents",
     reponse: null,
     delivre: false,
     erreur: null,
@@ -119,5 +120,30 @@ describe("extraction-suivi", () => {
     marquerErreurLue();
     expect(instantane().erreurLue).toBe(true);
     expect(instantane().erreur).toBe("Documento absente");
+  });
+
+  // C39-A : le scan HACCP partage le store — chaque chaine ne livre que son
+  // genre. Deux mesures : le genre par defaut, et le genre transmis.
+  it("(7) sans opts.genre, la chaine est « documents » (defaut C38-B)", async () => {
+    await lancer("docD", "D", { transport: () => Promise.resolve(OK()) });
+    expect(instantane().genre).toBe("documents");
+  });
+
+  it("(8) genre « haccp » porte le scan d'etiquette jusqu'a la livraison", async () => {
+    await lancer("haccp-scan", "Étiquette produit (scan HACCP)", {
+      genre: "haccp",
+      transport: () =>
+        Promise.resolve(OK({ product: "Filet de canard", lot: "L1", dlc: "12/12" })),
+    });
+    const etat = instantane();
+    expect(etat.genre).toBe("haccp");
+    expect(etat.reponse?.corps).toEqual({
+      product: "Filet de canard",
+      lot: "L1",
+      dlc: "12/12",
+    });
+    accuserDelivre("haccp-scan");
+    expect(instantane().reponse).toBeNull();
+    expect(instantane().delivre).toBe(true);
   });
 });
