@@ -2059,3 +2059,57 @@ gardent verts, le lot complet passe à 100 portes vertes, CI `42222633197` **suc
 Témoin : `~/.clausio/agent_culinaire.db` reste à `mtime=1790247072` (intacte).
 Vérifications rejouées : tsc 0, vitest 208/208, build OK, `verify:auth` 19/19,
 `verify:routes` 44/44, lot `PORTES=100 ROUGES=0`, CI 7/7 success.
+
+## Chantier 38 — Extraction IA survit au changement d'onglet, l'ingredient genere mesure (06/11)
+
+Le maitre d'ouvrage rapporte trois defauts le 06/11 : (1) les ingredients generes
+ne sont pas editables comme les autres, (2) une extraction IA qui s'arrete quand
+il change d'onglet, (3) une question sur le role du paddle OCR. Reponse (3) :
+paddle est la porte d'entree OCR hors ligne du produit (src/shared/ocr.ts, moteur
+par defaut, 7/7 sur la piece du banc) — sans lui, seuls les PDF a couche texte
+natives restent lisibles (pdfParse), les images et scans ne rendent rien, l'IA ne
+sert qu'a STRUCTURER le texte deja lu.
+
+**C38-B (le defaut principal, corrige)** : le fetch d'extraction portait par
+DocumentManager.tsx (handleExtractFromDraft) : en changeant d'onglet le composant
+demontait, la reponse tombait dans un setState no-op, le formulaire pre-rempli
+n'etait jamais rendu. Le fetch continuait cote serveur mais le resultat etait
+perdu pour l'utilisateur. Correctif (regle d'atelier-chat.ts, plan P3, le pattern
+existant du depot) : store de module `src/shared/extraction-suivi.ts` (memoire de
+session, useSyncExternalStore, transport injectable pour les tests). lancer()
+PORTE le fetch : la reponse/erreur atterrit dans l'instantane meme si l'appelant
+est demonte. DocumentManager applique la reponse au remontage (formulaire
+pre-rempli + accuse idempotent, toast d'erreur accuse une fois). Banniere
+`BanniereExtraction.tsx` montee dans App.tsx : « en cours / terminee / echouee »
+visible DEPUIS tout onglet. Juge: `test/unit/extraction-suivi.test.ts` 6 tests
+(survie au demontage, garde un seul appel a la fois, erreur NOMmee, livraison
+idempotente, erreur accusee).
+
+**C38-A (constat MESURE, pas devine)** : les ingredients generes existent via la
+categorie « Ingrédient généré » posee par recipes.ts:187/314 a l'insertion d'un
+ingredient inconnu du stock (le chemin reel des fiches IA). Le filtre categoriel
+existants EST l'onglet ; une première version ajoutait un second onglet
+Tous/Ingrédients/Genere — la mesure e2e (strict mode : 2 elements pour le nom du
+bouton) a prouve le doublon et la version est revert. Le rendu reel des trois
+actions pour cette categorie (crayon/poubelle/caddie) + le crayon ouvrant le
+formulaire pre-rempli est juge par la NOUVELLE porte
+`test/e2e/ingredient-genere-actions.spec.ts` (2/2 PASSE, semis par la vraie
+route POST /api/inventory avec la categorie reelle de recipes.ts). Si le maitre
+voit encore le defaut, le bundle installé peut etre perime : la porte joue la
+verite du BUNDLE, pas du disque.
+
+Accessoire mesure dans le meme commit : rendu DOUBLE de AccountsView dans
+App.tsx:697-706 (deux blocs identiques `activeTab === 'comptes'`) — la vue
+comptes s'affichait deux fois ; retrait du doublon, `verify:ui-tabs` 13/13
+(son talon anti-doublon sidebar rejoue vert).
+
+Proces : la premiere version de la banniere (inline dans InventoryAudit avec des
+accolades dedoublees dans un attribut `className="..."`) a fait 5 erreurs TS
+(guillemets fermes l'attribut trop tot) ;Industrialisation par la banniere
+globale du module — le mauvais chemin a ete jete au fil de la mesure, pas gardé.
+Preuves finales : tsc 0 err ; vitest 214/214 (208 + 6 du store) ; build OK ;
+`verify:ui-tabs` 13/13 ; `verify:routes` 44/44 ; `verify:bundle` TOUT PASS ;
+`verify:auth` vert ; `verify:types` ANY=0/70 ; `verify:csp-inline` OK ;
+`verify:no-mute` OK ; e2e ingredient-generé 2/2 ; temoin mtime 1790247072
+intouche.
+

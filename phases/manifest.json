@@ -1,6 +1,6 @@
 {
   "original_octets": 270908,
-  "original_sha256": "f0d95618a45e30ea9f2ed03957e27631dc641a8c6dc8ea2b22c4bc96703cbf5d",
+  "original_sha256": "bd5a4b59fa441a962c79f342a70e4a0fe91836bb8e40c8cd36ced19db263aa37",
   "chaud_octets": 78486,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 18916,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
+    "motif": "chantier 38 consigne : l'extraction IA d'un document survit au changement d'onglet (le fetch porte par le store de module extraction-suivi.ts selon la regle d'atelier-chat.ts — la reponse atterrit meme demonte, et la banniere globale BanniereExtraction.tsx la rend depuis tout onglet) ; l'ingredient genere juge PAR MESURE e2e (ingredient-genere-actions.spec.ts : les 3 actions + le crayon prefilent pour la categorie posee par recipes.ts, le chemin reel des fiches IA) ; rendu double de AccountsView retraits ; ancre recalculee par la boucle du juge (recolle bd5a4b59), jamais recopiee a la main sur un fichier",
+    "date": "2026-11-07T03:43:08.846510",
+    "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre ; l'entree reste chaude (regle '## Chantier N' du decoupeur)."
+  },
+  "reancrage_precedent": {
     "motif": "chantier 19 consigne : la vitrine publique auditee contre le code (9 promesses re-jugees, regle fondatrice « IA propose / humain applique » a l'ecran), la release v0.1.0 aux trois plateformes (AppImage + deb ARM64 locaux, NSIS Windows x64 et dmg Apple Silicon par le workflow d'actions build-windows.yml, se ressert seul a chaque tag v*), et les trois couthes dinstalleur : npm bug #4828, noms de prebuilds NAPI d'argon2 (node.napi.node), DELETE de tag -> release draft (re-patch draft:false). Ajoute au chaud ; l'ancre est recalculee par la boucle du juge (segments() + sha256 du module), jamais recopiee",
     "date": "2026-10-16T16:55:28.299573",
     "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre ; l'entree reste chaude (regle '## Chantier N —' du decoupeur)."
-  },
-  "reancrage_precedent": {
-    "motif": "chantier 18 consigne : le doublon « Chat Culinaire » retire de la sidebar (deux entrees vers le meme onglet = deux onglets actifs), le chat reste dans Ingenierie des Menus ; defaut mobile du chat ecrase a 0 px corrige ; ui-tabs passe a 12 onglets + jugement anti-doublon permanent ; ancre recalculee par la boucle du juge (segments() + sha256), jamais recopiee",
-    "date": "2026-10-15T21:56:47.104479",
-    "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
