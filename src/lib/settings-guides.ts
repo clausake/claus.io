@@ -66,6 +66,15 @@ export function exporterGuidePDF(lang: string) {
               "• Renseignez et visualisez la grille horaire hebdomadaire et assignez des postes précis.",
               "• Optimisez la productivité opérationnelle en coordonnant les horaires de production en cuisine."
             ]
+          },
+          {
+            title: "6. EXTRACTION IA ET KIT D'EXEMPLES",
+            content: [
+              "• L'extraction IA d'un document ou d'une étiquette HACCP survit au changement d'onglet : le pré-remplissage vous attend à votre retour.",
+              "• Une bannière globale affiche l'extraction en cours depuis n'importe quel onglet.",
+              "• Sur une base vierge, un kit d'exemples est posé automatiquement : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP.",
+              "• Dans Réglages, la carte « Kit de démonstration » permet de le ressemer ou de l'effacer définitivement en un clic."
+            ]
           }
         ],
         footer: "claus.io - Solution de Pilotage Professionnel de Cuisine"
@@ -118,6 +127,15 @@ export function exporterGuidePDF(lang: string) {
               "• Coordinate your kitchen team (Chefs, Sous-Chefs, Commis, Steward staff).",
               "• Lay out work grids, weekly shifts, hourly assignments, and core kitchen roles.",
               "• Optimize kitchen efficiency and control labor expenditures in sync with menu volume."
+            ]
+          },
+          {
+            title: "6. AI EXTRACTION & SAMPLE KIT",
+            content: [
+              "• AI extraction of a document or a HACCP label survives tab switching: the pre-filled form awaits your return.",
+              "• A global banner shows the running extraction from any tab.",
+              "• On an empty database, a sample kit is seeded automatically: 1 stock item, 1 production sheet, 1 scanned document, 1 HACCP document.",
+              "• In Settings, the “Sample kit” card re-seeds it or wipes it for good with one click."
             ]
           }
         ],
@@ -172,6 +190,15 @@ export function exporterGuidePDF(lang: string) {
               "• Visualisieren Sie wöchentliche Arbeitszeiten, freie Tage und feste Postenbesetzungen.",
               "• Optimieren Sie die Arbeitsabläufe und steuern Sie die Personalkosten parallel zum Auslastungsgrad."
             ]
+          },
+          {
+            title: "6. KI-EXTRAKTION & BEISPIEL-KIT",
+            content: [
+              "• Die KI-Extraktion eines Dokuments oder HACCP-Etiketts übersteht den Tab-Wechsel: das vorausgefüllte Formular erwartet Sie.",
+              "• Ein globales Banner zeigt die laufende Extraktion in jedem Tab.",
+              "• Auf einer leeren Datenbank wird automatisch ein Beispiel-Kit gesetzt: 1 Lagerartikel, 1 Produktionsblatt, 1 gescanntes Dokument, 1 HACCP-Dokument.",
+              "• In den Einstellungen setzt die Karte „Beispiel-Kit“ das Kit neu oder löscht es endgültig."
+            ]
           }
         ],
         footer: "claus.io - Professionelle Steuerzentrale für Großküchen"
@@ -225,6 +252,15 @@ export function exporterGuidePDF(lang: string) {
               "• Estructure el cronograma de turnos semanales de trabajo, descansos y puestos asignados.",
               "• Ajuste las horas de mano de obra en función de la ocupación y volumen de producción."
             ]
+          },
+          {
+            title: "6. EXTRACCIÓN IA Y KIT DE EJEMPLOS",
+            content: [
+              "• La extracción IA de un documento o de una etiqueta HACCP sobrevive al cambio de pestaña: el formulario prellenado le espera.",
+              "• Un cartel global muestra la extracción en curso desde cualquier pestaña.",
+              "• En una base vacía, un kit de ejemplos se siembra automáticamente: 1 artículo en stock, 1 ficha de producción, 1 documento escaneado, 1 documento HACCP.",
+              "• En Ajustes, la tarjeta «Kit de demostración» lo resiembra o lo borra definitivamente con un clic."
+            ]
           }
         ],
         footer: "claus.io - Plataforma de Mando Culinario Profesional"
@@ -277,6 +313,15 @@ export function exporterGuidePDF(lang: string) {
               "• Pianifica turni, disponibilità ed assenze della squadra in servizio (Chef, Commis, Lavapiatti).",
               "• Visualizza orari d'accesso settimanali, riposi pianificati e mansioni distribuite.",
               "• Diminuisci i costi legati ad inefficienze di personale sincronizzando i turni con l'affluenza."
+            ]
+          },
+          {
+            title: "6. ESTRAZIONE IA E KIT DI ESEMPI",
+            content: [
+              "• L'estrazione IA di un documento o di un'etichetta HACCP sopravvive al cambio di scheda: il modulo precompilato la attende.",
+              "• Una fascia globale mostra l'estrazione in corso da qualsiasi scheda.",
+              "• Su un database vuoto, un kit di esempi è seminato automaticamente: 1 articolo a magazzino, 1 scheda di produzione, 1 documento scansionato, 1 documento HACCP.",
+              "• In Impostazioni, la scheda « Kit dimostrativo » lo risemina o lo cancella definitivamente con un clic."
             ]
           }
         ],

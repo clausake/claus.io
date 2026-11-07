@@ -45,18 +45,21 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 
 | Module | Ce qu'il fait | Sans IA |
 |---|---|---|
-| **Ingenierie des Menus** | Discutez avec l'assistant culinaire IA : il crée des fiches techniques complètes (ingrédients, quantités, étapes, allergènes) que le chef valide avant enregistrement | Création manuelle de fiches complète |
+| **Ingenierie des Menus** | Discutez avec l'assistant culinaire IA : il crée des fiches techniques complètes (ingrédients, quantités, étapes, allergènes) que le chef valide avant enregistrement. L'extraction survit au changement d'onglet : le formulaire pré-rempli vous attend au retour (une bannière globale affiche l'extraction en cours) | Création manuelle de fiches complète |
 | **Hermes (suggestions)** | Surveille l'établissement (ruptures, DLC, températures) et propose des actions que l'humain applique de sa main | Désactivable (`COOKDRIVE_AGENT_OFF=1`) — boîte de suggestions fermée, tout le reste fonctionne |
 | **Fiches Techniques & Food Cost** | Le livre de recettes par cartes (Entrée / Plat / Dessert), scan de menus papier par IA (OCR), export PDF — chaque fiche porte son coût matière par portion (food cost) | CRUD complet + export PDF (l'OCR n'est qu'un raccourci de saisie) |
 | **Analyse de Menu** | Photo d'un menu → fiches techniques pré-remplies (le chef édite tout à 100 % avant de sauver) | Module IA pur — les fiches restent créables manuellement |
 | **Inventaire** | Suivi des stocks, seuils d'alerte, import CSV, audit des écarts | 100 % sans IA (import CSV inclus) |
 | **Achats** | Panier de production consolidé par fournisseur, bons de commande PDF, réceptions, comparaison de prix, mercuriales | 100 % sans IA |
-| **HACCP** | Journal de conformité : températures IoT en temps réel (SSE), DLC, lots, nettoyage, preuves sanitaires, export PDF réglementaire | 100 % sans IA (saisie manuelle ou capteurs IoT) |
+| **HACCP** | Journal de conformité : températures IoT en temps réel (SSE), DLC, lots, nettoyage, preuves sanitaires, export PDF réglementaire. Le scan d'étiquette (IA) suit la même règle : le pré-remplissage survit au changement d'onglet | 100 % sans IA (saisie manuelle ou capteurs IoT) |
 | **Plan de Production** | Recalcul automatique des quantités par nombre de couverts | 100 % sans IA (calcul arithmétique) |
 | **Anti-gaspillage** | Suggestions de recettes par l'IA sur les stocks critiques | Module IA pur — l'inventaire reste complet |
 | **Planification & Staff Management** | Planning hebdomadaire du personnel, taux horaire par poste, calcul automatique des heures travaillées et du coût de main-d'œuvre (labor cost), consolidé au dashboard | 100 % sans IA |
 | **Dashboard** | Courbes quotidiennes **food cost** (achats fournisseurs) et **labor cost** (planning × taux horaires), valeur du stock, alertes en temps réel | 100 % sans IA |
 | **Epicure Studio** | Analyse aromatique : embeddings d'ingrédients, substitutions, accords | Analyse locale (embeddings, pas un LLM) |
+| **Kit de démonstration** | Sur une base vierge, un exemple est posé automatiquement dans chaque onglet (1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP) ; ressemable et effaçable par le client dans Réglages | 100 % sans IA (INSERT/DELETE déterministes) |
+
+Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes six sections, dont « Extraction IA et kit d'exemples ».
 
 ## Intelligence : 100 % local par défaut, multi-moteurs
 
@@ -87,9 +90,9 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64 et .deb ARM64 pour Linux, installeur NSIS Windows x64, et .dmg Apple Silicon pour macOS) sont attachées à la [release **v1.0.0**](https://github.com/clausake/claus.io/releases/tag/v1.0.0). Les images Windows et macOS sont non signées : une confirmation manuelle (SmartScreen / clic droit → Ouvrir) est demandée à la première ouverture.
+**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64 et .deb ARM64 pour Linux, installeur NSIS Windows x64, et .dmg Apple Silicon pour macOS) sont attachées à la [release **v1.0.5**](https://github.com/clausake/claus.io/releases/tag/v1.0.5) — elle est la seule release publique, les précédentes ont été retirées. Les images Windows et macOS sont non signées : une confirmation manuelle (SmartScreen / clic droit → Ouvrir) est demandée à la première ouverture.
 
-> Les versions 0.1.x ont été retirées — la release publique est **v1.0.0**.
+> Les versions 0.1.x et 1.0.0→1.0.4 ont été retirées — la release publique est **v1.0.5**.
 > Prérequis si vous installez depuis le ZIP du dépôt : `npm install` puis
 > `npm run build` (le `NODE_ENV=production` doit venir après, ou npm saute
 > les devDependencies).
@@ -123,7 +126,7 @@ npm run build:linux   # Linux (AppImage, deb)
 
 ## Qualité
 
-Le projet est jugé par **86 portes automatiques** exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 170 tests unitaires, 46 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
+Le projet est jugé par **105 portes automatiques** (`verify:*` déclarées dans `package.json`, dont 102 jouées au lot `npm run verify:all`) exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 216 tests unitaires, 44 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
 
 ```bash
 npm run verify:all            # le lot complet
