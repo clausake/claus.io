@@ -1,9 +1,9 @@
 {
   "name": "clausio",
-  "description": "claus.io — assistant culinaire IA open source (EUPL-1.2)",
+  "description": "claus.io \u2014 assistant culinaire IA open source (EUPL-1.2)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
