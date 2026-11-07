@@ -68,6 +68,13 @@ export function InventoryAudit({
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
   const [activeCategoryFilter, setActiveCategoryFilter] = useState("all");
   const [searchFilter, setSearchFilter] = useState("");
+  // C38 (constat 06/11) : l'onglet « Ingrédient généré » du banc du maitre
+  // EST le filtre categoriel ci-dessous — la categorie porte par recipes.ts
+  // pour tout ingredient ne d'une fiche IA. AUCUN attribut source n'existe
+  // en base ; ajouter un second onglet dupliquait le bouton (strict mode 2
+  // elements, mesure e2e). Le seul correctif possible : le rendu EXISTANT
+  // des trois actions pour la categorie generee, juge par
+  // test/e2e/ingredient-genere-actions.spec.ts.
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

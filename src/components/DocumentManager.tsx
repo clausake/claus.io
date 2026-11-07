@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useSyncExternalStore, useState, useEffect } from "react";
 import {
   Calendar,
   CheckCircle2,
@@ -25,6 +25,15 @@ import { SupplierBinderView } from "./documentmanager/SupplierBinderView";
 import { DraftsView } from "./documentmanager/DraftsView";
 import { QuickAddModal } from "./documentmanager/QuickAddModal";
 import { Lightbox } from "./documentmanager/Lightbox";
+// C38-B : le suivi d'extraction IA survit au changement d'onglet — le fetch
+// est PORTE par ce store de module (regle d'atelier-chat.ts, plan P3).
+import {
+  lancer as lancerExtraction,
+  sAbonner as sAbonnerExtraction,
+  instantane as instantaneExtraction,
+  accuserDelivre as accuserDelivreExtraction,
+  marquerErreurLue as marquerErreurLueExtraction,
+} from "../shared/extraction-suivi.js";
 
 
 export function DocumentManager({ t }: DocumentManagerProps) {
@@ -290,57 +299,101 @@ export function DocumentManager({ t }: DocumentManagerProps) {
   };
 
   const handleExtractFromDraft = async (id: string) => {
-    try {
-      setExtractingId(id);
-      const res = await fetch(`/api/documents/${id}/extract`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result && result.data) {
-          const matchedItems = (result.data.items || []).map((item: {item?: string; description?: string; quantity?: number; unit_price?: number; lot?: string; dlc?: string}) => {
-            const itemName = item.item || item.description || "";
-            const found = inventory.find(
-              (inv) =>
-                inv.name.toLowerCase().includes(itemName.toLowerCase()) ||
-                itemName.toLowerCase().includes(inv.name.toLowerCase()),
-            );
-            return {
-              original_name: itemName,
-              inventory_id: found ? found.id : "",
-              quantity: item.quantity || 0,
-              unit_price: item.unit_price || 0,
-              lot_number: item.lot || "",
-              dlc: item.dlc || "",
-            };
-          });
-
-          setFormData({
-            id: id,
-            type:
-              result.data.type === "AVOIR"
-                ? "AVOIR"
-                : result.data.type === "BL"
-                  ? "BON_LIVRAISON"
-                  : "FACTURE",
-            supplier: result.data.supplier || "",
-            date: result.data.date || new Date().toISOString().split("T")[0],
-            total_amount: result.data.total_amount || 0,
-            source_image_url: result.source_image_url || "",
-            items: matchedItems,
-          });
-          setShowForm(true);
-        }
-      } else {
-        toast("Erreur lors de l'extraction IA", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      toast("Erreur de connexion.", "error");
-    } finally {
-      setExtractingId(null);
+    // C38-B : le fetch est PORTE par le store (survit au changement
+    // d'onglet). La livraison de la reponse (formulaire pre-rempli) est
+    // faite par l'effet de livraison ci-dessous, meme si le composant a ete
+    // remonte entre-temps.
+    const doc = documents.find((d) => d.id === id);
+    const nom = [doc?.type, doc?.supplier].filter(Boolean).join(" ") || "Document";
+    setExtractingId(id);
+    const res = await lancerExtraction(id, nom);
+    if (!res.lance && res.erreur === "EXTRACTION_EN_COURS") {
+      toast("Une extraction IA est deja en cours.", "info");
     }
   };
+
+  // C38-B : livraison de la reponse — le composant peut remonter APRES la
+  // fin du fetch (changement d'onglet pendant l'extraction) ; au remontage
+  // la reponse est toujours dans l'instantane, elle est appliquee ici puis
+  // accusee (idempotent).
+  const suiviExtraction = useSyncExternalStore(
+    sAbonnerExtraction,
+    instantaneExtraction,
+  );
+  useEffect(() => {
+    // re-derive le bouton « extraction en cours » apres un remontage : si
+    // le composant revit pendant une extraction, ce document est surligne.
+    if (suiviExtraction.enCours && suiviExtraction.documentId) {
+      setExtractingId(suiviExtraction.documentId);
+    }
+    const reponse = suiviExtraction.reponse;
+    if (!reponse || suiviExtraction.delivre) return;
+    const data = (
+      reponse.corps as { data?: Record<string, unknown> } | undefined
+    )?.data;
+    if (!data) {
+      accuserDelivreExtraction(reponse.documentId);
+      return;
+    }
+    const items = (data.items || []) as {
+      item?: string;
+      description?: string;
+      quantity?: number;
+      unit_price?: number;
+      lot?: string;
+      dlc?: string;
+    }[];
+    const matchedItems = items.map((item) => {
+      const itemName = item.item || item.description || "";
+      const found = inventory.find(
+        (inv) =>
+          inv.name.toLowerCase().includes(itemName.toLowerCase()) ||
+          itemName.toLowerCase().includes(inv.name.toLowerCase()),
+      );
+      return {
+        original_name: itemName,
+        inventory_id: found ? found.id : "",
+        quantity: item.quantity || 0,
+        unit_price: item.unit_price || 0,
+        lot_number: item.lot || "",
+        dlc: item.dlc || "",
+      };
+    });
+
+    setFormData({
+      id: reponse.documentId,
+      type:
+        data.type === "AVOIR"
+          ? "AVOIR"
+          : data.type === "BL"
+            ? "BON_LIVRAISON"
+            : "FACTURE",
+      supplier: String(data.supplier || ""),
+      date:
+        String(data.date || "") ||
+        new Date().toISOString().split("T")[0],
+      total_amount: Number(data.total_amount || 0),
+      source_image_url: String(
+        reponse.corps.source_image_url || "",
+      ),
+      items: matchedItems,
+    });
+    setShowForm(true);
+    accuserDelivreExtraction(reponse.documentId);
+  }, [suiviExtraction, inventory]);
+
+  // C38-B : l'erreur est toasTEE par ce composant quand il est vivant (une
+  // seule fois — l'accuse empeche la banniere globale de la rejouer).
+  useEffect(() => {
+    if (
+      suiviExtraction.erreur !== null &&
+      !suiviExtraction.erreurLue &&
+      !suiviExtraction.enCours
+    ) {
+      toast(`Erreur d'extraction IA : ${suiviExtraction.erreur}`, "error");
+      marquerErreurLueExtraction();
+    }
+  }, [suiviExtraction]);
 
   // Group documents by month and day
   const groupedDocuments = documents
