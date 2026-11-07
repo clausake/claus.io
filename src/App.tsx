@@ -36,6 +36,8 @@ import { LandingPage } from "./components/LandingPage";
 import { NavItem } from "./components/NavItem";
 import { Assistant } from "./components/Assistant";
 import { AuthGate, type Utilisateur } from "./components/AuthGate";
+// C38-B : banniere globe du suivi d'extraction IA (visible tout onglet).
+import { BanniereExtraction } from "./components/BanniereExtraction";
 import { Sidebar } from "./components/Sidebar";
 import * as LazyViews from "./components/lazy-views";
 import { translateAlertMessage, translateIngredientHelper } from "./lib/helpers";
@@ -699,11 +701,6 @@ export default function App() {
               <LazyViews.AccountsView moi={user} />
             </div>
           )}
-          {activeTab === "comptes" && user?.role === "maitre" && (
-            <div className="animate-in fade-in duration-200">
-              <LazyViews.AccountsView moi={user} />
-            </div>
-          )}
           {activeTab === "settings" && (
             <div className="animate-in fade-in duration-200">
               <LazyViews.SettingsView
@@ -715,6 +712,10 @@ export default function App() {
           )}
           </Suspense>
         </div>
+        {/* C38-B : le suivi d'extraction IA est visible DEPUIS N'IMPORTE
+            QUEL onglet — le store de module (extraction-suivi.ts) garde la
+            verite pendant que le maitre navigue. */}
+        <BanniereExtraction />
       </main>
     </div>
     </AuthGate>
