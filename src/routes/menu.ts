@@ -199,8 +199,14 @@ recette: "Recipe Name", categorie: "Kategorie", ingredients: [{name: "Name", qua
   await logAudit(req, res, { route: "/api/analyze-menu", action: "analyze" });
   res.json(parsedData);
 } catch (error) {
+  // C38-bis : un 500 deve dire LA RAISON (regle llm.ts:93 « le message du
+  // serveur est le seul qui explique POURQUOI »). Le juge « Processing
+  // failed » rendait le toast du composant aveugle : le maitre ne savait
+  // PAS si c'etait « sans IA » (IA_DESACTIVEE), Ollama eteint, ou un JSON
+  // invalide. Relais de la raison, meme code (500).
   console.error(error);
-  res.status(500).json({ error: "Processing failed" });
+  const raison = error instanceof Error ? error.message : "Erreur inconnue";
+  res.status(500).json({ error: `L'analyse du menu a échoué : ${raison}` });
 }
 });
   return router;
