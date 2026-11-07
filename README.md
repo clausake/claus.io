@@ -90,14 +90,22 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**En installateur (pré-empaqueté, sans Node)** : les images compilées (AppImage ARM64 et .deb ARM64 pour Linux, installeur NSIS Windows x64, et .dmg Apple Silicon pour macOS) sont attachées à la [release **v1.0.5**](https://github.com/clausake/claus.io/releases/tag/v1.0.5) — elle est la seule release publique, les précédentes ont été retirées. Les images Windows et macOS sont non signées : une confirmation manuelle (SmartScreen / clic droit → Ouvrir) est demandée à la première ouverture.
+**Étape 1 — télécharger.** Sur la [page des releases](https://github.com/clausake/claus.io/releases), une seule release est publiée : **v1.0.5**. Prenez le fichier de votre plateforme :
 
-> Les versions 0.1.x et 1.0.0→1.0.4 ont été retirées — la release publique est **v1.0.5**.
-> Prérequis si vous installez depuis le ZIP du dépôt : `npm install` puis
-> `npm run build` (le `NODE_ENV=production` doit venir après, ou npm saute
-> les devDependencies).
+| Plateforme | Fichier |
+|---|---|
+| Windows 10/11 x64 | `claus.io.Setup.1.0.5.exe` |
+| macOS (Apple Silicon) | `claus.io-1.0.5-arm64.dmg` |
+| Linux ARM64 (AppImage) | `claus.io-1.0.5-arm64.AppImage` |
+| Linux ARM64 (paquet) | `clausio_1.0.5_arm64.deb` |
 
-**De source** (développeur) :
+**Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.5-arm64.AppImage`.
+
+**Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans **Réglages → Kit de démonstration** (et ne revient pas tout seul).
+
+**Étape 4 — choisir le moteur d'IA (facultatif).** Dans **Réglages → Intelligence** : `sans` (fonctionnement 100 % manuel), un moteur **local** (Ollama par défaut, ou tout serveur compatible OpenAI : llama.cpp-server, vLLM, LM Studio), ou un **fournisseur cloud** de la liste blanche (OpenAI, Mistral, Anthropic, Cohere, DeepSeek — la clef vit dans l'environnement, jamais en base). Le choix est effectif dès la génération suivante. Le logiciel est **complet sans IA** : chaque module fonctionne en saisie manuelle.
+
+**De source** (développeur, Node.js ≥ 22 et Python 3.12) :
 
 ```bash
 git clone https://github.com/clausake/claus.io.git
@@ -109,12 +117,15 @@ cp .env.example .env   # renseigner si nécessaire
 
 ## Lancement
 
+- **Installateur** : l'application s'ouvre seule sur son port local (`http://127.0.0.1:3000`). Windows : `LANCER_APPLICATION.bat`.
+- **De source** :
+
 ```bash
 npm run dev     # développement : http://localhost:3000
 npm start       # production locale
 ```
 
-Windows : `LANCER_APPLICATION.bat`. L'URL du moteur IA est configurable dans les Réglages.
+L'URL du moteur IA est configurable dans les Réglages. Les cinq langues de l'interface (français, anglais, allemand, espagnol, italien) se règlent dans Réglages ; le guide PDF téléchargeable y est disponible dans ces cinq langues avec les mêmes six sections.
 
 ## Build des exécutables
 
