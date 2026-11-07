@@ -174,11 +174,18 @@ verdict("U2_parallele", refusPar === 0, `refus=${refusPar}`);
 
 // ── U3/U4/U5 : la base, pas les codes HTTP ─────────────────────────────────
 const relu = await (await fetch(`${BASE}/api/menu-planning`)).json().catch(() => []);
-const lignes = Array.isArray(relu) ? relu : [];
-const idsBase = new Set(lignes.map((l) => String(l.id)));
+const lignesBrutes = Array.isArray(relu) ? relu : [];
+const tousIds = [...idsPlanning, ...idsPar];
+// U3/U4 jugent LA RAFLE du probe (40 seq + 200 parall = 240), pas la table
+// entiere : la ligne du kit d'exemples (id `demo-planning`, chantier 39-B)
+// vit dans la MEME table et ferait un faux rouge de comptage. Le juge compte
+// ses PROPRE ids recus (la parite avec la base est U5), jamais le contenu
+// global (lecon C39).
+const idsRecus = new Set(tousIds);
+const lignes = lignesBrutes.filter((l) => idsRecus.has(String(l.id)));
+const idsBase = new Set(lignesBrutes.map((l) => String(l.id)));
 verdict("U3_relu_en_base", lignes.length === 240, `lignes=${lignes.length} attendu=240`);
 
-const tousIds = [...idsPlanning, ...idsPar];
 const distincts = new Set(tousIds);
 verdict("U4_ids_distincts", distincts.size === 240, `distincts=${distincts.size} attendu=240 (recus=${tousIds.length})`);
 

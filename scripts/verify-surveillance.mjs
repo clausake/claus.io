@@ -209,11 +209,20 @@ try {
   check("scan agent depose des propositions", (scan1.json?.deposees ?? 0) >= 4,
     `deposees=${scan1.json?.deposees} propositions=${scan1.json?.propositions}`);
 
-  // S2/S3/S4/S5/S6 DELTA : les regles ont chacune depose leur ligne
+  // S2/S3/S4/S5/S6 DELTA : les regles ont chacune depose leur ligne.
+  // ⚠ C39-B : le kit d'exemples (semé AUTO, « Filet de canard (exemple) »
+  // minStock 2) peut deposer sa PROPRE suggestion « Rupture imminente » avant
+  // celle du semis. Les juges S2/S3 apparien donc par L'ID SEME dans le
+  // payload (le contenu de leur propre semis), pas par le premier titre.
   const rows = await suggestionsRows();
-  const rupt = rows.find((r) => r.titre?.startsWith("Rupture imminente"));
+  const rupt = rows.find(
+    (r) =>
+      r.titre?.startsWith("Rupture imminente") &&
+      r.action_route === "/api/purchasing/order" &&
+      JSON.parse(r.action_payload || "{}").items?.[0]?.inventory_id === rupture.json?.id,
+  );
   check("S2 R1 rupture -> suggestion + action pre-remplie purchasing",
-    !!rupt && rupt.action_route === "/api/purchasing/order" && JSON.parse(rupt.action_payload).items?.[0]?.inventory_id === rupture.json?.id,
+    !!rupt && JSON.parse(rupt.action_payload).items?.[0]?.inventory_id === rupture.json?.id,
     `titre=${rupt?.titre}`);
   const mortRow = rows.find((r) => r.titre?.startsWith("Stock mort"));
   check("S3 R2 stock mort -> suggestion anomalie", !!mortRow && mortRow.type === "anomalie", `titre=${mortRow?.titre}`);

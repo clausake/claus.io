@@ -157,14 +157,24 @@ def seed(data_dir):
     c = sqlite3.connect(os.path.join(data_dir, "agent_culinaire.db"))
     cur = c.cursor()
     # ⚠ L'app ne remplit PAS la table inventory au demarrage (verifie dans
-    # src/db/init.ts : le seed d'init ne touche PAS inventory). Les 116
-    # articles vus dans un run precedent venaient de mes propres POST, pas du
+    # src/db/init.ts : le seed d'init ne touche PAS inventory — sauf le KIT de
+    # demonstration du chantier 39-B, 1 ligne, qui ne suffit pas au bench).
+    # Les 116 articles vus dans un run precedent venaient de mes propres POST, pas du
     # serveur. Le bench doit donc creer SES articles : sans eux, les jointures
     # "supplier_prices -> inventory" ne portent sur rien et le verdict d'index
     # serait un artefact de base vide.
     if cur.execute("select count(*) from inventory").fetchone()[0] == 0:
         cur.executemany(
             "insert into inventory (id,name,quantity,minStock,unit,status,category,unit_price) "
+            "values (?,?,?,?,?,?,?,?)",
+            [("inv-%d" % i, "Article %03d" % i, i % 40, 3, ["kg", "l", "pi"][i % 3], "active",
+              ["Legumes", "Viandes", "Poissons", "Epices"][i % 4], round(1.0 + (i % 60) * 0.21, 2))
+             for i in range(180)])
+    else:
+        # Le kit démo (1 ligne) est deja la : completer jusqu'a 180 sans toucher
+        # a la ligne existante (le bench juge des plans, pas le contenu demo).
+        cur.executemany(
+            "insert or ignore into inventory (id,name,quantity,minStock,unit,status,category,unit_price) "
             "values (?,?,?,?,?,?,?,?)",
             [("inv-%d" % i, "Article %03d" % i, i % 40, 3, ["kg", "l", "pi"][i % 3], "active",
               ["Legumes", "Viandes", "Poissons", "Epices"][i % 4], round(1.0 + (i % 60) * 0.21, 2))
