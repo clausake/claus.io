@@ -104,6 +104,12 @@ test.beforeAll(async () => {
     );
   }
   if (!pret) throw new Error(`SERVEUR PAS PRET sur ${BASE}`);
+  // C39-B : le kit d'exemples est SEME par le serveur quand la base est
+  // VIERGE. Ce contrat pose ses comptes sur sa PROPRE facture (123,45 /
+  // 77,70) : il purge le kit avant ses juges — la purge est la voie reelle
+  // du client (POST /api/demo/supprimer), les lignes du kit sont TRACees.
+  // Les juges D1..D5 rejouent ensuite leurs propres semis.
+  await fetch(`${BASE}/api/demo/supprimer`, { method: "POST" });
 }, 60000);
 
 test.afterAll(() => {
