@@ -2113,3 +2113,18 @@ Preuves finales : tsc 0 err ; vitest 214/214 (208 + 6 du store) ; build OK ;
 `verify:no-mute` OK ; e2e ingredient-generé 2/2 ; temoin mtime 1790247072
 intouche.
 
+
+**Complement du 07/11 (C38-bis)** : la question « pareil pour l'extraction menu
+(onglet Ingenierie des Menus) ? » famille le banc mesuré ; deux deltas face a
+l'extraction des documents. (a) La route /api/analyze-menu rendait un 500
+GENERIQUE (« Processing failed ») : la regle llm.ts:93 (erreur NOMMÉE, jamais un
+500 nu) etait bafouee ici — corrige : « L'analyse du menu a échoué : <raison> »
+(premier demarrage sans IA -> IA_DESACTIVEE nommée, Ollama eteint -> le message
+LlmInjoignable, JSON invalide -> visible). (b) MIEUX que documents : au changement
+d'onglet PENDANT l'analyse, le fetch Continue (pas d'AbortController) et
+saveGeneratedRecipes (MenuAnalysis.tsx:220-234) execute ses POST /api/recipes
+MÊME demonter = les fiches SONT persistees dans Fiches Techniques de toute façon
+; seul l'affichage cartes de l'onglet Ingenierie est perdu — accepté tel quel :
+la carte persiste, un second bac de livraison (store) serait redondant.
+Sans IA :ARCHI identique (OCR/PDF texte -> MATERIEL du prompt llm seul ->
+pre-remplissage) : PaddleOCR/Tesseract ne remplissent JAMAIS les cases.
