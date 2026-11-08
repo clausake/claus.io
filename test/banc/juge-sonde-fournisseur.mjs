@@ -10,7 +10,7 @@
 //   1. `duree` non defini sur la voie de reussite -> la sonde CRASHAIT sur un
 //      serveurs parfaitement sain (ReferenceError). Un capteur qui meurt sur
 //      l'entree verte est un capteur mort.
-//   2. Le serveurs vLLM local (Qwen3.8-Flash-Next, :8888) repond 200 avec
+//   2. Le serveurs vLLM local (qwen3.8-flash-next, :8888) repond 200 avec
 //      `content: null` et le texte dans `message.reasoning` (modele a
 //      raisonnement qui a consumé les huit tokens de la sonde dans son
 //      raisonnement). Juger la vie sur le SEUL `content` declare un serveurs

@@ -113,7 +113,7 @@ async function sonderOpenAI(cible) {
   const corps = await gen.json().catch(() => null);
   // Le champ n'est PAS présumé: il est LU, et son absence est nommée.
   //
-  // LA LEÇON MESURÉE du 25/09 sur le poste: le serveurs vLLM (Qwen3.8-Flash-Next,
+  // LA LEÇON MESURÉE du 25/09 sur le poste: le serveurs vLLM (qwen3.8-flash-next,
   // :8888) repond 200 avec `content: null` et le texte dans `message.reasoning`
   // (un modele a raisonnement qui a consumé les huit tokens de la sonde dans son
   // raisonnement). Juger la vie d'un serveurs sur le SEUL `content` declare donc

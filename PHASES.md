@@ -207,7 +207,7 @@ statiquement dans `App.tsx` (→ chunk principal). Passés dans
 - Chaque phase a ses commits ; `git revert <sha>` pour annuler proprement.
 
 ## 🧠 Note de continuité (changement de modèle)
-Le travail Phases 0+1 a été fait avec **Qwen3 32B**. La Phase 2 est reprise
+Le travail Phases 0+1 a été fait avec **qwen3-32b**. La Phase 2 est reprise
 avec **DeepSeek v4** (plus fort en coding). Ce fichier fait le lien : tout ce
 qui est nécessaire pour reprendre est ici. Ne pas refaire Phases 0/1, elles
 sont mergées. Commencer la Phase 2 au point 1 (découpage server.ts).
