@@ -61,7 +61,7 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 | **Sauvegarde** | Le bouton « Sauvegarder » (Réglages) télécharge une archive prête à restaurer : la base **complète** (y compris les dernières écritures), vos réglages sans leurs secrets, vos documents importés et un manifeste de version. L'archive est vérifiée avant d'être livrée, et une copie automatique est prise au démarrage de l'application | 100 % sans IA |
 | **Reprise des données** | Après une réinstallation, l'application cherche une installation précédente sur le poste et **propose** de reprendre ses données (un clic, une copie de sécurité conservée avant). Vos données actuelles ne sont jamais écrasées, et le chemin exact de vos données est affiché dans Réglages | 100 % sans IA |
 
-Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes six sections, dont « Extraction IA et kit d'exemples ».
+Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes sept sections, dont « Extraction IA et kit d'exemples » et « Sauvegarde et reprise des données ».
 
 ## Intelligence : 100 % local par défaut, multi-moteurs
 
@@ -129,7 +129,7 @@ npm run dev     # développement : http://localhost:3000
 npm start       # production locale
 ```
 
-L'URL du moteur IA est configurable dans les Réglages. Les cinq langues de l'interface (français, anglais, allemand, espagnol, italien) se règlent dans Réglages ; le guide PDF téléchargeable y est disponible dans ces cinq langues avec les mêmes six sections.
+L'URL du moteur IA est configurable dans les Réglages. Les cinq langues de l'interface (français, anglais, allemand, espagnol, italien) se règlent dans Réglages ; le guide PDF téléchargeable y est disponible dans ces cinq langues avec les mêmes sept sections.
 
 ## Build des exécutables
 

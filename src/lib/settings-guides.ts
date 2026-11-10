@@ -75,6 +75,15 @@ export function exporterGuidePDF(lang: string) {
               "• Sur une base vierge, un kit d'exemples est posé automatiquement : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP.",
               "• Dans Réglages, la carte « Kit de démonstration » permet de le ressemer ou de l'effacer définitivement en un clic."
             ]
+          },
+          {
+            title: "7. SAUVEGARDE ET REPRISE DES DONNÉES",
+            content: [
+              "• Dans Réglages, le bouton « Sauvegarder » télécharge une archive complète et vérifiée : la base (y compris les dernières écritures), vos réglages sans leurs secrets, vos documents importés et un manifeste de version. Réservé au compte maître.",
+              "• Une copie automatique est prise au démarrage de l'application puis toutes les heures ; les cinq plus récentes sont conservées dans le dossier de sauvegardes.",
+              "• Pour restaurer : fermez l'application, copiez les fichiers de l'archive dans le dossier de données (le chemin exact est affiché dans Réglages → Données), puis relancez. Copiez d'abord ce dossier tel quel avant de remplacer quoi que ce soit.",
+              "• Après une réinstallation, l'application cherche une installation précédente sur le poste et vous propose de reprendre vos données ; vos données actuelles ne sont jamais écrasées."
+            ]
           }
         ],
         footer: "claus.io - Solution de Pilotage Professionnel de Cuisine"
@@ -136,6 +145,15 @@ export function exporterGuidePDF(lang: string) {
               "• A global banner shows the running extraction from any tab.",
               "• On an empty database, a sample kit is seeded automatically: 1 stock item, 1 production sheet, 1 scanned document, 1 HACCP document.",
               "• In Settings, the “Sample kit” card re-seeds it or wipes it for good with one click."
+            ]
+          },
+          {
+            title: "7. BACKUP & DATA RECOVERY",
+            content: [
+              "• In Settings, the “Save backup” button downloads a complete, verified archive: the database (including the latest writes), your settings without their secrets, your imported documents and a version manifest. Master account only.",
+              "• An automatic copy is taken at application start and then every hour; the five most recent are kept in the backups folder.",
+              "• To restore: close the application, copy the archive files into the data folder (the exact path is shown in Settings → Data), then restart. Copy that folder as-is first.",
+              "• After a reinstall, the application looks for a previous installation on the machine and offers to take over your data; your current data is never overwritten."
             ]
           }
         ],
@@ -199,6 +217,15 @@ export function exporterGuidePDF(lang: string) {
               "• Auf einer leeren Datenbank wird automatisch ein Beispiel-Kit gesetzt: 1 Lagerartikel, 1 Produktionsblatt, 1 gescanntes Dokument, 1 HACCP-Dokument.",
               "• In den Einstellungen setzt die Karte „Beispiel-Kit“ das Kit neu oder löscht es endgültig."
             ]
+          },
+          {
+            title: "7. SICHERUNG UND WIEDERHERSTELLUNG DER DATEN",
+            content: [
+              "• In den Einstellungen lädt die Schaltfläche „Sichern“ ein vollständiges, geprüftes Archiv herunter: die Datenbank (einschließlich der letzten Schreibungen), Ihre Einstellungen ohne Geheimnisse, Ihre importierten Dokumente und ein Versionsmanifest. Nur für das Master-Konto.",
+              "• Beim Start der Anwendung und danach stündlich wird automatisch eine Kopie erstellt; die fünf neuesten werden im Sicherungsordner aufbewahrt.",
+              "• Wiederherstellen: Anwendung schließen, die Dateien des Archivs in den Datenordner kopieren (der genaue Pfad steht in Einstellungen → Daten), dann neu starten. Kopieren Sie diesen Ordner zuvor unverändert.",
+              "• Nach einer Neuinstallation sucht die Anwendung eine frühere Installation auf dem Rechner und bietet an, Ihre Daten zu übernehmen; Ihre aktuellen Daten werden niemals überschrieben."
+            ]
           }
         ],
         footer: "claus.io - Professionelle Steuerzentrale für Großküchen"
@@ -261,6 +288,15 @@ export function exporterGuidePDF(lang: string) {
               "• En una base vacía, un kit de ejemplos se siembra automáticamente: 1 artículo en stock, 1 ficha de producción, 1 documento escaneado, 1 documento HACCP.",
               "• En Ajustes, la tarjeta «Kit de demostración» lo resiembra o lo borra definitivamente con un clic."
             ]
+          },
+          {
+            title: "7. COPIA DE SEGURIDAD Y RECUPERACIÓN DE DATOS",
+            content: [
+              "• En Ajustes, el botón «Guardar copia» descarga un archivo completo y verificado: la base de datos (incluidas las últimas escrituras), sus ajustes sin secretos, sus documentos importados y un manifiesto de versión. Reservado a la cuenta maestra.",
+              "• Se toma una copia automática al iniciar la aplicación y después cada hora; se conservan las cinco más recientes en la carpeta de copias.",
+              "• Para restaurar: cierre la aplicación, copie los archivos del archivo en la carpeta de datos (la ruta exacta aparece en Ajustes → Datos) y vuelva a iniciar. Copie antes esa carpeta tal cual.",
+              "• Tras una reinstalación, la aplicación busca una instalación anterior en el equipo y le propone recuperar sus datos; sus datos actuales nunca se sobrescriben."
+            ]
           }
         ],
         footer: "claus.io - Plataforma de Mando Culinario Profesional"
@@ -322,6 +358,15 @@ export function exporterGuidePDF(lang: string) {
               "• Una fascia globale mostra l'estrazione in corso da qualsiasi scheda.",
               "• Su un database vuoto, un kit di esempi è seminato automaticamente: 1 articolo a magazzino, 1 scheda di produzione, 1 documento scansionato, 1 documento HACCP.",
               "• In Impostazioni, la scheda « Kit dimostrativo » lo risemina o lo cancella definitivamente con un clic."
+            ]
+          },
+          {
+            title: "7. BACKUP E RIPRISTINO DEI DATI",
+            content: [
+              "• In Impostazioni, il pulsante «Salva backup» scarica un archivio completo e verificato: il database (comprese le ultime scritture), le sue impostazioni senza segreti, i documenti importati e un manifesto di versione. Riservato all'account maestro.",
+              "• Una copia automatica viene presa all'avvio dell'applicazione e poi ogni ora; le cinque più recenti sono conservate nella cartella dei backup.",
+              "• Per ripristinare: chiuda l'applicazione, copi i file dell'archivio nella cartella dei dati (il percorso esatto è indicato in Impostazioni → Dati), quindi riavvii. Copi prima quella cartella così com'è.",
+              "• Dopo una reinstallazione, l'applicazione cerca un'installazione precedente sul computer e le propone di riprendere i suoi dati; i dati attuali non vengono mai sovrascritti."
             ]
           }
         ],
