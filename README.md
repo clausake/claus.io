@@ -79,7 +79,7 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 - **Frontend** : React 19 + Vite + Tailwind CSS, lazy-loading par vue
 - **Backend** : Express + SQLite (20 routeurs, `server.ts` 258 lignes), `127.0.0.1:3000`
-- **Desktop** : Electron (Windows NSIS, macOS DMG, Linux AppImage/deb)
+- **Desktop** : Electron 45 (Windows NSIS, macOS DMG, Linux AppImage/deb)
 - **OCR** : PaddleOCR PP-OCRv5 (12,8 Mo, hors ligne) + repli Tesseract
 - **Epicure** : embeddings d'ingrédients 300d (arXiv:2605.22391)
 - **Identité** : sessions argon2, audit trail de chaque écriture (règlement CE 852/2004 art. 5)
@@ -101,13 +101,13 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 | Linux ARM64 (AppImage) | `claus.io-1.0.6-arm64.AppImage` |
 | Linux ARM64 (paquet) | `clausio_1.0.6_arm64.deb` |
 
-Chaque fichier est publié avec sa somme de contrôle (`SOMMES-SHA256.txt`) : après téléchargement, comparez la somme (`sha256sum <fichier>` sous Linux/macOS, `Get-FileHash <fichier>` sous Windows) à celle du fichier texte pour être sûr que le téléchargement est intact.
+Chaque release publie aussi `SOMMES-SHA256.txt` : après téléchargement, comparez la somme de votre fichier (`sha256sum <fichier>` sous Linux/macOS, `Get-FileHash <fichier>` sous Windows) à la ligne du fichier qui porte son nom — si les deux sommes sont identiques, le téléchargement est intact.
 
 **Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.6-arm64.AppImage`.
 
-**Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans **Réglages → Kit de démonstration** (et ne revient pas tout seul).
+**Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Elle commence par vous demander de créer le **compte maître** (le vôtre, avec mot de passe) ; les comptes employé se déclarent ensuite dans **Réglages → Comptes**, et les exports de la base comme l'archive de sauvegarde sont réservés au maître. Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans **Réglages → Kit de démonstration** (et ne revient pas tout seul). Si une **installation précédente** est retrouvée sur le poste, l'application le signale et **propose** de reprendre ses données (une copie de sécurité est conservée avant tout import ; vos données actuelles ne sont jamais écrasées).
 
-**Étape 4 — choisir le moteur d'IA (facultatif).** Dans **Réglages → Intelligence** : `sans` (fonctionnement 100 % manuel), un moteur **local** (Ollama par défaut, ou tout serveur compatible OpenAI : llama.cpp-server, vLLM, LM Studio), ou un **fournisseur cloud** de la liste blanche (OpenAI, Mistral, Anthropic, Cohere, DeepSeek — la clef vit dans l'environnement, jamais en base). Le choix est effectif dès la génération suivante. Le logiciel est **complet sans IA** : chaque module fonctionne en saisie manuelle.
+**Étape 4 — choisir le moteur d'IA (facultatif).** Dans **Réglages → Intelligence** : `sans` (fonctionnement 100 % manuel), un moteur **local** (Ollama par défaut, ou tout serveur compatible OpenAI : llama.cpp-server, vLLM, LM Studio), ou un **fournisseur cloud** de la liste blanche (OpenAI, Mistral, Anthropic, Cohere, DeepSeek). Pour un moteur local, aucune clef n'est demandée ; pour un fournisseur cloud, la clef d'API se saisit dans les Réglages — elle est rangée dans le coffre du système d'exploitation, jamais en base ni à l'écran. Le choix est effectif dès la génération suivante. Le logiciel est **complet sans IA** : chaque module fonctionne en saisie manuelle.
 
 **De source** (développeur, Node.js ≥ 22 et Python 3.12) :
 
@@ -151,6 +151,12 @@ python3 scripts/lire-gates.py # qui est rouge
 ## Données
 
 100 % locales : SQLite, uploads et réglages dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). **Réglages → Données** affiche le chemin réellement utilisé sur votre poste : copiez-le pour conserver une sauvegarde de votre côté.
+
+**Comptes.** Au premier lancement, l'application demande de créer le **compte maître** (le vôtre, avec mot de passe) ; un compte **agent** de lecture seule existe pour l'assistant IA. Les comptes **employé** (rôle `staff`) se déclarent ensuite dans **Réglages → Comptes**. Le maître seul gère les comptes, les réglages et les exports : l'export de la base et l'archive de sauvegarde sont réservés au maître (un employé ou l'agent reçoit un refus explicite). Les sauvegardes automatiques, elles, fonctionnent pour tout le monde.
+
+**Sauvegarder (Réglages → Données, compte maître).** Le bouton télécharge une archive `.zip` prête à restaurer : la base complète (y compris les dernières écritures), vos réglages sans leurs secrets, vos documents importés et un manifeste de version. L'archive est vérifiée avant d'être livrée. En parallèle, une copie automatique est prise au démarrage de l'application puis toutes les heures (les cinq plus récentes sont conservées).
+
+**Restaurer.** Il n'y a pas de bouton « Restaurer » dans l'application : l'archive est un dossier de données complet. Fermez l'application, ouvrez le dossier de données affiché dans Réglages → Données, copiez-y les fichiers de l'archive (la base `agent_culinaire.db` et le dossier `uploads`), puis relancez. En cas de doute, copiez d'abord le dossier tel quel dans un coin avant de remplacer quoi que ce soit.
 
 Une réinstallation ne perd rien : si une installation précédente est retrouvée sur le poste, l'application propose de reprendre ses données (les vôtres d'abord, les anciennes ensuite — jamais l'inverse).
 
