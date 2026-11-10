@@ -101,6 +101,8 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 | Linux ARM64 (AppImage) | `claus.io-1.0.6-arm64.AppImage` |
 | Linux ARM64 (paquet) | `clausio_1.0.6_arm64.deb` |
 
+Chaque fichier est publié avec sa somme de contrôle (`SOMMES-SHA256.txt`) : après téléchargement, comparez la somme (`sha256sum <fichier>` sous Linux/macOS, `Get-FileHash <fichier>` sous Windows) à celle du fichier texte pour être sûr que le téléchargement est intact.
+
 **Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.6-arm64.AppImage`.
 
 **Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans **Réglages → Kit de démonstration** (et ne revient pas tout seul).
