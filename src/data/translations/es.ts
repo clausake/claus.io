@@ -680,6 +680,7 @@ export const ES_TRANSLATIONS: Record<string, string> = {
     downloadDB: "Descargar SQLite",
     downloadGuide: "Descargar Guía de Usuario",
     runBackup: "Hacer Backup",
+    backupDone: "Copia de seguridad descargada.",
     saveSettings: "Guardar config.",
     principal: "Principal",
     operations: "Operaciones",

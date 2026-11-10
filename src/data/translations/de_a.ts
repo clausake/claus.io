@@ -588,6 +588,7 @@ export const DE_A: Record<string, string> = {
     downloadDB: "Lokale DB (.sqlite) herunterladen",
     downloadGuide: "Benutzerhandbuch herunterladen",
     runBackup: "Eine Sicherung ausführen",
+    backupDone: "Sicherung heruntergeladen.",
     saveSettings: "Änderungen speichern",
     principal: "Hauptmenü",
     nom: "Name",

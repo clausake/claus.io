@@ -191,7 +191,10 @@ async function startServer() {
 
   // Backup automatique horaire de la base SQLite (rotation 5 backups).
   // C4 : le handle `db` du serveur est passe au backup pour le fold WAL.
-  startDbBackup(storageDir, path.join(storageDir, "agent_culinaire.db"), db);
+  // Chantier 45 : le premier backup est pose AU DEMARRAGE (le code d'avant
+  // ne posait qu'un setInterval d'une heure : le dossier backups/ restait
+  // ABSENT sur une installation neuve).
+  startDbBackup(storageDir, db);
 
   // Synchronise la référence partagée des settings (utilisée par le client Ollama
   // et les routes qui ont besoin de model_name/language sans dépendre de la base).
@@ -216,7 +219,7 @@ async function startServer() {
   // --- Routeurs ---
   // /api racine : settings, backup, network-info, ollama/status
   app.use(settingsRouter);
-  app.use(backupRouter);
+  app.use(backupRouter(db, logAudit));
   // Routeurs montés à la racine (leurs chemins commencent par /api/...)
   app.use(inventoryRouter(db, logAudit));
   app.use(suppliersRouter(db, logAudit));
@@ -228,7 +231,7 @@ async function startServer() {
   app.use(dashboardRouter(db));
   app.use(recipesRouter(db, logAudit));
   app.use(menuplanningRouter(db, logAudit));
-  app.use(adminRouter(storageDir, logAudit));
+  app.use(adminRouter(storageDir, logAudit, db));
   app.use(epicureRouter(logAudit));
   app.use(robotsRouter(db, logAudit));
   app.use(supplierpricesRouter(db, logAudit));

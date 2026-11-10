@@ -782,6 +782,7 @@ export const EN_A: Record<string, string> = {
     downloadDB: "Download local DB (.sqlite)",
     downloadGuide: "Download User Guide",
     runBackup: "Run a backup",
+    backupDone: "Backup downloaded.",
     saveSettings: "Save changes",
     principal: "Main",
 };

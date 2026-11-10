@@ -1,32 +1,29 @@
+// Backup automatique horaire de la base SQLite.
+//
+// Chantier 42 — le backup automatique utilise le MEME helper de snapshot que
+// les exports manuels (src/services/snapshot-sqlite.ts). Avant, il copiait
+// le `.db` nu : en mode WAL, une copie de fichier perd les dernieres
+// ecritures (elles vivent dans le `-wal`). Le helper produit un fichier
+// AUTONOME (mode DELETE, aucun sidecar) et verifie son integrite.
+//
+// Chantier 45 — LE PREMIER BACKUP EXISTE REELLEMENT.
+// Le commentaire d'avant annoncait "un premier fold+copie AU DEMARRAGE" mais
+// le code ne posait qu'un `setInterval` d'une heure : sur une installation
+// neuve, le dossier `backups/` etait ABSENT tant qu'une heure n'avait pas
+// passe. Mesure de l'audit : "Sur le serveur isole nouvellement demarre :
+// dossier backups ABSENT." Le premier backup est desormais pose au
+// demarrage, avec une erreur NOMMEE et observable.
+//
+// Chantier 45 (rotation) — les SIDECARS sont supprimes avec leur backup.
+// La rotation filtrait sur les `.db` seuls : un `-wal` ou un `-shm` d'un
+// backup supprime restait sur le disque. Les deux sont desormais traites.
 import fs from "fs";
 import path from "path";
-
-// Backup automatique horaire de la base SQLite.
-// - Crée le dossier <dataDir>/backups/ si inexistant,
-// - copie la base toutes les heures vers backups/db-YYYY-MM-DD_HH-mm-ss.db,
-// - ne garde que les 5 derniers backups (rotation par nom de fichier),
-// - journalise chaque copie ; les erreurs sont loguées sans crasher le process.
-// C4 : la base est en WAL (init.ts:44). Une copie du seul .db perd les
-// écritures du journal ; on fold donc le WAL (TRUNCATE) dans le .db AVANT la
-// copie, puis on copie aussi .db-wal/.db-shm s'ils portent encore des octets.
+import type { Database } from "sqlite";
+import { snapshotSqlite, SnapshotErreur } from "./snapshot-sqlite.js";
 
 const BACKUP_INTERVAL_MS = 3600000; // 1 heure
 const MAX_BACKUPS = 5;
-
-// C4 : le fold WAL. Le handle est passe en parametre (celui du serveur, deja
-// ouvert) : `initDatabase()` n'est PAS idempotente (elle re-OPEN la base et
-// reseede) — la rappeler dans un juge produisait des lignes d'audit en double
-// et des seeds fantomes. Le PRAGMA wal_checkpoint(TRUNCATE) fold le journal
-// dans le .db avant copie. Si aucun handle n'est passe (juge qui appelle la
-// fonction directement), on FOLDE via un handle ephemere ferme immediatement
-// — jamais le handle du serveur, jamais `initDatabase()`.
-async function foldWal(db: { exec(sql: string): Promise<unknown> } | undefined): Promise<void> {
-  // Le fold n'a de sens QUE dans le process du serveur (le handle y est
-  // ouvert). Sans handle, la copie du seul .db reste lisible — le WAL peut
-  // porter les dernieres écritures, defaut NOMMÉ, pas une exception.
-  if (!db) return;
-  await db.exec("PRAGMA wal_checkpoint(TRUNCATE);");
-}
 
 function timestampLocal(): string {
   const d = new Date();
@@ -37,60 +34,98 @@ function timestampLocal(): string {
   );
 }
 
-// Copie la base et supprime les backups au-delà des 5 derniers.
-export async function runDbBackup(
-  dataDir: string,
-  dbPath: string,
-  db?: { exec(sql: string): Promise<unknown> },
-): Promise<void> {
+/**
+ * Pose un backup autonome et verifie dans <dataDir>/backups/.
+ * Le fichier est produit par le helper de snapshot (sauvegarde en ligne) :
+ * il contient l'etat complet, WAL compris, et se suffit a lui-meme.
+ */
+export async function runDbBackup(dataDir: string, db: Database): Promise<string> {
   const backupDir = path.join(dataDir, "backups");
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }
-  if (!fs.existsSync(dbPath)) return;
-
-  // C4 : fold du WAL dans le fichier principal (await obligatoire : sans
-  // attendre, le .db est copie avant que le checkpoint WAL ne soit termine
-  // et le backup reste incomplet), puis copie des trois fichiers.
-  await foldWal(db);
 
   const backupName = `db-${timestampLocal()}.db`;
   const backupPath = path.join(backupDir, backupName);
-  fs.copyFileSync(dbPath, backupPath);
-  // Les sidecars ne sont copies que s'ils portent des octets (apres un fold
-  // reussi ils sont vides, et un fichier vide ne nuit pas a la restauration).
-  for (const suffixe of ["-wal", "-shm"]) {
-    const side = `${dbPath}${suffixe}`;
-    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
-      fs.copyFileSync(side, `${backupPath}${suffixe}`);
-    }
+  // Le snapshot est produit dans un fichier TEMPORAIRE, puis deplace a sa
+  // place finale : la base VIVANTE ne peut jamais etre remplacee par un
+  // backup (le serveur ecrit dans le fichier ouvert, pas dans son nom).
+  const snapshot = await snapshotSqlite(
+    db,
+    path.join(backupDir, `snapshot-${process.pid}-${Date.now().toString(36)}.db`),
+    { conserverSiEchec: false },
+  );
+  try {
+    fs.renameSync(snapshot.chemin, backupPath);
+  } catch (e) {
+    try { fs.unlinkSync(snapshot.chemin); } catch { /* deja absent */ }
+    throw new SnapshotErreur(
+      "BACKUP_PUBLICATION_ECHEC",
+      "Le backup automatique n'a pas pu etre depose.",
+      String((e as Error)?.message ?? e),
+    );
   }
 
   const sizeKo = (fs.statSync(backupPath).size / 1024).toFixed(1);
-  console.log(`[BACKUP] DB copiée → ${backupName} (${sizeKo} Ko)`);
+  console.log(
+    `[BACKUP] Base sauvegardee -> ${backupName} (${sizeKo} Ko, ` +
+      `${snapshot.lignes} lignes, ${snapshot.tables.length} tables)`,
+  );
 
-  // Rotation : le nom contient le timestamp (tri alphabétique = tri chronologique).
-  const files = fs
-    .readdirSync(backupDir)
+  // Rotation : le nom contient le timestamp (tri alphabétique = tri
+  // chronologique). Les SIDECARS d'un backup supprime partent avec lui.
+  const fichiers = fs.readdirSync(backupDir);
+  const backups = fichiers
     .filter((f) => f.startsWith("db-") && f.endsWith(".db"))
     .sort();
-  while (files.length > MAX_BACKUPS) {
-    const oldest = files.shift()!;
-    fs.unlinkSync(path.join(backupDir, oldest));
-    console.log(`[BACKUP] Ancien backup supprimé : ${oldest}`);
+  while (backups.length > MAX_BACKUPS) {
+    const oldest = backups.shift()!;
+    for (const suffixe of ["", "-wal", "-shm"]) {
+      const p = path.join(backupDir, oldest + suffixe);
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {
+        /* deja absent */
+      }
+    }
+    console.log(`[BACKUP] Ancien backup supprime : ${oldest}`);
   }
+  // Les sidecars ORPHELINS (d'un backup deja supprime par une version
+  // anterieure) sont nettoyes aussi : la rotation "5 backups" ne doit pas
+  // laisser trainer des fichiers d'anciennes sauvegardes.
+  for (const f of fichiers) {
+    if (!f.startsWith("db-")) continue;
+    if (!f.endsWith("-wal") && !f.endsWith("-shm")) continue;
+    if (backups.includes(f.replace(/-(wal|shm)$/, ".db"))) continue;
+    try {
+      fs.unlinkSync(path.join(backupDir, f));
+      console.log(`[BACKUP] Sidecar orphelin supprime : ${f}`);
+    } catch {
+      /* deja absent */
+    }
+  }
+
+  return backupPath;
 }
 
-// Démarre le backup : un premier fold+copie AU DEMARRAGE (C4 : la premiere
-// heure ne doit pas laisser la base sans backup), puis l'intervalle horaire.
-// Retourne stop() pour arrêter l'intervalle (tests).
-export function startDbBackup(
-  dataDir: string,
-  dbPath: string,
-  db?: { exec(sql: string): Promise<unknown> },
-): () => void {
+/**
+ * Demarre le backup automatique : UN backup reel AU DEMARRAGE (chantier 45),
+ * puis l'intervalle horaire. Retourne stop() pour arreter l'intervalle.
+ */
+export function startDbBackup(dataDir: string, db: Database): () => void {
+  // Le premier backup est pose tout de suite, et son echec est NOMME et
+  // journalise (pas un simple "on essayera plus tard"). L'etat du serveur ne
+  // depend pas de lui : un backup rate ne doit pas empeicher l'application
+  // de tourner.
+  void runDbBackup(dataDir, db).catch((err) => {
+    console.error(
+      "[BACKUP] Premier backup automatique impossible :",
+      err instanceof SnapshotErreur ? `${err.code} - ${err.message}` : err,
+    );
+  });
+
   const timer = setInterval(() => {
-    void runDbBackup(dataDir, dbPath, db).catch((err) => {
+    void runDbBackup(dataDir, db).catch((err) => {
       console.error("[BACKUP] Erreur lors de la sauvegarde :", err);
     });
   }, BACKUP_INTERVAL_MS);

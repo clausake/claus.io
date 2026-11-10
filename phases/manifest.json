@@ -1,6 +1,6 @@
 {
   "original_octets": 270908,
-  "original_sha256": "20dd9b361ba81d08b8640da4dc8fdf251fd31d6df02ee6e586a4fe5d94b91d9d",
+  "original_sha256": "3aa34e5d8a075457fbf9cb56badc532311e803b4cf85021ad29314c223e10e2e",
   "chaud_octets": 78486,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 18916,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "C38-bis consigne : /api/analyze-menu rendait un 500 generique (regle erreur NOMMEE bafouee) - corrige « L'analyse du menu a echoue : <raison> » ; mesure : au changement d'onglet pendant l'analyse menu, saveGeneratedRecipes persiste les fiches MEME demonter (MIEUX que documents, pas de second bac) ; archi sans IA identique (OCR/PDF = materiel du prompt, jamais pre-remplissage). ancre recalculee par le juge (recolle f78b6d60), jamais recopiee a la main",
-    "date": "2026-11-07T08:21:55.234226",
+    "motif": "chantier 42-45 consigne : les exports de la base livrent un SNAPSHOT SQLite coherent et verifie (integrity_check), reserves au maitre (garde centralisee), ZIP sur liste blanche, premier backup automatique pose au demarrage ; ancre recalculee par le juge (recolle 3aa34e5d), jamais recopiee a la main",
+    "date": "2026-11-10T07:20:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 38 consigne : l'extraction IA d'un document survit au changement d'onglet (le fetch porte par le store de module extraction-suivi.ts selon la regle d'atelier-chat.ts — la reponse atterrit meme demonte, et la banniere globale BanniereExtraction.tsx la rend depuis tout onglet) ; l'ingredient genere juge PAR MESURE e2e (ingredient-genere-actions.spec.ts : les 3 actions + le crayon prefilent pour la categorie posee par recipes.ts, le chemin reel des fiches IA) ; rendu double de AccountsView retraits ; ancre recalculee par la boucle du juge (recolle bd5a4b59), jamais recopiee a la main sur un fichier",
-    "date": "2026-11-07T03:43:08.846510",
-    "note": "le .orig reste l'etat d'origine et n'est pas retabli ; le recolle juge est la nouvelle ancre ; l'entree reste chaude (regle '## Chantier N' du decoupeur)."
+    "motif": "chantier 42-45 consigne : les exports de la base livrent un SNAPSHOT SQLite coherent et verifie (integrity_check), reserves au maitre (garde centralisee), ZIP sur liste blanche, premier backup automatique pose au demarrage ; ancre recalculee par le juge (recolle 3aa34e5d), jamais recopiee a la main",
+    "date": "2026-11-10T07:20:00.000000",
+    "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }

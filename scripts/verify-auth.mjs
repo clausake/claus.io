@@ -227,13 +227,21 @@ try {
   // vivantes et journal d'audit y sont. La gate exempte les GET (A1), donc la
   // garde doit exister DANS la route. Mesure du scan 015 : un anonyme recevait
   // 290 816 o de SQLite en 200 — cette regle rougissait sur cet etat exact.
+  //
+  // Chantier 43 : la garde des exports est CENTRALISEE (src/middleware/
+  // garde-maitre.ts) et distingue les deux refus : 401 AUTH_REQUISE quand
+  // il n'y a AUCUNE session (l'identite est requise), 403 MAITRE_REQUIS quand
+  // la session existe mais n'est pas maitre. L'ancien code repondait 403 pour
+  // l'anonyme : le refus reste, mais il dit maintenant ce qui manque.
+  // L'ESSENTIEL est inchange et toujours juge : l'anonyme ne recoit ZERO
+  // octet de la base (le fichier n'est jamais servi sans session).
   const a6 = await fetch(`${BASE}/api/admin/db-download`, {
     headers: { "X-Cookdrive-Instance": TOKEN_INSTANCE },
   }).then(async (r) => ({ status: r.status, type: r.headers.get("content-type") ?? "",
                           debut: (await r.arrayBuffer()).byteLength }))
     .catch((e) => ({ status: 0, type: String(e), debut: 0 }));
-  check("A6 GET /api/admin/db-download sans session -> 403 MAITRE_REQUIS",
-    a6.status === 403, `status=${a6.status} type=${a6.type} octets=${a6.debut}`);
+  check("A6 GET /api/admin/db-download sans session -> 401 AUTH_REQUISE (0 octet de base)",
+    a6.status === 401 && a6.debut < 4096, `status=${a6.status} type=${a6.type} octets=${a6.debut}`);
 
   // A2 la gate mord sur mutation anonyme
   const a2 = await call("POST", "/api/inventory", { name: "x", quantity: 1, unit: "kg", category: "test" });
@@ -326,6 +334,57 @@ try {
   const c2 = await call("POST", "/api/users", { username: "re-entre", password: "passe-re-entre", role: "staff" });
   check("C2 logout detruit la session -> mutation 401",
     c2logout.status === 200 && c2.status === 401, `logout=${c2logout.status} post=${c2.status}`);
+
+  // ── Chantier 43 : LES EXPORTS SONT RESERVES AU MAITRE, SUR LES DEUX VOIES.
+  // Le defaut mesure : la restriction "maitre" n'existait que sur
+  // /api/admin/db-download. POST /api/backup n'en avait pas : un compte
+  // STAFF obtenait un ZIP contenant la base ENTIERE (hachages argon2,
+  // sessions vivantes, journal d'audit). Le defaut est reproduit ici par
+  // la matrice des quatre roles, sur les DEUX exports.
+  const matrices = [];
+  // 1. Anonyme : aucune session.
+  jar.cd_session = undefined; delete jar.cd_session;
+  const mAnonBackup = await call("POST", "/api/backup");
+  const mAnonDl = await call("GET", "/api/admin/db-download");
+  matrices.push(
+    ["anonyme", "POST /api/backup", mAnonBackup.status, 401, mAnonBackup.json?.error],
+    ["anonyme", "GET /api/admin/db-download", mAnonDl.status, 401, mAnonDl.json?.error],
+  );
+
+  // 2. Agent : session d'un role qui n'ecrit pas.
+  await call("POST", "/api/auth/login", { username: "hermes", password: "passe-agent-01" }, false);
+  const mAgentBackup = await call("POST", "/api/backup");
+  const mAgentDl = await call("GET", "/api/admin/db-download");
+  matrices.push(
+    ["agent", "POST /api/backup", mAgentBackup.status, 403, mAgentBackup.json?.error],
+    ["agent", "GET /api/admin/db-download", mAgentDl.status, 403, mAgentDl.json?.error],
+  );
+
+  // 3. Staff : session d'un role qui ecrit le METIER mais pas les exports.
+  await call("POST", "/api/auth/login", { username: "brigade", password: "passe-staff-01" }, false);
+  const mStaffBackup = await call("POST", "/api/backup");
+  const mStaffDl = await call("GET", "/api/admin/db-download");
+  matrices.push(
+    ["staff", "POST /api/backup", mStaffBackup.status, 403, mStaffBackup.json?.error],
+    ["staff", "GET /api/admin/db-download", mStaffDl.status, 403, mStaffDl.json?.error],
+  );
+
+  // 4. Maitre : les deux exports repondent 200.
+  await call("POST", "/api/auth/login", { username: "maitre", password: "passe-2026-fort" }, false);
+  const mMaitreBackup = await call("POST", "/api/backup");
+  const mMaitreDl = await call("GET", "/api/admin/db-download");
+  matrices.push(
+    ["maitre", "POST /api/backup", mMaitreBackup.status, 200, mMaitreBackup.json?.error],
+    ["maitre", "GET /api/admin/db-download", mMaitreDl.status, 200, mMaitreDl.json?.error],
+  );
+
+  for (const [role, route, obtenu, attendu, erreur] of matrices) {
+    check(
+      `C3 export ${route} avec session ${role} -> ${attendu}`,
+      obtenu === attendu,
+      `status=${obtenu} erreur=${erreur ?? "aucune"}`,
+    );
+  }
 } finally {
   arreter(child);
 }

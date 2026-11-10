@@ -767,6 +767,7 @@ export const FR_TRANSLATIONS: Record<string, string> = {
     downloadDB: "Télécharger base local (.sqlite)",
     downloadGuide: "Télécharger Guide Utilisateur",
     runBackup: "Lancer une sauvegarde",
+    backupDone: "Sauvegarde telechargee.",
     saveSettings: "Enregistrer les modifications",
     principal: "Navigation",
     operations: "Opérations",

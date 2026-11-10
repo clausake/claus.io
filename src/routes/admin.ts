@@ -2,11 +2,14 @@
 import { Router } from "express";
 import fs from "fs";
 import path from "path";
+import type { Database } from "sqlite";
 import type { AuditLogger } from "../services/audit.js";
 import { resoudreDist } from "../services/chemin-ressources.js";
+import { snapshotSqlite, SnapshotErreur } from "../services/snapshot-sqlite.js";
+import { exigerMaitre } from "../middleware/garde-maitre.js";
 
 // Factory : les routes admin ont besoin du dossier de données utilisateur.
-export default function adminRouter(storageDir: string, logAudit: AuditLogger) {
+export default function adminRouter(storageDir: string, logAudit: AuditLogger, db: Database) {
   const router = Router();
 
 router.get("/api/admin/guide-download", (req, res) => {
@@ -21,42 +24,55 @@ if (guidePath) {
 }
 });
 
-router.get("/api/admin/db-download", (req, res) => {
-// La base porte les hachages argon2 des comptes, les hachages des sessions
-// VIVANTES et tout le journal d'audit : ce n'est PAS de la lecture metier.
-// La gate laisse passer les GET par contrat (A1, lecture libre) — donc la
-// garde se pose ICI, dans la route, comme /api/users. Mesure du scan 015 :
-// 290 816 o de base (users + sessions + audit_log) rendus a un anonyme, car
-// aucune garde n'existait sur cette route.
-const user = (res.locals as Record<string, unknown>).user as { role?: string } | undefined;
-if (user?.role !== "maitre") {
-  return res.status(403).json({
-    error: "MAITRE_REQUIS",
-    message: "Le telechargement de la base est reserve au maitre.",
-  });
-}
+// Chantier 42 — le telechargement direct livre un SNAPSHOT, plus le `.db` nu.
+// Le `.db` nu ne contient que les pages deja ecrites dans le fichier : en
+// mode WAL, les dernieres ecritures vivent dans `agent_culinaire.db-wal`.
+// Mesure de l'audit : le fichier telecharge pesait 4 096 o et ne contenait
+// AUCUNE table (ni inventory, ni documents, ni recipes, ni users).
+// Chantier 43 — la garde passe par le module central (src/middleware/
+// garde-maitre.ts) : 401 sans session, 403 si le role n'est pas maitre.
+router.get("/api/admin/db-download", exigerMaitre(), async (req, res) => {
 const dbFile = path.join(storageDir, "agent_culinaire.db");
-if (fs.existsSync(dbFile)) {
+if (!fs.existsSync(dbFile)) {
+  return res.status(404).json({ error: "Database file not found" });
+}
+try {
+  // Snapshot coherent et verifie (integrity_check) : un fichier invalide n'est
+  // jamais livre. Il est ecrit dans un fichier TEMPORAIRE (jamais a la place
+  // de la base vivante) puis supprime apres envoi.
+  //
+  // ⚠ Le nom ne commence PAS par un point : `path.extname(".x.db")` rend une
+  // chaine VIDE (c'est un fichier « dotfile »), et Express cherche alors un
+  // fichier avec une extension -> 404 « Not Found » mesure sur ce poste.
+  const snapshot = await snapshotSqlite(
+    db,
+    path.join(
+      storageDir,
+      `snapshot-download-${process.pid}-${Date.now().toString(36)}.db`,
+    ),
+  );
   logAudit(req, res, { route: "/api/admin/db-download", action: "telecharger" }).catch(() => {});
-  res.download(dbFile, "agent_culinaire.db");
-} else {
-  res.status(404).json({ error: "Database file not found" });
-}
-});
-router.post("/api/backup", (req, res) => {
-const dbFile = path.join(storageDir, "agent_culinaire.db");
-if (fs.existsSync(dbFile)) {
-  logAudit(req, res, { route: "/api/backup", action: "backup" });
-  res.json({
-    status: "success",
-    message: "Database is healthy and persisted.",
+  res.download(snapshot.chemin, "agent_culinaire.db", (err) => {
+    // Le fichier temporaire ne doit pas rester dans le dossier de donnees.
+    try { fs.unlinkSync(snapshot.chemin); } catch { /* deja absent */ }
+    if (err) {
+      console.error("[ADMIN] envoi du snapshot impossible :", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "TELECHARGEMENT_ECHEC" });
+      }
+    }
   });
-} else {
-  res
-    .status(500)
-    .json({ status: "error", message: "Database file missing." });
+} catch (error) {
+  const code = error instanceof SnapshotErreur ? error.code : "TELECHARGEMENT_ECHEC";
+  console.error("[ADMIN] export de la base impossible :", error);
+  res.status(500).json({ error: code, message: "La sauvegarde de la base a echoue." });
 }
 });
+// NOTE (chantier 44) : la route POST /api/backup DUPLIQUEE qui etait ici a
+// ete SUPPRIMEE. Elle repondait en JSON "Database is healthy" alors que la
+// route reelle (/api/backup, src/routes/backup.ts) livre une archive ZIP :
+// le client (Reglages) suivait donc la mauvaise reponse et partait en erreur
+// de parsing. La source de verite est desormais unique.
 router.post("/api/agent/command", async (req, res) => {
   // Le try/catch qui ferme ce bloc est CONSERVE tel quel: une erreur
   // serveur doit rester une erreur serveur (500), pas un 200 muet.

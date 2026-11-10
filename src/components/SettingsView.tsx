@@ -262,15 +262,37 @@ export function SettingsView({
     }
   };
 
+  // Chantier 42 — le bouton « Sauvegarder » doit TELECHARGER l'archive, pas
+  // la parser. La route /api/backup repond `application/zip` : l'ancien code
+  // faisait `res.json()` dessus, ce qui partait en erreur de parsing meme
+  // quand le serveur repondait 200 (mesure de l'audit : « le bouton ne
+  // telecharge pas l'archive et part en erreur de parsing »). On verifie
+  // donc le code ET le type de contenu, on lit le blob, puis on declenche le
+  // telechargement. Le message de succes n'apparait qu'APRES la creation
+  // du telechargement : une erreur ne doit jamais laisser croire a un
+  // sauvegarde faite.
   const handleBackup = async () => {
     try {
       const res = await fetch("/api/backup", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        toast(`✅ ${t.active}: ${data.message}`, "success");
-      } else {
-        throw new Error(data.message || "Server error");
+      const type = res.headers.get("content-type") || "";
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}) as { message?: string });
+        throw new Error(err.message || `Erreur ${res.status}`);
       }
+      if (!type.includes("application/zip")) {
+        throw new Error(`Reponse inattendue (${type || "type inconnu"})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "sauvegarde-clausio.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Le blob est libere apres le declenchement du telechargement.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast(t.backupDone || "Sauvegarde téléchargée.", "success");
     } catch (e) {
       console.error("Backup error:", e);
       toast(t.syncError, "error");

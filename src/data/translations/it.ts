@@ -738,6 +738,7 @@ export const IT_TRANSLATIONS: Record<string, string> = {
     downloadDB: "Scarica SQLite Export.",
     downloadGuide: "Scarica Guida Utente",
     runBackup: "Effettua Snap-Shot",
+    backupDone: "Backup scaricato.",
     saveSettings: "Forza il Salvataggio Impostazioni",
     principal: "Principale",
     operations: "Manovre / Operazioni",

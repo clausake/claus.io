@@ -112,7 +112,13 @@ describe("generer() — la porte unique de génération (chantier 11)", () => {
 
   it("6. cloud de la liste SANS clef ENV = CLEF_ABSENTE (la clef ne vit que dans l'env)", async () => {
     poserReglage({ llm_choix: "openai" });
-    // Aucune OPENAI_API_KEY dans l'environnement du test.
+    // Le test CONTROLE son environnement : la regle vaut « pas de clef dans
+    // l'env », pas « pas de clef sur CE poste ». Sans cette isolation, le
+    // poste de l'agent (qui a une OPENAI_API_KEY dans son env) voyait le
+    // produit tenter l'appel — un rouge d'INFRA, pas une mesure (mesure du
+    // 10/11 sur ce poste : « LLM injoignable [OpenAI] » au lieu de
+    // CLEF_ABSENTE).
+    vi.stubEnv("OPENAI_API_KEY", "");
     await expect(generer({ prompt: "salut" })).rejects.toThrow(/CLEF_ABSENTE/);
     expect(urlsJouees).toHaveLength(0);
   });

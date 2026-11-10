@@ -2175,3 +2175,66 @@ Preuves finales : tsc 0 err ; vitest 216/216 (214 + 2 du genre) ; build OK ;
 `verify:ui-tabs` 13/13 ; `verify:routes` 44/44 ; `verify:bundle` TOUT PASS ;
 `verify:auth` vert ; `verify:types` ANY=0/71 ; `verify:csp-inline` OK ;
 `verify:no-mute` OK ; `verify:demo-kit` 3/3 ; temoin mtime 1790247072 intouche.
+
+## Chantier 42-45 — Les exports de la base : snapshot reellement fiable, reserves au maitre (10/11)
+
+Audit senior du 09/11 (CHANTIER_CLAUSIO_5), quatre chantiers d'un bloc : ils
+touchent la MEME chose (le contenu livre par les exports), donc ils sont
+corriges d'un coup et prouves par un meme jeu de portes.
+
+**C42 — LE SNAPSHOT SQLite EST UN HELPER PARTAGE.** Les deux exports
+livraient le fichier `.db` NU : en mode WAL, les dernieres ecritures vivent
+dans `agent_culinaire.db-wal`, que la route EXCLUAIT de l'archive. Mesure :
+le ZIP pesait 219 o, la base 4 096 o, et le fichier livre ne contenait AUCUNE
+table (ni inventory, ni documents, ni recipes, ni users). Le nouveau helper
+`src/services/snapshot-sqlite.ts` utilise la SAUVEGARDE EN LIGNE de SQLite
+(`sqlite3_backup`) : l'etat complet, WAL compris. Mesures faites avant
+d'ecrire : `db.backup(fichier)` SANS `.step()` ne copie RIEN (0 octet) ;
+`backup(...).step(-1, cb)` copie l'etat complet ; la copie herite du mode
+WAL, on la bascule en `DELETE` pour qu'elle soit AUTONOME ; enfin on la
+REJOINT en lecture seule et on exige `integrity_check = ok` — un snapshot
+invalide n'est JAMAIS livre. Le helper refuse par defaut d'ECRASER une
+destination existante (garde-fou pose apres la mesure d'un appelant qui
+remplacait la base VIVANTE par son snapshot).
+
+**C43 — LA GARDE DES EXPORTS EST CENTRALISEE.** La restriction « maitre »
+n'existait que dans admin.ts : un compte STAFF obtenait `POST /api/backup`,
+donc un ZIP contenant la base ENTIERE (hachages argon2, sessions vivantes,
+journal d'audit). Le nouveau `src/middleware/garde-maitre.ts` distingue les
+deux refus — 401 AUTH_REQUISE sans session, 403 MAITRE_REQUIS sinon — et
+est pose sur LES DEUX exports. La matrice (anonyme 401 / agent 403 / staff
+403 / maitre 200) est jugee par `verify:auth` (regles C3) ET par le spec
+`test/e2e/export-sqlite.spec.ts`.
+
+**C44 — LISTE BLANCHE DU ZIP.** L'archive-recursive du dossier Electron
+emportait les caches, les cookies et les anciennes sauvegardes (mesure :
+`Cache/junk.bin`, `Network/Cookies`, `backups/old.db` etaient DANS le ZIP).
+L'archive contient desormais : le snapshot, les reglages SANS leurs secrets
+(regle unique de services/settings.ts), un manifeste de version, et les
+uploads utiles. La route POST /api/backup DUPLIQUEE d'admin.ts (qui
+repondait en JSON « Database is healthy ») est SUPPRIMEE : c'etait elle que
+le client (Reglages) suivait, d'ou le parsing en erreur.
+
+**C45 — LE PREMIER BACKUP AUTOMATIQUE EXISTE.** Le commentaire annoncait
+« un premier fold+copie AU DEMARRAGE » ; le code ne posait qu'un
+`setInterval` d'une heure, et le dossier `backups/` restait ABSENT sur une
+installation neuve. Le premier backup est desormais pose au demarrage, avec
+une erreur NOMMEE, et la rotation supprime les SIDECARS (orphelins) avec
+leur backup.
+
+**LE COTE CLIENT.** `handleBackup()` faisait `res.json()` sur une reponse
+`application/zip` : le bouton ne telechargeait rien et partait en erreur de
+parsing meme en 200. Il verifie desormais le code ET le type de contenu,
+lit le blob, declenche le telechargement, et n'affiche le succes qu'APRES.
+
+Preuves : `verify:export-sqlite` (nouvelle porte : matrice des roles sur les
+deux exports, OUVERTURE du ZIP, base interrogee en SQL — le marqueur ecrit
+avant l'export est present, 29 tables dont users/audit_log/documents/
+recipes/demo_kit, `integrity_check = ok`, aucun sidecar), `verify:export-ui`
+(nouvelle porte : le clic « Sauvegarder » telecharge un ZIP reel dans un
+navigateur, et sur une reponse 500 AUCUN message de succes n'apparait),
+`verify:auth` (26 regles, dont la matrice C3), `verify:routes` 44/44,
+vitest 216/216, tsc 0. Le test llm-porte (regle 6) rendait un rouge
+d'INFRA sur ce poste (une OPENAI_API_KEY dans l'env du poste contredisait
+l'hypothese « pas de clef dans l'env ») : le test controle desormais son
+environnement.

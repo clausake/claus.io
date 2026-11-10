@@ -405,6 +405,23 @@ DEFAUT = ["verify:split",
           # tracées, jamais de re-semage après purge). Les retirer rend ces
           # contrats jugeables partiellement sans qu'aucun lot ne le voie.
           "verify:extraction-suivi", "verify:demo-kit",
+          # Chantier 42/43/44/45 (audit senior du 09/11) : les DEUX exports
+          # (archive ZIP + telechargement direct) doivent livrer une base
+          # REELLEMENT fiable (le snapshot est coherent, verifie par
+          # integrity_check, autonome) et etre RESERVES AU MAITRE (la garde
+          # est centralisee : anonyme 401, agent 403, staff 403, maitre 200).
+          # L'archive est jugee par OUVERTURE (ZIP ouvert, base interrogee en
+          # SQL) — un « 200 + le MIME » passait sur une archive VIDE. Sans
+          # cette porte, la regression « export vide » ne serait vue par
+          # aucun lot.
+          "verify:export-sqlite",
+          # Le meme contrat, mais par le CHEMIN UTILISATEUR : le clic
+          # « Sauvegarder » doit TELECHARGER un ZIP reel (l'ancien code
+          # faisait res.json() sur une reponse application/zip et partait en
+          # erreur de parsing) et n'afficher aucun succes sur une erreur.
+          # Necessite dist/ (comme verify:reception) : le job gates le
+          # construit avant le lot.
+          "verify:export-ui",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,

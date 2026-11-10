@@ -7,6 +7,7 @@ import fs from "fs";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { request as rawRequest } from "node:http";
+import { lireZip } from "../banc/zip-lire";
 import { gunzipSync } from "node:zlib";
 import { Buffer } from "node:buffer";
 
@@ -453,11 +454,72 @@ test("GET /api/haccp/production-history", async ({ request }) => {
   expect(Array.isArray(arr)).toBe(true);
 });
 
-test("POST /api/backup", async ({ request }) => {
+// Chantier 42 + 43 — POST /api/backup est RESERVE AU MAITRE et livre une
+// archive REELLE.
+//
+// L'ancien test n'acceptait que « 200 + le MIME application/zip » : il
+// passait sur une archive VIDE (219 o) dont la base ne contenait AUCUNE
+// table — le defaut mesure de l'audit. Il est remplace par une preuve qui
+// OUVRE le contenu : le ZIP contient la base, et la base contient le
+// marqueur ecrit juste avant l'export.
+//
+// Le mate : un anonyme (et un staff) sont refuses par la garde centralisee
+// (src/middleware/garde-maitre.ts) : 401 sans session, 403 mauvais role.
+test("POST /api/backup : maitre 200 + archive reelle, anonyme 401", async ({ request }) => {
+  const anonyme = await request.post(`${BASE}/api/backup`);
+  expect(anonyme.status(), "anonyme = 401 (jamais l'archive)").toBe(401);
+  expect(((await anonyme.json()) as { error?: string }).error).toBe("AUTH_REQUISE");
+
+  // Session maitre (le harnais tourne avec COOKDRIVE_AUTH_OFF=1 : la gate
+  // est desactivee, mais la session, elle, se charge normalement depuis le
+  // cookie — c'est ce que montre deja le test db-download plus bas).
+  const setup = await request.post(`${BASE}/api/auth/setup`, {
+    data: { username: "maitre-harnais", password: "passe-harnais-2026" },
+  });
+  expect([201, 409]).toContain(setup.status());
+  if (setup.status() !== 201) {
+    const login = await request.post(`${BASE}/api/auth/login`, {
+      data: { username: "maitre-harnais", password: "passe-harnais-2026" },
+    });
+    expect(login.status()).toBe(200);
+  }
+
+  // Le marqueur : ecrit JUSTE AVANT l'export, il doit etre dans l'archive.
+  const marqueur = `audit-marker-${Date.now().toString(36)}`;
+  const marque = await request.post(`${BASE}/api/inventory`, {
+    data: { name: marqueur, quantity: 3, minStock: 1, unit: "kg", category: "Test" },
+  });
+  expect([200, 201]).toContain(marque.status());
+
   const res = await request.post(`${BASE}/api/backup`);
   expect(res.status()).toBe(200);
   const headers = res.headers();
   expect(headers["content-type"]).toContain("application/zip");
+  const zip = Buffer.from(await res.body());
+  expect(zip.length, "l'archive ne doit pas etre vide").toBeGreaterThan(4096);
+
+  // --- L'archive est OUVERTE, et la base qu'elle contient est INTERROGEE.
+  // Chercher le marqueur dans les octets compresses ne prouverait rien (le
+  // contenu deflate n'est pas lisible tel quel) : on extrait l'entree, on
+  // ouvre la base extraite, on demande les lignes du marqueur en SQL.
+  const archive = lireZip(zip);
+  expect(archive.noms, "la base doit etre dans l'archive").toContain("agent_culinaire.db");
+  const baseExtraite = path.join(DATA_DIR, "base-depuis-zip.db");
+  fs.writeFileSync(baseExtraite, archive.contenu("agent_culinaire.db"));
+  const ouverte = await open({ filename: baseExtraite, mode: sqlite3.OPEN_READONLY, driver: sqlite3.Database });
+  try {
+    const lignes = await ouverte.all("SELECT name FROM inventory WHERE name = ?", [marqueur]);
+    expect(
+      lignes.length,
+      `le marqueur « ${marqueur} » doit etre dans la base de l'archive`,
+    ).toBeGreaterThan(0);
+    const tables = await ouverte.all(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('users','audit_log','documents','recipes','demo_kit')",
+    );
+    expect(tables.length, "la base de l'archive doit porter les tables metier").toBe(5);
+  } finally {
+    await ouverte.close();
+  }
 });
 
 test("GET /api/network-info", async ({ request }) => {
@@ -572,15 +634,17 @@ test("CRUD supplier-prices : depend de inventory + calcul prix/ref", async ({ re
 // un echo comme une extraction » et « sans panier rend 400 »); l'item
 // xvfb du journal chaud est donc RE-JUGE comme FEUILLE STALE: la route ne
 // demarre plus de navigateur, xvfb n'est plus une voie necessaire.
-test("GET /api/admin/db-download : anonyme 403, maitre 200", async ({ request }) => {
+test("GET /api/admin/db-download : anonyme 401, maitre 200", async ({ request }) => {
   // La base emporte les hachages argon2 des comptes, les hachages des sessions
   // VIVANTES et le journal d'audit : ce n'est pas de la lecture metier libre,
   // meme si la gate exempte les GET (contrat A1 du chantier 1). Mesure du scan
   // 015 : un anonyme recevait 290 816 o de SQLite en 200, sans aucune garde.
+  // Chantier 43 : la garde est CENTRALISEE (src/middleware/garde-maitre.ts) et
+  // distingue les refus — 401 sans session, 403 si le role n'est pas maitre.
   const anonyme = await request.get(`${BASE}/api/admin/db-download`);
-  expect(anonyme.status(), "anonyme = 403 MAITRE_REQUIS (jamais le fichier)")
-    .toBe(403);
-  expect((await anonyme.json()).error).toBe("MAITRE_REQUIS");
+  expect(anonyme.status(), "anonyme = 401 AUTH_REQUISE (jamais le fichier)")
+    .toBe(401);
+  expect(((await anonyme.json()) as { error?: string }).error).toBe("AUTH_REQUISE");
 
   // Le maitre, lui, telecharge : l'ecran Reglages passe par un <a href> qui
   // porte son cookie. Setup tolerate d'un run a l'autre (409 = deja fait).
