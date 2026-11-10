@@ -7,6 +7,7 @@ import {
   Cpu,
   Download,
   Globe,
+  HardDrive,
   Menu as MenuIcon,
   PencilLine,
   Play,
@@ -65,6 +66,57 @@ export function SettingsView({
   useEffect(() => {
     relireDemoEtat();
   }, [relireDemoEtat]);
+  // Chantier 49 : l'etat REEL des donnees (chemin actif) et la proposition
+  // de reprise quand une ancienne installation existe.
+  const [donneesEtat, setDonneesEtat] = React.useState<{
+    cheminActif: string;
+    baseVierge: boolean;
+    proposition: { dossier: string; tables: string[]; lignes: number } | null;
+  } | null>(null);
+  const relireDonneesEtat = React.useCallback(async () => {
+    try {
+      const r = await fetch("/api/donnees/actif");
+      if (!r.ok) return;
+      const j = await r.json();
+      setDonneesEtat({
+        cheminActif: String(j.chemin_actif ?? ""),
+        baseVierge: !!j.base_vierge,
+        proposition: j.proposition_import
+          ? {
+              dossier: String(j.proposition_import.dossier),
+              tables: Array.isArray(j.proposition_import.tables) ? j.proposition_import.tables : [],
+              lignes: Number(j.proposition_import.lignes ?? 0),
+            }
+          : null,
+      });
+    } catch {
+      /* serveur injoignable : la carte reste muette */
+    }
+  }, []);
+  useEffect(() => {
+    relireDonneesEtat();
+  }, [relireDonneesEtat]);
+  const importerAnciennes = async () => {
+    if (!donneesEtat?.proposition) return;
+    try {
+      const r = await fetch("/api/donnees/importer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dossier: donneesEtat.proposition.dossier }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.message || "Import refusé");
+      toast(
+        (t.importDone || "Données reprises") +
+          ` : ${Number(j.lignes ?? 0)} lignes, ${Number(j.uploads ?? 0)} fichiers`,
+        "success",
+      );
+      relireDonneesEtat();
+      relireDemoEtat();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : t.syncError, "error");
+    }
+  };
   const actionDemo = async (url: "/api/demo/semence" | "/api/demo/supprimer") => {
     try {
       const r = await fetch(url, { method: "POST" });
@@ -809,6 +861,50 @@ export function SettingsView({
                   ></span>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Chantier 49 : le chemin REELLEMENT actif + la reprise des donnees
+              d'une ancienne installation. Rien n'est propose si l'installation
+              active contient deja des donnees : une base non vide n'est jamais
+              ecrasee. */}
+          <section className="led-glow-container">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl mr-4">
+                <HardDrive className="w-5 h-5" />
+              </div>
+              {t.donneesSection || "Donnees"}
+            </h3>
+            <div className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {t.donneesChemin ||
+                  "Vos donnees sont stockees ici. Copiez ce dossier pour les conserver."}
+              </p>
+              {donneesEtat?.cheminActif ? (
+                <div className="p-3 bg-black/40 rounded-xl border border-white/5 break-all text-[11px] text-slate-300 font-mono">
+                  {donneesEtat.cheminActif}
+                </div>
+              ) : null}
+              {donneesEtat?.proposition ? (
+                <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30 space-y-3">
+                  <p className="text-xs text-amber-200 leading-relaxed">
+                    {t.donneesAnciennesFound ||
+                      "Des donnees d'une installation precedente ont ete trouvees."}{" "}
+                    {donneesEtat.proposition.lignes} ligne(s),{" "}
+                    {donneesEtat.proposition.tables.length} table(s).
+                  </p>
+                  <button
+                    onClick={importerAnciennes}
+                    className="w-full py-3 bg-amber-500 text-obsidian rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-amber-400 transition-all"
+                  >
+                    {t.donneesImporter || "Reprendre les anciennes donnees"}
+                  </button>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    {t.donneesImportWarning ||
+                      "Une copie de securite est conservee avant l'import. Vos donnees actuelles ne sont jamais ecrasees."}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </section>
 

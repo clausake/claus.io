@@ -69,6 +69,7 @@ import suggestionsRouter from "./src/routes/suggestions.js";
 import surveillanceRouter from "./src/routes/surveillance.js";
 import hermesRouter from "./src/routes/hermes.js";
 import demoRouter from "./src/routes/demo.js";
+import donneesRouter from "./src/routes/donnees.js";
 import { metierVierge, dejaSeme, semer } from "./src/routes/demo.js";
 import healthRouter from "./src/routes/health.js";
 
@@ -245,6 +246,10 @@ async function startServer() {
   // Cerveau Hermes (chantier 5) : contexte -> consigne -> LLM injecte ->
   // propositions validees -> suggestions. LLM JAMAIS juge par une porte.
   app.use(hermesRouter(db, logAudit));
+  // Reprise des donnees d'une ancienne installation (chantier 49) : le
+  // chemin REELLEMENT actif + la proposition d'import des bases anciennes
+  // detectees en lecture seule.
+  app.use(donneesRouter(db, logAudit));
   // Kit d'exemples (chantier 39-B) : 1 exemple par onglet, effacable par le
   // client (POST /api/demo/supprimer). Aucune IA, deterministe.
   app.use(demoRouter(db, logAudit));

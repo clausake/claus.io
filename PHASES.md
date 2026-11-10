@@ -2355,3 +2355,46 @@ refuse ici, car « npm audit fix --force » est explicitement exclu par le
 cahier des charges. L'arbre est coherent (`npm ls` rc=0) et le livrable se
 construit (`electron-builder --linux dir` : empaquetage OK, modules natifs
 reconstruits pour electron 45.2.3).
+
+## Chantier 49 — Reprendre les donnees d'une ancienne installation (10/11)
+
+Audit senior du 09/11 (CHANTIER_CLAUSIO_5), chantier 49.
+
+**LE CONSTAT.** Sur le poste du client, deux dossiers ont coexiste :
+`AppData/Roaming/ClausIO` (l'install actuelle) et
+`AppData/Roaming/agent-culinaire-os` (l'ancienne). Apres reinstallation,
+l'application montre une base NEUVE : le client croit avoir perdu son stock,
+alors que l'ancienne base est toujours sur le disque.
+
+**LES QUATRE REGLES, IMPLEMENTEES ET JUGEEES.**
+1. La detection se fait en LECTURE SEULE (`sqlite3.OPEN_READONLY`) sur les
+   bases anciennes connues (les noms historiques + les voisins REELS du
+   dossier actif qui contiennent une base) ; l'ancienne base n'est jamais
+   ouverte en ecriture.
+2. L'import n'est PROPOSE que si l'installation active est vierge HORS kit de
+   demonstration (le kit est trace dans `demo_kit` : ses lignes ne comptent
+   pas comme donnees, sinon le premier lancerage empecherait l'import).
+3. Une base active NON VIDE n'est JAMAIS ecrasee : l'import est refuse
+   (409 `IMPORT_REFUSE_BASE_ACTIVE`) et les donnees actives restent intactes.
+4. Un SNAPSHOT DE SECURITE est pose AVANT l'import
+   (`backups/avant-import-<date>.db`), et les uploads accompagnants sont
+   importes aussi (sans ecraser un upload deja present).
+
+L'import se fait par ATTACH + INSERT (colonnes communes aux deux schemas) :
+la base VIVANTE n'est jamais remplacee sur le disque — le serveur ecrit dans
+le fichier ouvert, le remplacer sous ses pieds serait une operation
+silencieusement destructrice.
+
+Le client voit l'etat : une carte « Donnees » dans les Reglages affiche le
+chemin REELLEMENT actif (le chemin ou sont les donnees, a copier pour les
+conserver) et, quand l'import est licite, la proposition « Reprendre les
+anciennes donnees ». L'import est DEMANDE par l'humain (§8 : l'humain
+clique et execute) et reserve au maitre.
+
+Preuves (nouvelle porte `verify:donnees-anciennes`, dans package.json ET
+dans le DEFAUT du lot) : les quatre scenarios du cahier des charges sont
+joues sur des dossiers isoles — proposition + import (2 lignes, 1 upload,
+snapshot pose) + donnees visibles par la route metier ; refus 409 sur une
+base active non vide avec donnees intactes ; aucune proposition et AUCUN
+bruit sans ancienne base (detection en 5 ms) ; sauvegardes preexistantes
+conservees.

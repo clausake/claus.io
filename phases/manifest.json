@@ -1,6 +1,6 @@
 {
   "original_octets": 270908,
-  "original_sha256": "1c1eedea9b85a7a77bbf0778fab86b7078afb04744cbe2bf36352570fb94f857",
+  "original_sha256": "473341dabef02c6fc1242df207a64b74993628f7487d207848a509728fe1375b",
   "chaud_octets": 78486,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 18916,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 48 consigne : electron 41.10.7 -> 45.2.3 (les 8 alertes electron fermes) et overrides ciblees sur la chaine glob/minimatch de production (archiver-utils, cacache) ; npm audit --omit=dev = 0, arbre coherent, livrable construit ; ancre recalculee par le juge (recolle 1c1eedea), jamais recopiee a la main",
-    "date": "2026-11-10T08:05:00.000000",
+    "motif": "chantier 49 consigne : reprise des donnees d'une ancienne installation (detection en lecture seule, proposition seulement si l'installation active est vierge hors kit, refus sur base active non vide, snapshot de securite avant import, uploads importes, chemin actif affiche dans les Reglages) ; ancre recalculee par le juge (recolle 473341da), jamais recopiee a la main",
+    "date": "2026-11-10T08:30:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 47 consigne : /health ne rend plus diskFree=-1 en permanence (fs.statfsSync, le nom exact ; erreur journalisee, pas avalee) ; uncre recalculee par le juge (recolle c4c07fe9), jamais recopiee a la main",
-    "date": "2026-11-10T07:55:00.000000",
+    "motif": "chantier 48 consigne : electron 41.10.7 -> 45.2.3 (les 8 alertes electron fermes) et overrides ciblees sur la chaine glob/minimatch de production (archiver-utils, cacache) ; npm audit --omit=dev = 0, arbre coherent, livrable construit ; ancre recalculee par le juge (recolle 1c1eedea), jamais recopiee a la main",
+    "date": "2026-11-10T08:05:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }

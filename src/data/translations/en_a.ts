@@ -783,6 +783,12 @@ export const EN_A: Record<string, string> = {
     downloadGuide: "Download User Guide",
     runBackup: "Run a backup",
     backupDone: "Backup downloaded.",
+    donneesSection: "Data",
+    donneesChemin: "Your data is stored here. Copy this folder to keep it.",
+    donneesAnciennesFound: "Data from a previous installation was found.",
+    donneesImporter: "Restore the previous data",
+    donneesImportWarning: "A safety copy is kept before the import. Your current data is never overwritten.",
+    importDone: "Data restored",
     saveSettings: "Save changes",
     principal: "Main",
 };

@@ -105,6 +105,7 @@
     "verify:demo-kit": "npx playwright test test/e2e/demo-kit.spec.ts --reporter=line",
     "verify:export-sqlite": "npx playwright test test/e2e/export-sqlite.spec.ts --reporter=line",
     "verify:export-ui": "npx playwright test test/e2e/export-ui.spec.ts --reporter=line",
+    "verify:donnees-anciennes": "npx playwright test test/e2e/donnees-anciennes.spec.ts --reporter=line",
     "verify:audit": "node scripts/verify-audit.mjs",
     "verify:audit-mord": "python3 scripts/negative-test-audit.py",
     "verify:audit-barriere": "node scripts/verify-audit-barriere.mjs",

@@ -422,6 +422,13 @@ DEFAUT = ["verify:split",
           # Necessite dist/ (comme verify:reception) : le job gates le
           # construit avant le lot.
           "verify:export-ui",
+          # Chantier 49 : la reprise des donnees d'une ancienne installation.
+          # Les quatre scenarios du cahier des charges sont joues : proposition
+          # quand l'installation est vierge, import visible, REFUS sur une base
+          # active non vide, et silence quand il n'y a aucune ancienne base.
+          # Sans cette porte, la detection pourrait disparaitre (ou ecraser une
+          # base pleine) sans qu'aucun lot ne le voie.
+          "verify:donnees-anciennes",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,
