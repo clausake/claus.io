@@ -61,7 +61,7 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 | **Sauvegarde** | Le bouton « Sauvegarder » (Réglages) télécharge une archive prête à restaurer : la base **complète** (y compris les dernières écritures), vos réglages sans leurs secrets, vos documents importés et un manifeste de version. L'archive est vérifiée avant d'être livrée, et une copie automatique est prise au démarrage de l'application | 100 % sans IA |
 | **Reprise des données** | Après une réinstallation, l'application cherche une installation précédente sur le poste et **propose** de reprendre ses données (un clic, une copie de sécurité conservée avant). Vos données actuelles ne sont jamais écrasées, et le chemin exact de vos données est affiché dans Réglages | 100 % sans IA |
 
-Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes sept sections, dont « Extraction IA et kit d'exemples » et « Sauvegarde et reprise des données ».
+Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes sept sections : l'inventaire, les fiches techniques, les achats, le HACCP, le personnel, l'extraction IA avec le kit d'exemples, et « Sauvegarde et reprise des données ».
 
 ## Intelligence : 100 % local par défaut, multi-moteurs
 
@@ -141,7 +141,7 @@ npm run build:linux   # Linux (AppImage, deb)
 
 ## Qualité
 
-Le projet est jugé par **105 portes automatiques** (`verify:*` déclarées dans `package.json`, dont 102 jouées au lot `npm run verify:all`) exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 216 tests unitaires, 44 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
+Le projet est jugé par **106 portes automatiques** (`verify:*` déclarées dans `package.json`, dont 103 jouées au lot `npm run verify:all`) exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 225 tests unitaires, 44 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la **notice livrée** (les sept sections du guide PDF, dans ses cinq langues), la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
 
 ```bash
 npm run verify:all            # le lot complet

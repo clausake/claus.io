@@ -429,6 +429,12 @@ DEFAUT = ["verify:split",
           # Sans cette porte, la detection pourrait disparaitre (ou ecraser une
           # base pleine) sans qu'aucun lot ne le voie.
           "verify:donnees-anciennes",
+          # La notice telechargeable (Reglages → « Télécharger le guide ») est
+          # du CONTENU LIVRE : ses sept sections, dans les cinq langues, sont
+          # ce que le client lit quand il reinstalle son poste. Sans cette
+          # porte, une section retiree par erreur (ou une langue qui n'embarque
+          # pas la sauvegarde et la reprise) ne rougirait nulle part.
+          "verify:guide-notice",
           # verify:livrable (Tache 14) : la sonde SUR PIECE des echantillons
           # construits (3 poids OCR aux scelles du manifest + les binaires
           # .node). Sans echantillon sous release/ elle rend la main (rc=0,

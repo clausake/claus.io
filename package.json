@@ -102,6 +102,7 @@
     "verify:langues-formats": "python3 scripts/mesurer-langues-formats.py",
     "verify:etiquettes-dlc": "python3 scripts/juge-etiquettes-dlc.py",
     "verify:extraction-suivi": "npx vitest run test/unit/extraction-suivi.test.ts",
+    "verify:guide-notice": "npx vitest run test/unit/guide-pdf.test.ts",
     "verify:demo-kit": "npx playwright test test/e2e/demo-kit.spec.ts --reporter=line",
     "verify:export-sqlite": "npx playwright test test/e2e/export-sqlite.spec.ts --reporter=line",
     "verify:export-ui": "npx playwright test test/e2e/export-ui.spec.ts --reporter=line",
