@@ -7,6 +7,7 @@ import { getOllamaHost } from "../shared/util.js";
 import { ollama, getModel, ollamaSettingsRef, type OllamaModelInfo } from "../shared/ollama.js";
 import { cibleActuelle } from "../shared/llm.js";
 import { perf } from "../services/perf.js";
+import { espaceLibreDisque } from "../services/disque.js";
 
 const router = Router();
 
@@ -75,19 +76,12 @@ try {
 } catch {
   dbSize = 0;
 }
-let diskFree = -1;
-try {
-  // statfs n'est pas dans tous les typages @types/node : cast cible, pas any.
-  const statfsFn = (fs as unknown as { statfs?: { sync: (p: string) => { bavail: number; bsize: number } } }).statfs as
-    | { sync: (p: string) => { bavail: number; bsize: number } }
-    | undefined;
-  if (statfsFn) {
-    const stats = statfsFn.sync(dataDir);
-    diskFree = Math.round((stats.bavail * stats.bsize) / 1e9);
-  }
-} catch {
-  diskFree = -1;
-}
+// Chantier 47 : le calcul passe par le service `espaceLibreDisque`, qui
+// utilise `fs.statfsSync` (le nom EXACT de la methode synchrone) et journalise
+// l'echec au lieu de l'avaler. Mesure du defaut : `diskFree` valait -1 en
+// permanence, parce que la route appelait `statfsFn.sync` — une methode
+// inexistante.
+const diskFree = espaceLibreDisque(dataDir);
 const memUsed = Math.round((process.memoryUsage().rss / 1024 / 1024) * 10) / 10;
 
 try {

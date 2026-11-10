@@ -2284,3 +2284,27 @@ hors perimetre de l'audit), et les portes `verify:auth`, `verify:routes`,
 `verify:mode-agent`, `verify:garde-fantomes` vertes. La preuve WINDOWS
 elle-meme ne peut pas etre produite sur ce poste Linux : elle viendra du
 poste du client.
+
+## Chantier 47 — /health ne dit plus « disque inconnu » (10/11)
+
+Audit senior du 09/11 (CHANTIER_CLAUSIO_5), chantier 47.
+
+La route /health rendait `diskFree: -1` en PERMANENCE. Elle appelait
+`fs.statfs(...)` puis `statfsFn.sync(...)` — une methode qui N'EXISTE PAS
+(la methode synchrone s'appelle `statfsSync`), et l'exception etait avalee
+par un `catch` muet. Mesure du client : « diskFree: -1 » sur l'application
+installee, alors que `fs.statfsSync()` sur le meme dossier rendait ~35 Go
+libres.
+
+Le calcul passe desormais par `src/services/disque.ts` (`espaceLibreDisque`),
+qui utilise `fs.statfsSync` — le nom exact — et JOURNALISE l'echec au lieu
+de l'avaler : un -1 signifie « information indisponible », jamais « disque
+plein ». Mesure apres correction (serveur local, /health) : `diskFree = 138`
+au lieu de -1.
+
+Le test unitaire (test/unit/disque.test.ts) couvre les deux moities : le
+RESULTAT (espace libre mesure sur un dossier reel, jamais -1 ; dossier
+inexistant -> -1) et la SOURCE (le service appelle `fs.statfsSync` et
+n'appelle PAS `statfs.sync` ; health.ts passe par le service et ne masque
+plus l'appel). Un correctif qui reintroduirait `statfs.sync` fait rougir
+le test meme si le resultat reste -1.

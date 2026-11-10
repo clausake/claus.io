@@ -1,6 +1,6 @@
 {
   "original_octets": 270908,
-  "original_sha256": "2f945f40df1dc47e79edbd6e33717aa134a55b7371a6355f3ed273b8119f59cd",
+  "original_sha256": "c4c07fe96bb0aeb502fd5a00d54808e1f3deb5b2e089411877e86c4a4bbc080f",
   "chaud_octets": 78486,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 18916,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 46 consigne : le harnais des tests est partage et correct sous Windows (vrai CLI JS de tsx resolu par le module, arret d'arborescence taskkill /T sous Windows et groupe sous POSIX, assertions de chemins normalisees) ; ancre recalculee par le juge (recolle 2f945f40), jamais recopiee a la main",
-    "date": "2026-11-10T07:45:00.000000",
+    "motif": "chantier 47 consigne : /health ne rend plus diskFree=-1 en permanence (fs.statfsSync, le nom exact ; erreur journalisee, pas avalee) ; uncre recalculee par le juge (recolle c4c07fe9), jamais recopiee a la main",
+    "date": "2026-11-10T07:55:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 42-45 consigne : les exports de la base livrent un SNAPSHOT SQLite coherent et verifie (integrity_check), reserves au maitre (garde centralisee), ZIP sur liste blanche, premier backup automatique pose au demarrage ; ancre recalculee par le juge (recolle 3aa34e5d), jamais recopiee a la main",
-    "date": "2026-11-10T07:20:00.000000",
+    "motif": "chantier 46 consigne : le harnais des tests est partage et correct sous Windows (vrai CLI JS de tsx resolu par le module, arret d'arborescence taskkill /T sous Windows et groupe sous POSIX, assertions de chemins normalisees) ; ancre recalculee par le juge (recolle 2f945f40), jamais recopiee a la main",
+    "date": "2026-11-10T07:45:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }
