@@ -18,8 +18,8 @@ export function exporterGuidePDF(lang: string) {
       footer: string;
     }> = {
       fr: {
-        fileName: "Guide_Utilisateur_Agent_Culinaire_OS.pdf",
-        title: "AGENT CULINAIRE OS - GUIDE D'UTILISATION",
+        fileName: "Guide_Utilisateur_clausio.pdf",
+        title: "CLAUS.IO - GUIDE D'UTILISATION",
         subtitle: "Système de Pilotage Culinaire Premium, Ingénierie des Menus & HACCP",
         intro: "Bienvenue dans l'interface de l'claus.io. Ce guide complet vous détaille les différentes rubriques et outils de l'application conçus en étroite synergie pour optimiser vos marges, faciliter votre approvisionnement et garantir la conformité réglementaire de votre établissement.",
         sections: [
@@ -89,8 +89,8 @@ export function exporterGuidePDF(lang: string) {
         footer: "claus.io - Solution de Pilotage Professionnel de Cuisine"
       },
       en: {
-        fileName: "User_Guide_Agent_Culinaire_OS.pdf",
-        title: "AGENT CULINAIRE OS - USER MANUAL",
+        fileName: "User_Guide_clausio.pdf",
+        title: "CLAUS.IO - USER MANUAL",
         subtitle: "Premium Kitchen Management, Menu Engineering & HACCP System",
         intro: "Welcome to claus.io. This master guide describes how to navigate and make the most out of our comprehensive professional kitchen tools, designed in harmony to simplify operations, protect margins, streamline ordering, and ensure complete sanitary compliance.",
         sections: [
@@ -160,8 +160,8 @@ export function exporterGuidePDF(lang: string) {
         footer: "claus.io - Professional Kitchen Control Deck"
       },
       de: {
-        fileName: "Benutzerhandbuch_Agent_Culinaire_OS.pdf",
-        title: "AGENT CULINAIRE OS - BENUTZERHANDBUCH",
+        fileName: "Benutzerhandbuch_clausio.pdf",
+        title: "CLAUS.IO - BENUTZERHANDBUCH",
         subtitle: "Premium Küchenmanagement, Menü-Analyse und HACCP-System",
         intro: "Willkommen bei claus.io. Dieses Handbuch führt Sie durch die hocheffizienten Funktionen unseres Küchen-Betriebssystems. Die nahtlos vernetzten Module senken Ihren Wareneinsatz, optimieren den Einkauf und garantieren die lückenlose Einhaltung aller Hygienevorschriften.",
         sections: [
@@ -231,8 +231,8 @@ export function exporterGuidePDF(lang: string) {
         footer: "claus.io - Professionelle Steuerzentrale für Großküchen"
       },
       es: {
-        fileName: "Guia_del_Usuario_Agent_Culinaire_OS.pdf",
-        title: "AGENT CULINAIRE OS - GUÍA DE USUARIO",
+        fileName: "Guia_del_Usuario_clausio.pdf",
+        title: "CLAUS.IO - GUÍA DE USUARIO",
         subtitle: "Gestión Culinaria Premium, Ingeniería de Menús e Higiene HACCP",
         intro: "Bienvenido a claus.io. Esta guía maestra describe el uso y la sinergia de nuestro conjunto completo de herramientas profesionales, diseñadas para optimizar sus márgenes, organizar las compras y garantizar el máximo cumplimiento de las normativas de seguridad de cocina.",
         sections: [
@@ -302,8 +302,8 @@ export function exporterGuidePDF(lang: string) {
         footer: "claus.io - Plataforma de Mando Culinario Profesional"
       },
       it: {
-        fileName: "Guida_Utente_Agent_Culinaire_OS.pdf",
-        title: "AGENT CULINAIRE OS - GUIDA PER L'UTENTE",
+        fileName: "Guida_Utente_clausio.pdf",
+        title: "CLAUS.IO - GUIDA PER L'UTENTE",
         subtitle: "Gestione di Cucina Premium, Ingegneria dei Menu e Protocollo HACCP",
         intro: "Benvenuto in claus.io. Questa guida centrale illustra come utilizzare le potenti utilità del nostro sistema operativo per ristorazione per consolidare i margini finanziari, regolare l'approvvigionamento e soddisfare appieno i requisiti HACCP ed allergeni del locale.",
         sections: [

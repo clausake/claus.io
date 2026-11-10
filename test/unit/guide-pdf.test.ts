@@ -70,6 +70,19 @@ describe("le guide telechargeable (src/lib/settings-guides.ts)", () => {
     expect(readme, 'le README doit dire « sept sections » (et non un compte périmé)').toContain("sept sections");
     expect(readme).not.toContain("six sections");
   });
+
+  it("le guide porte le nom du produit, pas un nom de developpement", () => {
+    // Mesure 10/11 : les cinq titres et les cinq noms de fichier etaient
+    // « AGENT CULINAIRE OS », un nom que le client ne lit nulle part ailleurs
+    // (le produit est claus.io partout ailleurs : README, installeurs,
+    // electron-builder productName).
+    for (const langue of LANGUES) {
+      const bloc = blocLangue(texte, langue);
+      expect(bloc, `${langue} : un nom de produit autre que claus.io`).not.toMatch(/AGENT CULINAIRE/i);
+      expect(bloc, `${langue} : le titre porte le nom du produit`).toMatch(/CLAUS\.IO/);
+      expect(bloc, `${langue} : le fichier telecharge porte le nom du produit`).toMatch(/fileName: "[^"]*clausio\.pdf"/);
+    }
+  });
 });
 
 // --- coupe du dictionnaire (le fichier est un litteral, pas un AST) --------
