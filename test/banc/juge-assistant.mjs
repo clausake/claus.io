@@ -24,8 +24,9 @@ import { createServer } from "node:http";
 import { rmSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { cheminTsx } from "../../scripts/harnais-serveur.cjs";
 
-const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
+const BIN = cheminTsx(process.cwd());
 const OUT = join(process.cwd(), "test", "tmp-assistant");
 const LECTEUR = join(process.cwd(), "test", "banc", "lecteur-fabrique-assistant.mjs");
 const FICHIER_CONSIGNE = join(OUT, "lignes.json");

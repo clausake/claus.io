@@ -37,10 +37,11 @@ import time
 import urllib.error
 import urllib.request
 
-HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import _sondes_serveur as ss
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 WORKROOT = os.path.join(os.path.expanduser("~"), ".cook-probe-index-installe")
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
@@ -114,7 +115,7 @@ class Serveur:
         self.port = free_port()
         self.log = open(os.path.join(data_dir, "server.log"), "w")
         self.proc = ss.Popen_sonde(
-            [NODE, os.path.join(BASE, "node_modules", ".bin", "tsx"), "server.ts"],
+            [NODE, chemin_tsx(BASE), "server.ts"],
             cwd=BASE, stdout=self.log, stderr=self.log,
             env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(self.port), USER_DATA_PATH=data_dir))
         deadline = time.time() + 35
@@ -142,7 +143,7 @@ class Serveur:
 
     def stop(self):
         try:
-            self.proc.terminate()
+            ss.tuer_groupe(self.proc)
             self.proc.wait(timeout=10)
         except Exception:
             self.proc.kill()

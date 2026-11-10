@@ -16,8 +16,9 @@ import { createServer } from "node:net";
 import { rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { cheminTsx } from "../../scripts/harnais-serveur.cjs";
 
-const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
+const BIN = cheminTsx(process.cwd());
 const OUT = join(process.cwd(), "test", "tmp-reglage-llm");
 
 let fail = 0;

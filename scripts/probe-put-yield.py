@@ -5,6 +5,7 @@ import urllib.request, urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _sondes_serveur as ss
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
@@ -29,7 +30,7 @@ def call(method, path, payload=None):
 shutil.rmtree(DATA, ignore_errors=True)
 ss.bootstrap(PORT)
 os.makedirs(DATA, exist_ok=True)
-tsxb = os.path.join(BASE_DIR, "node_modules", ".bin", "tsx")
+tsxb = chemin_tsx(BASE_DIR)
 log = open(os.path.join(DATA, "server.log"), "w")
 proc = ss.Popen_sonde([NODE, tsxb, "server.ts"], cwd=BASE_DIR,
                       env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(PORT), USER_DATA_PATH=DATA),

@@ -40,7 +40,11 @@ describe("candidatsDist : ordre et dédoublonnage", () => {
 
   it("l'asar (parent du module) est fouillé AVANT le cwd", () => {
     const c = candidatsDist({ env: {}, dirname: `${ASAR}/dist-server`, cwd: "/ailleurs" });
-    expect(c).toEqual([path.join(ASAR, "dist"), path.resolve("/ailleurs/dist")]);
+    // `path.resolve` et non `path.join` : sous Windows, ASAR ("/opt/...")
+    // est resolu en "C:\opt\..." par le code (il fait path.resolve du
+    // dirname), alors que path.join(ASAR, "dist") resterait "\opt\...".
+    // Mesure du client (Windows) : le test rougissait sur cette forme la.
+    expect(c).toEqual([path.join(path.resolve(ASAR), "dist"), path.resolve("/ailleurs/dist")]);
   });
 
   it("un même dossier trouvé par deux voies n'apparaît qu'une fois", () => {
@@ -57,7 +61,10 @@ describe("resoudreDist : la direction passante", () => {
       cwd: WIN,
       fichierExiste: disque(`${ASAR}/dist/index.html`),
     });
-    expect(r).toBe(path.join(ASAR, "dist"));
+    // Meme raison que plus haut : le code resout le dirname, il ne le
+    // concatene pas. Sous Windows, path.join(ASAR, "dist") donnerait
+    // "\opt\..." la ou le code rend "C:\opt\...".
+    expect(r).toBe(path.join(path.resolve(ASAR), "dist"));
   });
 
   it("COOKDRIVE_DIST gagne même si dist-server/../dist existe aussi", () => {
@@ -94,7 +101,7 @@ describe("resoudreDist : la morsure", () => {
       expect.unreachable("aurait dû lever");
     } catch (e) {
       const msg = (e as Error).message;
-      expect(msg).toContain(path.join(ASAR, "dist"));
+      expect(msg).toContain(path.join(path.resolve(ASAR), "dist"));
       expect(msg).toContain(path.resolve("/un/dossier/dist"));
     }
   });

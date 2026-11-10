@@ -10,6 +10,7 @@ import { request as rawRequest } from "node:http";
 import { lireZip } from "../banc/zip-lire";
 import { gunzipSync } from "node:zlib";
 import { Buffer } from "node:buffer";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 const PORT = 3999;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -27,9 +28,8 @@ let server: ChildProcess;
 
 test.beforeAll(async () => {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
-  server = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  server = demarrerServeur({
+
     env: {
       ...process.env,
       PORT: String(PORT),
@@ -41,7 +41,7 @@ test.beforeAll(async () => {
       COOKDRIVE_AUTH_OFF: "1",
     },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   server.stdout?.on("data", (d) => process.stdout.write(d));
   server.stderr?.on("data", (d) => process.stderr.write(d));
   // wait for server to listen ET confronte QUI REPOND (le garde d'instance) :
@@ -69,7 +69,7 @@ test.beforeAll(async () => {
 }, 45_000);
 
 test.afterAll(() => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
 });
 
 test("GET /health répond", async ({ request }) => {

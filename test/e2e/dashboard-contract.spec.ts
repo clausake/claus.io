@@ -20,6 +20,7 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -68,9 +69,8 @@ test.beforeAll(async () => {
   PORT = await portLibre();
   await attendrePortLibre(PORT);
   BASE = `http://127.0.0.1:${PORT}`;
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
-  server = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  server = demarrerServeur({
+
     // ⚠ le jeton doit etre DEDANS l objet env: pose apres l accolade fermante
     // c est un champ d options IGNORE par le fils (voir PHASES.md, 7.6).
     env: {
@@ -81,7 +81,7 @@ test.beforeAll(async () => {
       COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
     },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   server.stdout?.on("data", (d) => process.stdout.write(d));
   server.stderr?.on("data", (d) => process.stdout.write(d));
   const deadline = Date.now() + 45000;
@@ -113,7 +113,7 @@ test.beforeAll(async () => {
 }, 60000);
 
 test.afterAll(() => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
 });
 
 // --- T1: la voie par defaut sur une base SANS donnee ne rend PAS une semaine

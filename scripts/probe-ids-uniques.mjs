@@ -36,6 +36,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { createServer } from "net";
 import { fileURLToPath } from "node:url";
+import { cheminTsx, arreterServeur } from "./harnais-serveur.cjs";
 
 // La racine du depot, DERIVEE du fichier lui-meme : un nom en dur
 // (« cookdrive-project » = l ancien nom, ou « .clausio/claus.io » = le
@@ -76,7 +77,7 @@ fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const PORT = await portLibre();
 const BASE = `http://127.0.0.1:${PORT}`;
-const tsxBin = path.join(RACINE, "node_modules", ".bin", "tsx");
+const tsxBin = cheminTsx(RACINE);
 
 // ── U0 : le generateur, en SYNCHRONE (verdict deterministe) ─────────────────
 // 20 000 appels dans la MEME boucle : sous l'horloge nue ils tombent dans une
@@ -115,7 +116,7 @@ server.on("error", () => {
   process.exit(9);
 });
 
-const tuer = () => { try { process.kill(-server.pid, "SIGKILL"); } catch { try { server.kill("SIGKILL"); } catch {} } };
+const tuer = () => arreterServeur(server);
 
 const deadline = Date.now() + 45000;
 let pret = false;

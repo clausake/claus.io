@@ -25,8 +25,9 @@ import { createServer } from "node:net";
 import { rmSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
-const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
+const BIN = cheminTsx(process.cwd());
 const OUT = join(process.cwd(), "test", "tmp-instance-guard");
 const VERDICT = join(OUT, "verdict.txt");
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -9,6 +9,7 @@ import fs from "fs";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -73,12 +74,11 @@ test.beforeAll(async () => {
   if (!fs.existsSync(path.join(process.cwd(), "dist", "index.html"))) {
     throw new Error("dist/ absent : lancer `npm run build` avant cette suite");
   }
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
   serveurFini = new Promise<void>((resolve) => {
-    server = spawn(process.execPath, [tsxBin, "server.ts"], {
-      cwd: process.cwd(),
+    server = demarrerServeur({
+
       env: {
         ...process.env,
         PORT: String(PORT),
@@ -86,7 +86,7 @@ test.beforeAll(async () => {
         NODE_ENV: "production",
       },
       stdio: "pipe",
-    });
+      racine: process.cwd(),    });
     server.on("exit", () => resolve());
   });
   server.stdout?.on("data", (d) => process.stdout.write(d));
@@ -103,7 +103,7 @@ test.beforeAll(async () => {
 }, 45_000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   if (serveurFini) await serveurFini;
   if (PORT) await attendrePortLibre(PORT);
   fs.rmSync(DATA_DIR, { recursive: true, force: true });

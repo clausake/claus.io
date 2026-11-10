@@ -14,6 +14,7 @@ Juge:
  V5 le generateur de token produit des clefs UNIQUES et de bonne longueur (le
     contrat est juge par execution, pas par lecture)."""
 import os, re, shutil, subprocess, sys, json, collections
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(BASE)
@@ -67,7 +68,7 @@ if taille:
 # fichier se relit alors qu'un inline ne se relit pas.
 def _v5():
     node = shutil.which("node")
-    tsx = os.path.join(BASE, "node_modules", ".bin", "tsx")
+    tsx = chemin_tsx(BASE)
     harnais = os.path.join(BASE, "scripts", "_harnais_token.mjs")
     if not (node and os.path.exists(tsx) and os.path.exists(harnais)):
         return False, "harnais indisponible (node=%s tsx=%s harnais=%s)" % (

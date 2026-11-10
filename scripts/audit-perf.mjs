@@ -10,6 +10,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { rmSync, mkdirSync, statSync, readFileSync } from "node:fs";
 import process from "node:process";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
 const root = process.cwd();
 const PORT = 4125;
@@ -18,7 +19,7 @@ const DATA = join(process.cwd(), "test", "tmp-perf");
 rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
 
-const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsx = cheminTsx(process.cwd());
 const t0 = process.hrtime.bigint();
 const child = spawn(process.execPath, [tsx, "server.ts"], {
   env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },

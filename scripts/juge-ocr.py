@@ -25,6 +25,7 @@ import os
 import statistics
 import subprocess
 import sys
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BANC = os.path.join(BASE, "test", "banc")
@@ -53,7 +54,7 @@ def lire_piece(image: str, moteur: str):
     Un rc non nul est une faute NOMMEE (poids absents, piece absente) — le
     juge la rend, il ne la compte pas comme « 0 atteint »."""
     r = subprocess.run(
-        [os.path.join(BASE, "node_modules", ".bin", "tsx"), COULOIR, image, moteur],
+        [chemin_tsx(BASE), COULOIR, image, moteur],
         cwd=BASE, capture_output=True, text=True, timeout=300,
     )
     if r.returncode != 0:

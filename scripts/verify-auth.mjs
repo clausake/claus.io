@@ -39,6 +39,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rmSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { cheminTsx, arreterServeur } from "./harnais-serveur.cjs";
 
 const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
 
@@ -54,11 +55,7 @@ const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
 // la suite laissaient SIX serveurs vivants, chacun avec sa base — le
 // fantome que le garde d'amont rattrapait a chaque run. On spawn donc
 // detache (le fils devient chef de son groupe) et on tue le GROUPE.
-const arreter = (c) => {
-  if (!c || !c.pid) return;
-  try { process.kill(-c.pid, "SIGKILL"); }
-  catch { try { c.kill("SIGKILL"); } catch {} }
-};
+const arreter = arreterServeur;
 
 const PORT = 4171;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -84,7 +81,7 @@ writeFileSync(
   }, null, 2),
 );
 
-const tsx = join(RACINE, "node_modules", ".bin", "tsx");
+const tsx = cheminTsx(RACINE);
 const ERRLOG = join(DATA, "serveur-stderr.log");
 // Fantome : un fils orphelin d'un run precedent tient encore le port avec une
 // VIEILLE base (lecon du 03/10 — B1 rendait SETUP_DEJA_FAIT a cause d'un fils

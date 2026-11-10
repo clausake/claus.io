@@ -45,6 +45,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -128,7 +129,7 @@ def main():
     os.makedirs(donnees, exist_ok=True)
     port = str(port_libre())
     env = dict(os.environ, PORT=port, USER_DATA_PATH=donnees, NODE_ENV="development")
-    tsx = os.path.join(BASE, "node_modules", ".bin", "tsx")
+    tsx = chemin_tsx(BASE)
     if not os.path.exists(tsx):
         print("SANS TERRAIN : node_modules/.bin/tsx absent — lancer `npm ci`")
         return 0

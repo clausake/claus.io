@@ -36,8 +36,31 @@ def port_libre(port, hote="127.0.0.1"):
 
 def tuer_groupe(proc, delais=6):
     """SIGTERM puis SIGKILL sur le GROUPPE entier (le fils est chef de session).
-    Ne remonter au `proc.kill()` seul: il ne tue pas le petit-fils `tsx`."""
+    Ne remonter au `proc.kill()` seul: il ne tue pas le petit-fils `tsx`.
+
+    Chantier 46 — sous WINDOWS, il n'y a pas de groupe de processus :
+    `os.killpg` y echoue (le PID negatif n'y a pas de sens), et le serveur
+    `tsx` (petit-fils) SURVIT, garde le port, et la sonde suivante rend un
+    verdict FAUX (« SERVEUR PAS PRET »). On passe donc par `taskkill /T /F`,
+    qui tue l'ARBORESCENCE entiere du PID qu'on a lance — et rien d'autre
+    (le serveur installe sur le port 3000 n'est jamais touche).
+    """
     if proc is None:
+        return
+    if sys.platform.startswith("win"):
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=delais,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        try:
+            proc.wait(timeout=delais)
+        except subprocess.TimeoutExpired:
+            pass
         return
     for sig in ("SIGTERM", "SIGKILL"):
         try:

@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
 const ROOT = path.resolve(process.cwd());
 const PORT = Number(process.argv[2] || 3995);
@@ -16,7 +17,7 @@ fs.rmSync(DATA, { recursive: true, force: true });
 fs.mkdirSync(DATA, { recursive: true });
 
 const server = spawn(process.execPath,
-  [path.join(ROOT, "node_modules", ".bin", "tsx"), "server.ts"], {
+  [cheminTsx(ROOT), "server.ts"], {
   cwd: ROOT,
   env: { ...process.env, PORT: String(PORT), USER_DATA_PATH: DATA,
  // Identite desactivee : sonde de METIER (l'identite a sa porte verify:auth).

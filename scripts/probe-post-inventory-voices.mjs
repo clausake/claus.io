@@ -26,6 +26,7 @@ import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur } from "./harnais-serveur.cjs";
 
 const DATA_DIR = path.join(process.cwd(), "test", "tmp-probe-post");
 const TOKEN = `probe-post-inventory-${process.pid}-${Date.now().toString(36)}`;
@@ -45,7 +46,7 @@ fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const PORT = await portLibre();
 const BASE = `http://127.0.0.1:${PORT}`;
-const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsxBin = cheminTsx(process.cwd());
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
   cwd: process.cwd(),
   detached: true,
@@ -54,7 +55,7 @@ const server = spawn(process.execPath, [tsxBin, "server.ts"], {
 });
 server.on("error", () => process.exit(9));
 const groupKilled = () => {
-  try { process.kill(-server.pid, "SIGKILL"); } catch {}
+  arreterServeur(server);
 };
 // Le fils est DETACHE : il est chef de son propre groupe. `server.kill` ne
 // vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est

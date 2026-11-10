@@ -51,6 +51,7 @@ import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
 const DATA_DIR = path.join(process.cwd(), "test", "tmp-probe-recipes");
 const TOKEN = "probe-recipes";
@@ -70,7 +71,7 @@ fs.rmSync(DATA_DIR, { recursive: true, force: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const PORT = await portLibre();
 const BASE = `http://127.0.0.1:${PORT}`;
-const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsxBin = cheminTsx(process.cwd());
 const server = spawn(process.execPath, [tsxBin, "server.ts"], {
   cwd: process.cwd(),
   env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR, COOKDRIVE_INSTANCE_TOKEN: TOKEN },

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import path from "path";
 import {
   jugerEpreuve, etatAssistant, jouerEpreuve, consignerDemarrage,
   reinitialiserEpreuve, attendusEpreuve, cheminPiece,
@@ -72,9 +73,13 @@ describe("jouerEpreuve + consignerDemarrage (sans épreuve, pas de consignation)
   });
 
   it("cheminPiece rend la pièce du banc SOUS GIT, scellée présente", () => {
-    expect(cheminPiece("facture-synthetique.png")).toMatch(/test\/banc\/facture-synthetique\.png$/);
-    expect(cheminPiece("facture-synthetique-mauvaise.png"))
-      .toMatch(/facture-synthetique-mauvaise\.png$/);
+    // Le separateur est celui de la PLATEFORME : sous Windows, le chemin
+    // porte des antislashs et le motif POSIX ne matchait plus (mesure du
+    // client : 3 echecs unitaires, tous de cette famille).
+    const attendu = path.join("test", "banc", "facture-synthetique.png");
+    expect(cheminPiece("facture-synthetique.png").endsWith(attendu)).toBe(true);
+    expect(cheminPiece("facture-synthetique-mauvaise.png")
+      .endsWith(path.join("facture-synthetique-mauvaise.png"))).toBe(true);
   });
 
   it("la voie injectée improuvable est un défaut NOMMÉ, jamais une exception nue", async () => {

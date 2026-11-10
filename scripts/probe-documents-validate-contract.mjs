@@ -29,8 +29,9 @@ import { rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "node:net";
 import process from "node:process";
+import { cheminTsx, arreterServeur } from "./harnais-serveur.cjs";
 
-const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
+const BIN = cheminTsx(process.cwd());
 const OUT = join(process.cwd(), "test", "tmp-probe-docs-validate");
 const PORT = Number(process.env.PROBE_PORT || 4351);
 const BASE = "http://127.0.0.1:" + PORT;
@@ -211,7 +212,7 @@ async function main() {
     // vise que son pid, et le `tsx` qu'il a lui-même engendre lui survit (c'est
     // precisement le fils remanant qui a tenu 4351 pendant 20 minutes et fait
     // TIMEOUT la course suivante). `process.kill(-pid)` SIGKILL tout le groupe.
-    try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+    arreterServeur(child);
     await Promise.race([
       new Promise((r) => child.on("exit", r)),
       new Promise((r) => setTimeout(r, 4000)),

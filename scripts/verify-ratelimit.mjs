@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { rmSync, mkdirSync } from "node:fs";
 import process from "node:process";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
 const PORT = 4126;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -16,7 +17,7 @@ const DATA = join(process.cwd(), "test", "tmp-rl");
 rmSync(DATA, { recursive: true, force: true });
 mkdirSync(DATA, { recursive: true });
 
-const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsx = cheminTsx(process.cwd());
 const child = spawn(process.execPath, [tsx, "server.ts"], {
   env: {
     ...process.env,

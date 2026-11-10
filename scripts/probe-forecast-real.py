@@ -1,3 +1,4 @@
+from _sondes_serveur import tuer_groupe
 #!/usr/bin/env python3
 # Sonde de la prevision d'achat sur la base REELLE du client.
 #
@@ -25,8 +26,9 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import datetime
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
-HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 CLIENT_DB = os.environ.get("COOKDRIVE_CLIENT_DB", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "var", "agent_culinaire.db"))
 TODAY = time.strftime("%Y-%m-%d")
@@ -58,8 +60,9 @@ class Server:
         log = open(os.path.join(data_dir, "server.log"), "w")
         self.log = log
         self.proc = subprocess.Popen(
-            [NODE, os.path.join(BASE, "node_modules", ".bin", "tsx"), "server.ts"],
+            [NODE, chemin_tsx(BASE), "server.ts"],
             cwd=BASE, stdout=log, stderr=log,
+            start_new_session=True,  # precondition de tuer_groupe (arbre entier)
             env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(self.port), USER_DATA_PATH=data_dir))
         deadline = time.time() + 35
         while time.time() < deadline:
@@ -85,7 +88,7 @@ class Server:
 
     def stop(self):
         try:
-            self.proc.terminate()
+            tuer_groupe(self.proc)
             self.proc.wait(timeout=10)
         except Exception:
             self.proc.kill()

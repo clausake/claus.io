@@ -1,3 +1,4 @@
+from _sondes_serveur import tuer_groupe
 #!/usr/bin/env python3
 # Preuve negative de la GARDE D'INSTANCE du spec de la chaine d'approvisionnement.
 #
@@ -27,8 +28,9 @@ import subprocess
 import sys
 import time
 import urllib.request
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
-HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 SPEC_REL = os.path.join("test", "e2e", "purchasing-chain.spec.ts")
 WORK = os.path.join(BASE, "test", "tmp-garde-mord")
@@ -119,7 +121,7 @@ def lancer_intrus(port, tag, env_surcroit=None):
     il a meme ses propres donnees. Ce qu'il n'a PAS, c'est la source que le test
     croit juger.
     """
-    tsx = os.path.join(BASE, "node_modules", ".bin", "tsx")
+    tsx = chemin_tsx(BASE)
     data = os.path.join(WORK, "test", "tmp-intrus-" + tag)
     shutil.rmtree(data, ignore_errors=True)
     os.makedirs(data)
@@ -135,7 +137,8 @@ def lancer_intrus(port, tag, env_surcroit=None):
     log = open(os.path.join(WORK, "intrus-%s.log" % tag), "w", encoding="utf-8")
     proc = subprocess.Popen([os.path.realpath(shutil.which("node") or "node"),
                              tsx, "server.ts"],
-                            cwd=BASE, env=env, stdout=log, stderr=log)
+                            cwd=BASE, env=env, stdout=log, stderr=log,
+                            start_new_session=True)  # precondition de tuer_groupe
     return proc, log
 
 
@@ -153,7 +156,7 @@ def tuer(proc):
     if proc is None:
         return
     try:
-        proc.terminate()
+        tuer_groupe(proc)
         proc.wait(timeout=20)
     except Exception:
         try:

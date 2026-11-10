@@ -43,6 +43,7 @@ import fs from "fs";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -68,10 +69,9 @@ test.beforeAll(async () => {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   serveurFini = new Promise<void>((resolve) => {
-    server = spawn(process.execPath, [tsxBin, "server.ts"], {
-      cwd: process.cwd(),
+    server = demarrerServeur({
+
       // ⚠ Le jeton est DEDANS de l'objet `env`. Pose apres l'accolade
       // fermante c'est un champ d'options IGNORE par le fils: le serveur
       // retombe sur son propre randomUUID et toute la porte ROUGIT SUR SON
@@ -84,7 +84,7 @@ test.beforeAll(async () => {
         COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
       },
       stdio: ["ignore", "pipe", "pipe"],
-    });
+      racine: process.cwd(),    });
     server.on("exit", () => resolve());
   });
 
@@ -112,7 +112,7 @@ test.beforeAll(async () => {
 }, 90_000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   if (serveurFini) await serveurFini;
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });

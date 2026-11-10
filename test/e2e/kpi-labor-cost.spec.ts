@@ -32,6 +32,7 @@ import { test, expect } from "@playwright/test";
 import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 const PORT = 3997;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -56,12 +57,11 @@ const ATTENDU = TARIF * HEURES; // 240
 test.beforeAll(async () => {
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
-  server = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  server = demarrerServeur({
+
     env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA_DIR },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   server.stdout?.on("data", (d) => process.stdout.write(d));
   server.stderr?.on("data", (d) => process.stderr.write(d));
   const deadline = Date.now() + 30_000;
@@ -76,7 +76,7 @@ test.beforeAll(async () => {
 }, 45_000);
 
 test.afterAll(() => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });
 

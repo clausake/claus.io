@@ -20,6 +20,7 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -59,12 +60,11 @@ test.beforeAll(async () => {
   if (!fs.existsSync(path.join(process.cwd(), "dist", "index.html"))) {
     throw new Error("dist/ absent : lancer `npm run build` avant cette suite");
   }
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
   serveurFini = new Promise<void>((res) => {
-    server = spawn(process.execPath, [tsxBin, "server.ts"], {
-      cwd: process.cwd(),
+    server = demarrerServeur({
+
       env: {
         ...process.env,
         COOKDRIVE_AUTH_OFF: "1",
@@ -74,7 +74,7 @@ test.beforeAll(async () => {
         NODE_ENV: "production",
       },
       stdio: "pipe",
-    });
+      racine: process.cwd(),    });
     server.on("exit", () => res());
   });
   const deadline = Date.now() + 30_000;
@@ -88,7 +88,7 @@ test.beforeAll(async () => {
 }, 45_000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   if (serveurFini) await serveurFini;
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });

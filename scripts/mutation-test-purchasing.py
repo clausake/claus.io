@@ -22,7 +22,7 @@ import shutil
 import subprocess
 import sys
 
-HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 SPEC = os.path.join("test", "e2e", "purchasing-chain.spec.ts")
 SUCC = os.path.join("src", "routes", "suppliers.ts")

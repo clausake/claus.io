@@ -34,6 +34,7 @@ import fs from "fs";
 import { createServer } from "net";
 import { execFileSync } from "child_process";
 import { lireZip } from "../banc/zip-lire";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -41,7 +42,6 @@ const DATA_DIR = path.join(process.cwd(), "test", "tmp-export-sqlite");
 let server: ChildProcess;
 let serverLog = "";
 
-const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 
 async function portLibre(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -58,8 +58,8 @@ async function portLibre(): Promise<number> {
 async function demarrerAvec(extraEnv: Record<string, string>, dataDir: string) {
   const port = await portLibre();
   const instance = `export-sqlite-${port}`;
-  const proc = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  const proc = demarrerServeur({
+
     env: {
       ...process.env,
       PORT: String(port),
@@ -72,7 +72,7 @@ async function demarrerAvec(extraEnv: Record<string, string>, dataDir: string) {
       ...extraEnv,
     },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   proc.stdout?.on("data", (d) => (serverLog += String(d)));
   proc.stderr?.on("data", (d) => (serverLog += String(d)));
   const deadline = Date.now() + 40_000;

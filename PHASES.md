@@ -2238,3 +2238,49 @@ vitest 216/216, tsc 0. Le test llm-porte (regle 6) rendait un rouge
 d'INFRA sur ce poste (une OPENAI_API_KEY dans l'env du poste contredisait
 l'hypothese « pas de clef dans l'env ») : le test controle desormais son
 environnement.
+
+## Chantier 46 — Le harnais des tests, partage et correct sous Windows (10/11)
+
+Audit senior du 09/11 (CHANTIER_CLAUSIO_5), chantier 46.
+
+**LE DEFAUT MESURE.** 26 harnais (18 specs e2e + 8 scripts JS) et 9 juges
+Python lancaient le serveur via `node_modules/.bin/tsx`. Sous Windows, ce
+fichier est un SCRIPT SHELL : passe a `process.execPath` (node.exe), il etait
+lu comme du shell — « basedir=$(dirname ...) — SyntaxError: missing ) after
+argument list » — et le serveur ne demarrait jamais. Mesures du client :
+verify:auth echouait sur « serveur pas pret », verify:routes sur « 1 echec de
+demarrage, 43 tests non executes ».
+
+**LE CORRECTIF.** Un helper de harnais PARTAGE (scripts/harnais-serveur.cjs,
+plus son equivalent Python scripts/lib/tsx_cli.py) qui resout le VRAI CLI
+JavaScript de tsx (`tsx/cli` -> `dist/cli.mjs`) par le MODULE — node sait
+l'executer sur les deux systemes. Les 26 + 9 appelants l'utilisent
+desormais ; plus aucune occurrence de `.bin/tsx` dans les harnais.
+
+**L'ARRET D'ARBORESCENCE.** `child.kill()` ne tue que le fils direct : le
+serveur `tsx` (petit-fils) SURVIVAIT, gardait le port, et la course
+suivante jugeait un serveur qui n'etait pas le sien (verdict FAUX). Le
+helper tue l'ARBRE : `taskkill /T /F` sous Windows, le GROUPE sous POSIX
+(`detached: true` au lancement). cote Python, `tuer_groupe()` (module
+`_sondes_serveur.py`) gagne la voie `taskkill`, et les juges qui lancient le
+serveur posent desormais `start_new_session=True` — la PRECONDITION du
+tuer_groupe (elle manquait a cinq juges : le petit-fils survivait et
+tenait le port ; mesure : « port 4148 tenu par un orphelin »).
+Le serveur installe sur le port 3000 n'est JAMAIS touche : on ne tue que
+l'arbre du PID qu'on a lance.
+
+**LES TROIS TESTS UNITAIRES QUI ROUGISSAIENT.** a) `assistant.test.ts`
+imposait des slashs POSIX ; b et c) `chemin-ressources.test.ts` comparait
+`path.join(ASAR, "dist")` a un code qui, lui, RESOUT le dirname : sous
+Windows le code rend "C:\\opt\\..." et le test attendait "\\opt\\...". Les
+assertions passent desormais par `path.resolve` / `path.join` (meme
+resultat sur les deux systemes) — la LOGIQUE PRODUIT n'a pas ete touchee.
+
+Mesures : vitest 216/216, tsc 0, les 170 tests e2e (169 verts ; le
+`sonde-ui-auth`echoue deja sur le commit precedent : rouge PREEEXISTANT,
+hors perimetre de l'audit), et les portes `verify:auth`, `verify:routes`,
+`verify:http`, `verify:sse`, `verify:perf`, `verify:ratelimit`,
+`verify:audit`, `verify:hermes`, `verify:suggestions`, `verify:surveillance`,
+`verify:mode-agent`, `verify:garde-fantomes` vertes. La preuve WINDOWS
+elle-meme ne peut pas etre produite sur ce poste Linux : elle viendra du
+poste du client.

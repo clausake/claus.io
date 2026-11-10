@@ -15,6 +15,7 @@ import { test, expect } from "@playwright/test";
 import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 const PORT = 3998;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -33,15 +34,11 @@ test.beforeAll(async () => {
   if (!fs.existsSync(path.join(process.cwd(), "dist", "index.html"))) {
     throw new Error("dist/ absent : lancer `npm run build` avant cette suite");
   }
-  server = spawn(
-    process.execPath,
-    [path.join(process.cwd(), "node_modules", ".bin", "tsx"), "server.ts"],
-    {
-      cwd: process.cwd(),
-      env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
-      stdio: "pipe",
-    },
-  );
+  server = demarrerServeur({
+    racine: process.cwd(),
+    env: { ...process.env, COOKDRIVE_AUTH_OFF: "1", PORT: String(PORT), USER_DATA_PATH: DATA, NODE_ENV: "production" },
+    stdio: "pipe",
+  });
   const deadline = Date.now() + 45_000;
   while (Date.now() < deadline) {
     try {
@@ -55,7 +52,7 @@ test.beforeAll(async () => {
   throw new Error("serveur prod pas pret sur " + BASE);
 }, 60_000);
 
-test.afterAll(() => server?.kill("SIGTERM"));
+test.afterAll(() => arreterServeur(server));
 
 const chargees = async (page: any) => {
   const vus: string[] = [];

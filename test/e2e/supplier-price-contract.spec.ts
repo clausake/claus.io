@@ -46,6 +46,7 @@ import fs from "fs";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -82,10 +83,9 @@ test.beforeAll(async () => {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   serveurFini = new Promise<void>((resolve) => {
-    server = spawn(process.execPath, [tsxBin, "server.ts"], {
-      cwd: process.cwd(),
+    server = demarrerServeur({
+
       env: {
         ...process.env,
             COOKDRIVE_AUTH_OFF: "1",
@@ -94,7 +94,7 @@ test.beforeAll(async () => {
         COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
       },
       stdio: ["ignore", "pipe", "pipe"],
-    });
+      racine: process.cwd(),    });
     server.on("exit", () => resolve());
   });
 
@@ -145,7 +145,7 @@ test.beforeAll(async () => {
 }, 90_000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   if (serveurFini) await serveurFini;
   fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });

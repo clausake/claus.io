@@ -39,12 +39,13 @@ import json
 import os
 import subprocess
 import sys
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BANC = os.path.join(BASE, "test", "banc")
 COULOIR_OCR = os.path.join(BANC, "couloir-juge-ocr.mjs")
 COULOIR_DLC = os.path.join(BANC, "couloir-garde-dlc.mjs")
-TSX = os.path.join(BASE, "node_modules", ".bin", "tsx")
+TSX = chemin_tsx(BASE)
 
 ATTENTES = {
     "etiquette-fr-dlc":          ("ACCEPTE", "dlc"),

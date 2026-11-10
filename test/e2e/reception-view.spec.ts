@@ -40,6 +40,7 @@ import path from "path";
 import fs from "fs";
 import { createServer } from "net";
 import { entrerDansAppSansNavigation } from "./entrer-dans-app";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -102,15 +103,14 @@ test.beforeAll(async () => {
       "dist/ absent : lancer `npm run build` avant cette suite (meme contrat que motion-animation.spec.ts)",
     );
   }
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
   // PAS d'await ici : la promesse se resout a la MORT du serveur.
   // L'attendre ici ferait attendre a beforeAll que le serveur meure avant de
   // continuer — un timeout de hook a 90 s garanti.
   serveurFini = new Promise<void>((resolve) => {
-    server = spawn(process.execPath, [tsxBin, "server.ts"], {
-      cwd: process.cwd(),
+    server = demarrerServeur({
+
       env: {
         ...process.env,
             COOKDRIVE_AUTH_OFF: "1",
@@ -127,7 +127,7 @@ test.beforeAll(async () => {
       NODE_ENV: "production",
     },
     stdio: "pipe",
-    });
+      racine: process.cwd(),    });
     server.on("exit", () => resolve());
   });
   server.stdout?.on("data", (d) => process.stdout.write(d));
@@ -144,7 +144,7 @@ test.beforeAll(async () => {
 }, 45_000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   if (serveurFini) await serveurFini;
   if (PORT) await attendrePortLibre(PORT);
   fs.rmSync(DATA_DIR, { recursive: true, force: true });

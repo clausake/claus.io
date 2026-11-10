@@ -26,6 +26,7 @@ import { createServer } from "node:net";
 import { execSync } from "node:child_process";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+import { cheminTsx, arreterServeur } from "./harnais-serveur.cjs";
 
 const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
 
@@ -41,15 +42,11 @@ const RACINE = resolve(fileURLToPath(import.meta.url), "..", "..");
 // la suite laissaient SIX serveurs vivants, chacun avec sa base — le
 // fantome que le garde d'amont rattrapait a chaque run. On spawn donc
 // detache (le fils devient chef de son groupe) et on tue le GROUPE.
-const arreter = (c) => {
-  if (!c || !c.pid) return;
-  try { process.kill(-c.pid, "SIGKILL"); }
-  catch { try { c.kill("SIGKILL"); } catch {} }
-};
+const arreter = arreterServeur;
 
 const DATA = join(RACINE, "test", "tmp-mode-manuel");
 const DBFILE = join(DATA, "agent_culinaire.db");
-const TSX = join(RACINE, "node_modules", ".bin", "tsx");
+const TSX = cheminTsx(RACINE);
 const ERRLOG = join(DATA, "serveur-stderr.log");
 
 const portLibre = () => new Promise((resolve, reject) => {

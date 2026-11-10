@@ -24,13 +24,13 @@ import fs from "fs";
 import { createServer } from "net";
 import { entrerDansAppSansNavigation } from "./entrer-dans-app";
 import { lireZip } from "../banc/zip-lire";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
 const DATA_DIR = path.join(process.cwd(), "test", "tmp-export-ui");
 let server: ChildProcess;
 
-const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
 
 async function portLibre(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -70,8 +70,8 @@ test("le bouton Sauvegarder telecharge un ZIP reel ; sur erreur, aucun succes", 
   PORT = await portLibre();
   BASE = `http://127.0.0.1:${PORT}`;
   const instance = `export-ui-${PORT}`;
-  server = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  server = demarrerServeur({
+
     env: {
       ...process.env,
       PORT: String(PORT),
@@ -85,7 +85,7 @@ test("le bouton Sauvegarder telecharge un ZIP reel ; sur erreur, aucun succes", 
       COOKDRIVE_RATELIMIT_OFF: "1",
     },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   server.stdout?.on("data", () => undefined);
   server.stderr?.on("data", () => undefined);
 

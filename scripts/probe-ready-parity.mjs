@@ -38,8 +38,9 @@ import { rmSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
-const BIN = join(process.cwd(), "node_modules", ".bin", "tsx");
+const BIN = cheminTsx(process.cwd());
 const OUT = join(process.cwd(), "test", "tmp-ready-parity");
 const require = createRequire(import.meta.url);
 const R = require("../electron/ready-parity.cjs");

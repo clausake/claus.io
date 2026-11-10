@@ -1,3 +1,4 @@
+from _sondes_serveur import tuer_groupe
 # Decision d'index SQLite : plan + A/B entrelace, a volume de resto reel.
 #
 # Pourquoi cet outil existe : la question « faut-il des index ? » a deja ete
@@ -30,6 +31,7 @@
 import argparse, os, shutil, sqlite3, statistics, subprocess, sys, tempfile, time
 from shutil import which as shutil_which
 import urllib.request
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 
 # Les outils d'edition de cette machine ALTERENT les identifiants contenant un
 # soulignement (cf. journal de projet). Les noms d'API sensibles sont donc
@@ -42,7 +44,7 @@ _PERF = getattr(time, "perf" + _U + "counter")
 _ADDARG = "add" + _U + "argument"
 _PARGS = "parse" + _U + "args"
 
-root = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
+root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 PORT = 4148
 base = "http://127.0.0.1:%d" % PORT
 
@@ -111,7 +113,7 @@ def run_server(data_dir):
             "`npm install --include=dev` (NODE_ENV=production fait sauter les "
             "devDependencies et le serveur ne peut pas demarrer)"
         )
-    tsx = os.path.join(root, "node_modules", ".bin", "tsx")
+    tsx = chemin_tsx(root)
     # ⚠ node, pas sys.executable : tsx est un shim SHELL que seul node sait
     # execher. Lance par python, il l'inter-prete comme du python et meurt d'un
     # "SyntaxError: invalid syntax" sur le shim - un echec qui ressemblait a s'y
@@ -123,14 +125,19 @@ def run_server(data_dir):
         raise SystemExit("ECHEC  tsx absent : lancer `npm ci` avant ce script")
     log = open(os.path.join(data_dir, "serveur.log"), "w")
     child = subprocess.Popen([node, tsx, "server.ts"], cwd=root, env=env,
-                             stdout=log, stderr=subprocess.STDOUT)
+                             stdout=log, stderr=subprocess.STDOUT,
+                             # Le fils part dans SA PROPRE session : c'est la
+                             # precondition de tuer_groupe (un kill() seul ne
+                             # tue pas le petit-fils `tsx`, qui survit et garde
+                             # le port — le « fantome » du Sprint 14.d).
+                             start_new_session=True)
     for _ in range(240):
         try:
             urllib.request.urlopen(base + "/api/settings", timeout=2)
             return child
         except Exception:
             time.sleep(0.25)
-    child.terminate()
+    tuer_groupe(child)
     try:
         log.seek(0)
         queue = (log.read() or "").strip().split("\n")[-12:]
@@ -410,7 +417,7 @@ def main(argv=None):
     print("base de mesure isolee :", data)
     try:
         child = run_server(data)          # le serveur cree + seed sa propre base
-        child.terminate()
+        tuer_groupe(child)
         time.sleep(0.5)
         seed(data)
 

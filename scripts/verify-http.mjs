@@ -27,6 +27,7 @@ import { Buffer } from "node:buffer";
 // Un client HTTP BRUT. fetch (undici) decompress tout seul et masque le poids
 // reel du fil : mesurer un gain de compression avec lui serait une preuve creuse.
 import { request as rawRequest } from "node:http";
+import { cheminTsx } from "./harnais-serveur.cjs";
 
 const PORT = 4129;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -41,7 +42,7 @@ if (!existsSync(join(process.cwd(), "dist", "index.html"))) {
   process.exit(1);
 }
 
-const tsx = join(process.cwd(), "node_modules", ".bin", "tsx");
+const tsx = cheminTsx(process.cwd());
 const child = spawn(process.execPath, [tsx, "server.ts"], {
   env: {
     ...process.env,

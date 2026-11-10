@@ -29,6 +29,7 @@ import { spawn, ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 import { createServer } from "net";
+import { cheminTsx, arreterServeur, demarrerServeur } from "../../scripts/harnais-serveur.cjs";
 
 let PORT = 0;
 let BASE = "";
@@ -69,9 +70,8 @@ test.beforeAll(async () => {
   PORT = await portLibre();
   await attendrePortLibre(PORT);
   BASE = `http://127.0.0.1:${PORT}`;
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", "tsx");
-  server = spawn(process.execPath, [tsxBin, "server.ts"], {
-    cwd: process.cwd(),
+  server = demarrerServeur({
+
     // le jeton DEDANS l'objet env (voir PHASES.md 7.6)
     env: {
       ...process.env,
@@ -81,7 +81,7 @@ test.beforeAll(async () => {
       COOKDRIVE_INSTANCE_TOKEN: INSTANCE_TOKEN,
     },
     stdio: "pipe",
-  });
+    racine: process.cwd(),  });
   server.stdout?.on("data", (d) => process.stdout.write(d));
   server.stderr?.on("data", (d) => process.stdout.write(d));
   const deadline = Date.now() + 45000;
@@ -120,7 +120,7 @@ test.beforeAll(async () => {
 }, 60000);
 
 test.afterAll(async () => {
-  server?.kill("SIGTERM");
+  arreterServeur(server);
   await new Promise((r) => setTimeout(r, 800));
 });
 
