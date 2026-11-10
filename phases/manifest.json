@@ -1,6 +1,6 @@
 {
   "original_octets": 270908,
-  "original_sha256": "473341dabef02c6fc1242df207a64b74993628f7487d207848a509728fe1375b",
+  "original_sha256": "aa8a33072a0641196eb1819f562fe65891b482fbff02b93dc5bbd83f58d61ac4",
   "chaud_octets": 78486,
   "archives": [
     {
@@ -176,13 +176,13 @@
   "tokens_approx_chaud": 18916,
   "sha256_original_avant_reancrage": "0360a1fe902e446899aef3d21911857a126dd356afaf56e25799223cda43ebe2",
   "reancrage": {
-    "motif": "chantier 49 consigne : reprise des donnees d'une ancienne installation (detection en lecture seule, proposition seulement si l'installation active est vierge hors kit, refus sur base active non vide, snapshot de securite avant import, uploads importes, chemin actif affiche dans les Reglages) ; ancre recalculee par le juge (recolle 473341da), jamais recopiee a la main",
-    "date": "2026-11-10T08:30:00.000000",
+    "motif": "livraison 1.0.6 consigne : les six chantiers de l'audit senior (42 a 49) sont fermes, le lot complet des portes est vert (GATES=105 ROUGES=0, dont verify:export-sqlite, verify:export-ui, verify:donnees-anciennes), le versionnement passe en 1.0.6 (v1.0.5 n'est jamais re-taguee) ; ancre recalculee par le juge (recolle aa8a3307), jamais recopiee a la main",
+    "date": "2026-11-10T09:20:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   },
   "reancrage_precedent": {
-    "motif": "chantier 48 consigne : electron 41.10.7 -> 45.2.3 (les 8 alertes electron fermes) et overrides ciblees sur la chaine glob/minimatch de production (archiver-utils, cacache) ; npm audit --omit=dev = 0, arbre coherent, livrable construit ; ancre recalculee par le juge (recolle 1c1eedea), jamais recopiee a la main",
-    "date": "2026-11-10T08:05:00.000000",
+    "motif": "chantier 49 consigne : reprise des donnees d'une ancienne installation (detection en lecture seule, proposition seulement si l'installation active est vierge hors kit, refus sur base active non vide, snapshot de securite avant import, uploads importes, chemin actif affiche dans les Reglages) ; ancre recalculee par le juge (recolle 473341da), jamais recopiee a la main",
+    "date": "2026-11-10T08:30:00.000000",
     "note": "le .orig reste l'etat d'origine ; le recolle juge est la nouvelle ancre."
   }
 }

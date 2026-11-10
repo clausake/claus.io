@@ -2398,3 +2398,21 @@ snapshot pose) + donnees visibles par la route metier ; refus 409 sur une
 base active non vide avec donnees intactes ; aucune proposition et AUCUN
 bruit sans ancienne base (detection en 5 ms) ; sauvegardes preexistantes
 conservees.
+
+## Livraison 1.0.6 — le lot complet des portes, puis les installeurs (10/11)
+
+Les six chantiers de l'audit senior du 09/11 (42 a 49) sont fermes,
+commites un par un (0e4fc5a, 68e6121, 16d1c9f, 4890f22, 9beb513), et le
+versionnement est passe en **1.0.6** : la version publiee v1.0.5 n'est JAMAIS
+re-taguee (regle du depot), les installeurs neufs sont donc reconstruits et
+publies sous v1.0.6.
+
+Preuve du lot complet : `GATES=105 ROUGES=0` (le lot de `run-all-gates.py`,
+lu par `scripts/lire-gates.py`), dont les trois portes nouvelles :
+`verify:export-sqlite`, `verify:export-ui`, `verify:donnees-anciennes`.
+Le lot complet est la preuve la plus large du depot : elle rejoue les portes
+de contrat metier, d'identite, de securite, de bundle et de livrable.
+
+Le README est mis a jour en LANGAGE PRODUIT (la release, la sauvegarde
+fiable, la reprise des donnees, le chemin reel des donnees) : aucune
+reference aux chantiers internes.

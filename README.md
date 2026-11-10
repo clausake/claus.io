@@ -58,6 +58,8 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 | **Dashboard** | Courbes quotidiennes **food cost** (achats fournisseurs) et **labor cost** (planning × taux horaires), valeur du stock, alertes en temps réel | 100 % sans IA |
 | **Epicure Studio** | Analyse aromatique : embeddings d'ingrédients, substitutions, accords | Analyse locale (embeddings, pas un LLM) |
 | **Kit de démonstration** | Sur une base vierge, un exemple est posé automatiquement dans chaque onglet (1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP) ; ressemable et effaçable par le client dans Réglages | 100 % sans IA (INSERT/DELETE déterministes) |
+| **Sauvegarde** | Le bouton « Sauvegarder » (Réglages) télécharge une archive prête à restaurer : la base **complète** (y compris les dernières écritures), vos réglages sans leurs secrets, vos documents importés et un manifeste de version. L'archive est vérifiée avant d'être livrée, et une copie automatique est prise au démarrage de l'application | 100 % sans IA |
+| **Reprise des données** | Après une réinstallation, l'application cherche une installation précédente sur le poste et **propose** de reprendre ses données (un clic, une copie de sécurité conservée avant). Vos données actuelles ne sont jamais écrasées, et le chemin exact de vos données est affiché dans Réglages | 100 % sans IA |
 
 Le guide PDF téléchargeable dans **Réglages** est fourni dans les **cinq langues** de l'interface (fr, en, de, es, it) et porte les mêmes six sections, dont « Extraction IA et kit d'exemples ».
 
@@ -90,16 +92,16 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**Étape 1 — télécharger.** Sur la [page des releases](https://github.com/clausake/claus.io/releases), une seule release est publiée : **v1.0.5**. Prenez le fichier de votre plateforme :
+**Étape 1 — télécharger.** Sur la [page des releases](https://github.com/clausake/claus.io/releases), une seule release est publiée : **v1.0.6**. Prenez le fichier de votre plateforme :
 
 | Plateforme | Fichier |
 |---|---|
-| Windows 10/11 x64 | `claus.io.Setup.1.0.5.exe` |
-| macOS (Apple Silicon) | `claus.io-1.0.5-arm64.dmg` |
-| Linux ARM64 (AppImage) | `claus.io-1.0.5-arm64.AppImage` |
-| Linux ARM64 (paquet) | `clausio_1.0.5_arm64.deb` |
+| Windows 10/11 x64 | `claus.io.Setup.1.0.6.exe` |
+| macOS (Apple Silicon) | `claus.io-1.0.6-arm64.dmg` |
+| Linux ARM64 (AppImage) | `claus.io-1.0.6-arm64.AppImage` |
+| Linux ARM64 (paquet) | `clausio_1.0.6_arm64.deb` |
 
-**Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.5-arm64.AppImage`.
+**Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.6-arm64.AppImage`.
 
 **Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans **Réglages → Kit de démonstration** (et ne revient pas tout seul).
 
@@ -146,7 +148,9 @@ python3 scripts/lire-gates.py # qui est rouge
 
 ## Données
 
-100 % locales : SQLite, uploads et réglages dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux).
+100 % locales : SQLite, uploads et réglages dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). **Réglages → Données** affiche le chemin réellement utilisé sur votre poste : copiez-le pour conserver une sauvegarde de votre côté.
+
+Une réinstallation ne perd rien : si une installation précédente est retrouvée sur le poste, l'application propose de reprendre ses données (les vôtres d'abord, les anciennes ensuite — jamais l'inverse).
 
 ## Licence
 
