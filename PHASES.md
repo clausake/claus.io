@@ -2308,3 +2308,50 @@ inexistant -> -1) et la SOURCE (le service appelle `fs.statfsSync` et
 n'appelle PAS `statfs.sync` ; health.ts passe par le service et ne masque
 plus l'appel). Un correctif qui reintroduirait `statfs.sync` fait rougir
 le test meme si le resultat reste -1.
+
+## Chantier 48 — Les dependances vulnerables, corrigees SANS --force (10/11)
+
+Audit senior du 09/11 (CHANTIER_CLAUSIO_5), chantier 48.
+
+**MESURES AVANT (09/11).** `npm audit` : 16 alertes (1 elevee, 15 moderees),
+dont 9 moderees en dependances de PRODUCTION. La seule elevee est Electron
+(GHSA-jr5w-w6x2-84p9 et sept autres, toutes les ranges < 42.11.16). Mesure
+de l'audit : « Electron est une devDependency npm MAIS il est livre dans
+l'application ; ne pas ignorer l'alerte sous prétexte dev-only » — c'est bien
+le cas : electron-builder embarque l'executable dans l'installateur.
+
+**CORRECTION 1 — ELECTRON 41.10.7 -> 45.2.3.** C'est la version corrigee que
+`npm audit` propose ; elle ferme les HUIT alertes electron (toutes les ranges
+sont < 42.11.16). Mesure de compatibilite : `electron-builder --linux dir`
+empaquette l'application avec electron 45.2.3 sur ce poste, en RECONSTRUISANT
+les modules natifs (argon2, sqlite3) pour la nouvelle ABI — le livrable
+reel se construit.
+
+**CORRECTION 2 — LA CHAINE glob/minimatch, par `overrides` CIBLES.** Ce sont
+les deux seules alertes restantes (glob >=9.0.0 <=14.0.1 ; minimatch
+>=7.0.0 <11.0.1). Elles viennent de `archiver-utils` et `cacache`
+(PRODUCTION) et de la chaine electron-builder (build). On force
+`archiver-utils > glob@^14.0.4` et `cacache > glob@^14.0.4` : glob 14 expose
+toujours `sync` et `glob`, et il embarque minimatch 11.0.5.
+
+  ⚠ POURQUOI PAS `archiver@8` ? Mesure : archiver 8.0.0 est ESM-ONLY
+  (« type: module ») et son API a change (classes `ZipArchive`, plus de
+  fonction `archiver('zip', ...)`). Le serveur est empaquete en CJS
+  (`esbuild --format=cjs --packages=external`) : l'accepter demanderait
+  `require(esm)` (Node >= 22.12) dans le bundle livre, pour un gain de
+  securite equivalent. On garde donc archiver 7 et on corrige SA chaine.
+
+  ⚠ POURQUOI PAS les overrides minimatch d'electron-builder ? Mesure :
+  `dir-compare@4` exige minimatch ^3 ; l'override forcait minimatch 11 dans
+  ce sous-arbre et l'arbre devenait INCOHERENT (« invalid » dans `npm ls`,
+  code de sortie 1). On les a RETIRES : la chaine electron-builder est
+  dev-only (build), et la production est a ZERO.
+
+**ETAT FINAL MESURE.** `npm audit --omit=dev` : **0 vulnerabilite**. `npm
+audit` : 6 alertes moderees, toutes dans la chaine electron-builder (BUILD,
+jamais livree au client) ; la correction proposee par npm est un
+RETROGRADEMENT a electron-builder 25.1.0 (une chaine d'octobre 2024) —
+refuse ici, car « npm audit fix --force » est explicitement exclu par le
+cahier des charges. L'arbre est coherent (`npm ls` rc=0) et le livrable se
+construit (`electron-builder --linux dir` : empaquetage OK, modules natifs
+reconstruits pour electron 45.2.3).

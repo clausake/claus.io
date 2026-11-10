@@ -1,6 +1,6 @@
 {
   "name": "clausio",
-  "description": "claus.io \u2014 assistant culinaire IA open source (EUPL-1.2)",
+  "description": "claus.io — assistant culinaire IA open source (EUPL-1.2)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
   "version": "1.0.5",
@@ -234,7 +234,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/sqlite3": "^3.1.11",
     "autoprefixer": "^10.4.21",
-    "electron": "^41.2.1",
+    "electron": "^45.2.3",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.28.0",
     "js-yaml": "4.3.2",
@@ -278,7 +278,13 @@
     "node-gyp": "^11.3.0",
     "tar": "^7.5.22",
     "dompurify": "^3.4.17",
-    "body-parser": "^2.4.0"
+    "body-parser": "^2.4.0",
+    "archiver-utils": {
+      "glob": "^14.0.4"
+    },
+    "cacache": {
+      "glob": "^14.0.4"
+    }
   },
   "license": "EUPL-1.2"
 }
