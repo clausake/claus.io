@@ -115,7 +115,7 @@ jobs:
 
   # ── Lot 2 : unites ────────────────────────────────────────────────────────
   vitest:
-    name: vitest (158 tests)
+    name: vitest (225 tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
