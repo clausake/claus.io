@@ -87,6 +87,12 @@ unit-test:
     # AppImage quand il est construit ; sans installeur sous release/ elle nomme
     # son absence au lieu de mentir en vert.
     - npm run verify:smoke-installateurs
+    # Chantier 52 : SOMMES-SHA256.txt est promis au client par le README. Il a
+    # manque a v1.0.7 alors que le workflow ne l'a jamais genere (celui de v1.0.6
+    # venait d'un geste a la main). La porte juge la promesse, le workflow, et
+    # la release publiee ; en mode complet elle recalcule les sommes sur les
+    # octets telecharges.
+    - npm run verify:sommes-release
 
 # E2E (Playwright) : démarre le serveur Express (tsx) sur un port isolé et
 # vérifie les routes critiques (CRUD inventaire, licence, dashboard, HACCP).

@@ -307,6 +307,86 @@ jobs:
             echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
           fi
 
+      # ── LE FICHIER DE SOMMES EST UN CONTRAT DU README, PAS UN ORNEMENT
+      # (mesure du 11/11 : v1.0.7 a ete publiee avec ses quatre installeurs et
+      # SANS SOMMES-SHA256.txt ; `grep -rn SOMMES .github/` rendait VIDE — le
+      # fichier de v1.0.6 avait ete attache A LA MAIN, cinq minutes apres le
+      # dernier asset. Un contrat promis au client et tenu a la main une fois
+      # sur deux est un contrat faux.)
+      #
+      # Il est ICI, dans le job linux, pour une raison mesuree : les trois jobs
+      # s'attachent a la MEME release (`tag_name` lu dans package.json) mais
+      # chacun ne voit QUE ses fichiers sous release/, et ils tournent en
+      # PARALLELE. Aucun job ne peut donc sommer les quatre fichiers : les
+      # trois premiers ne sont pas sur sa machine. Ce que ce job peut garantir,
+      # c'est ce qu'il produit — d'ou une etape PAR JOINTURE (exe, dmg, ici
+      # AppImage + deb) et une ATTACHE DEDIEE QUI FUSIONNE : le fichier joint
+      # porte les QUATRE lignes, et une jointure dont un fichier attendu est
+      # absent fait ROUGIR l'etape au lieu de produire un fichier incomplet
+      # qui rassure pour rien.
+      #
+      # LES SOMMES PORTENT LES OCTETS PUBLES, PAS UNE INTENTION : electron-builder
+      # re-ecrit les block maps embarquees apres son propre hash. La somme est
+      # donc calculee sur le fichier qui part, dans la MEME etape que
+      # l'attachement. Cote client, la contre-verif est ecrite dans le README
+      # (sha256sum / Get-FileHash) ; la porte verify:sommes-release rejoue le
+      # calcul sur les octets reellement telecharges.
+      - name: SOMMES-SHA256.txt (les octets publies, liste fermee)
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          # Liste FERMEE : les DEUX fichiers de ce job doivent exister, sinon
+          # le fichier de sommes serait incomplet — et un fichier incomplet est
+          # pire qu'un fichier absent (il rassure pour rien).
+          a="release/claus.io-${version}-arm64.AppImage"
+          d="release/clausio_${version}_arm64.deb"
+          for f in "$a" "$d"; do
+            [ -s "$f" ] || { echo "::error::$f absent ou vide — AppImage et deb sont le contrat de ce job"; exit 1; }
+          done
+          ( cd release && sha256sum "$(basename "$a")" "$(basename "$d")" ) > release/SOMMES-SHA256.txt
+          echo "== contenu de SOMMES-SHA256.txt (les octets qui partent) :"
+          cat release/SOMMES-SHA256.txt
+          [ "$(wc -l < release/SOMMES-SHA256.txt)" -eq 2 ] || { echo "::error::2 lignes attendues"; exit 1; }
+          # on nomme les lignes des AUTRES jobs deja publiees sur cette release
+          # (information du journal : la fusion se fait a l'etape suivante).
+          gh release view "v${version}" --json assets -q '.assets[].name' || true
+
+      - name: joindre la release (installeurs + SOMMES fusionnes des trois jobs)
+        shell: bash
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          # ATTENTE BORNEE : les trois jobs sont en PARALLELE, les deux autres
+          # joints peuvent arriver apres. 12 tentatives x 20 s = 4 min, puis
+          # on ROUGIT en nommant ce qui manque (un wait infini est exactement le
+          # defaut du smoke AppImage corrige plus haut dans ce meme fichier).
+          manquants=""
+          for i in $(seq 1 12); do
+            manquants=""
+            for n in "claus.io.Setup.${version}.exe" "claus.io-${version}-arm64.dmg"; do
+              gh release download "v${version}" -p "$n" -D release --clobber >/dev/null 2>&1 \
+                || manquants="$manquants $n"
+            done
+            [ -z "$manquants" ] && break
+            echo "== en attente des joints des autres jobs ($i/12) :$manquants"
+            sleep 20
+          done
+          [ -z "$manquants" ] || { echo "::error::joints absents apres 4 min :$manquants"; exit 1; }
+          # FUSION : les lignes de CE job (celles qui viennent d'etre calculees
+          # sur les octets presents ici) + les lignes recalculees sur les
+          # fichiers telecharges, soit les quatre.
+          ( cd release && sha256sum "claus.io.Setup.${version}.exe" \
+                                   "claus.io-${version}-arm64.dmg" ) \
+            > release/SOMMES-SHA256.txt.tmp
+          cat release/SOMMES-SHA256.txt >> release/SOMMES-SHA256.txt.tmp
+          mv release/SOMMES-SHA256.txt.tmp release/SOMMES-SHA256.txt
+          echo "== SOMMES-SHA256.txt final (4 lignes attendues) :"
+          cat release/SOMMES-SHA256.txt
+          [ "$(wc -l < release/SOMMES-SHA256.txt)" -eq 4 ] || { echo "::error::4 lignes attendues"; exit 1; }
+
       - name: attacher les installeurs à la release
         uses: softprops/action-gh-release@v2
         with:
@@ -314,3 +394,4 @@ jobs:
           files: |
             release/*.AppImage
             release/*.deb
+            release/SOMMES-SHA256.txt

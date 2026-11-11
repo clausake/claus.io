@@ -2778,3 +2778,84 @@ smoke (l'execution headless d'un NSIS ou d'un .dmg n'est pas implantee — le
 workflow le dit a la ligne 183 au lieu de laisser croire que les trois
 plateformes sont couvertes). La preuve d'`EBUSY` sur le portable du client
 reste donc le test demande, pas cette porte.
+
+## Chantier 53 — SOMMES-SHA256.txt : le contrat du README etait tenu a la main (11/11)
+
+**CE QUE LE CLIENT LIT.** README.md, ligne 104 (verifiee par la porte) :
+« Chaque release publie aussi `SOMMES-SHA256.txt` : apres telechargement,
+comparez la somme de votre fichier (`sha256sum` sous Linux/macOS,
+`Get-FileHash` sous Windows) a la ligne du fichier qui porte son nom — si les
+deux sommes sont identiques, le telechargement est intact. »
+
+**LE DEFAUT MESURE.** v1.0.7 a ete publiee avec ses quatre installeurs et
+**SANS** `SOMMES-SHA256.txt`. `grep -rn SOMMES .github/` rendait **VIDE** : le
+workflow ne l'a jamais genere. Celui de v1.0.6 etait la parce qu'il avait ete
+attache **a la main**, cinq minutes apres le dernier asset (preuve par les
+`updatedAt` : assets a 07:10:49, fichier a 08:05:34). Un contrat promis au
+client et tenu par un geste humain une fois sur deux est un contrat faux.
+
+**CE QUE LA MESURE A FAIT DECIDER, PAS L'INTENTION.** Les sommes du fichier
+publie ont ete recalculees par la porte sur les OCTETS reellement telecharges
+de la release :
+
+    claus.io.Setup.1.0.7.exe        aed70eff66bc…   (construit par le job windows)
+    claus.io-1.0.7-arm64.dmg        a62b9dbc0e00…   (job mac)
+    claus.io-1.0.7-arm64.AppImage   e2432837a32f…   (job linux)
+    clausio_1.0.7_arm64.deb         3a0fe05e6f54…   (job linux)
+
+Les quatre correspondent aux octets publies. Ce qui a corrige au passage une
+erreur que la premiere version du fichier contenait : je l'avais construit
+depuis `release/` LOCAL et ses sommes ne correspondaient plus (`7ef1fb8f…` et
+`1e8c5354…`, c'est-a-dire mes fichiers d'il y a une heure, pas ceux de la CI).
+**La somme d'un installeur ne peut etre calculee que sur le fichier qui part.**
+
+**DEUX PIEGES DE FORMAT, tous deux mesurés :**
+
+1. les trois jobs tournent en PARALLELE et chacun ne voit que ses fichiers
+   sous `release/` : aucun job ne peut sommier les quatre. D'ou une etape par
+   jointure (exe, dmg, ici AppImage + deb) et une ATTACHE DEDIEE qui attend
+   les joints des autres jobs (`12 x 20 s`, puis ROUGE en nommant ce qui
+   manque — un `wait` infini est exactement le defaut du smoke corrige au
+   chantier 52) et fusionne les quatre lignes ;
+2. LE FORMAT EST CELUI DU README : « la ligne du fichier QUI PORTE SON NOM ».
+   Une ligne `…  release/clausio_1.0.7_arm64.deb` ne porte pas le nom que le
+   client a telecharge — il ne la retrouverait pas et croirait son fichier
+   corrompu. `sha256sum` est donc joue dans `release/` sur des noms NUS
+   (`( cd release && sha256sum "$(basename …)" )`).
+
+**LA PORTE `verify:sommes-release`** (declaree dans `package.json` ET dans
+`DEFAUT`, branchée dans `unit-test`), juge les trois cotes du contrat : la
+promesse du README, la generation par le workflow, et la release publiee.
+
+**SES MORSURES, TOUTES JOUEES** (cinq mutations, chacune annulee apres mesure,
+`md5sum` confirme le retour a l'identique) : le README ne promet plus le
+fichier → rc=1 ; `sha256sum` reprend le prefixe `release/` → rc=1 ; la jointure
+ne le porte plus → rc=1 ; le compte de lignes disparait → rc=1 ; l'etape perd
+son `timeout-minutes` → rc=1.
+
+**CE QUE LA PORTE A DÛ CORRIGER EN ELLE-MEME, et c'est le fond du chantier.**
+Cinq fois de suite, son propre controle du workflow a rendu un faux verdict,
+toujours pour la meme raison : `grep` sur le texte BRUT d'un YAML.
+
+- `NOM_FICHIER in wf` restait VERT sur un workflow qui ne produit rien : le mot
+  est cite dans les commentaires. Remplace par « une `run:` joue `sha256sum` sur
+  ses lignes de commandement ET une etape d'attachement le joint » ;
+- `run:` seul comptait l'etape `uses:` de jointure comme « productrice » ;
+- le nom cite avant `run:` comptait « a quelle release rattacher », qui ne fait
+  que le nommer dans un commentaire ;
+- exiger `-s` des deux productrices rougissait sur celle qui FUSIONNE (elle
+  n'ouvre pas les installeurs, elle verifie leurs joints) ;
+- juger `download … || manquants` par regex ligne-a-ligne ne voyait pas la
+  continuation `\`.
+
+Un filtre qui compte des etapes inexistantes exige l'impossible et rougit pour
+toujours : ce n'est pas un controle, c'est un deuxieme defaut. Regle degagee,
+la meme que pour la porte `-qq` du chantier 52 : **on juge les lignes de
+commandement, jamais les commentaires.**
+
+Ce que la porte dit sans le cacher : en mode defaut elle ne verifie que la
+FORME (promesse, workflow, les quatre lignes du fichier). Le verdict est alors
+`VERT LIMITE` et **nomme ce qui n'a pas ete joue** ; `SOMMES_MODE=complet`
+re-telecharge les 1,2 Go et recalcule les quatre sommes, et c'est ce mode qui
+doit etre joue a la publication. Un « VERT » muet sur ce qu'il n'a pas vu est
+la classe exacte du defaut du smoke AppImage.

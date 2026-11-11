@@ -473,6 +473,15 @@ DEFAUT = ["verify:split",
           # sous release/, elle rend SANS TERRAIN en le nommant : pas un PASS
           # gratuit.
           "verify:smoke-installateurs",
+          # Chantier 52 : le README PROMET SOMMES-SHA256.txt a chaque release.
+          # Mesure du 11/11 : v1.0.7 est publiee sans ce fichier, et `grep -rn
+          # SOMMES .github/` rendait VIDE — celui de v1.0.6 avait ete attache A
+          # LA MAIN. La porte verrouille le contrat des trois cotes : la promesse
+          # du README, la generation par le workflow (jointe par files:, bornee,
+          # refuse le fichier incomplet, noms NUS conformes a « la ligne qui
+          # porte son nom »), et ce qui est publie. Elle dit ce qu'elle n'a pas
+          # joue : sans SOMMES_MODE=complet elle ne re-telecharge pas les octets.
+          "verify:sommes-release",
           # Le meme contrat, mais par le CHEMIN UTILISATEUR : le clic
           # « Sauvegarder » doit TELECHARGER un ZIP reel (l'ancien code
           # faisait res.json() sur une reponse application/zip et partait en
