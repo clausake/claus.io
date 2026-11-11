@@ -282,11 +282,21 @@ def jouer_smoke_local():
     if os.path.isdir(release):
         candidats = [f for f in sorted(os.listdir(release)) if f.endswith(".AppImage") and version in f]
     if not candidats:
+        # SANS TERRAIN n'est pas un vert simple : la voie ne peut etre jouee ICI
+        # que par le job linux du workflow (celui qui construit l'AppImage), et
+        # c'est lui qui la rejoue a chaque publication — mesure du 11/11, run
+        # 43109022436 : `SMOKE OK — AppImage : /api/settings 200, jeton conforme,
+        # UI rendue`. Sur ce poste, sans installeur de la version courante, la
+        # porte nomme l'absence et dit ou la voie est jouee, au lieu d'un PASS
+        # qui laisserait croire qu'elle a lance quelque chose.
         print("  SANS TERRAIN aucun AppImage de la version %s dans release/ "
-              "(construire `npm run build:linux` pour jouer cette voie)" % version)
+              "(construire `npm run build:linux` pour jouer cette voie ; elle est "
+              "jouee a chaque publication par le job build-linux du workflow, "
+              " preuve: l'etape « smoke AppImage » du run)" % version)
         return 2
     if not shutil.which("xvfb-run"):
-        print("  SANS TERRAIN xvfb-run absent de ce poste")
+        print("  SANS TERRAIN xvfb-run absent de ce poste (la voie est jouee par "
+              "le job build-linux du workflow a chaque publication)")
         return 2
     appimage = os.path.join(release, candidats[-1])
     port = "3995"

@@ -2939,3 +2939,65 @@ cross PyYAML reste une garantie, plus une source).
 d'environnement (`ModuleNotFoundError`, `FileNotFoundError`, binaire absent) est
 un defaut DE LA PORTE : elle doit nommer son absence et rendre SANS TERRAIN,
 comme `verif-audit-build.py` et les sondes « sonde sans terrain » du depot.
+
+## Chantier 55 — Le tag porte le code, pas le harnais: SOMMES etait obsolete (11/11)
+
+**CE QUE LE DEPLACEMENT A PRODUIT, MESURE.** Pour que l'installeur Windows du
+client sorte d'un workflow corrige, je relance `installateurs` en
+`workflow_dispatch` sur `v1.0.7` (run 43109022436). Les trois jobs rendent
+`success`. Mais la porte `verify:sommes-release`, rejouee en
+`SOMMES_MODE=complet`, rougit sur les QUATRE lignes :
+
+    claus.io.Setup.1.0.7.exe      calculee 843af02d79a6…  vs publiee aed70eff66bc…
+    claus.io-1.0.7-arm64.dmg      calculee 640e3b231935…  vs publiee a62b9dbc0e00…
+    claus.io-1.0.7-arm64.AppImage calculee 88da06b0c606…  vs publiee e2432837a32f…
+    clausio_1.0.7_arm64.deb       calculee 7738d32fa84f…  vs publiee 3a0fe05e6f54…
+
+**CE N'ETAIT PAS UN FAUX POSITIF : LE FICHIER ETAIT VRAIMENT FAUX.** Les
+`updatedAt` le disent : les quatre installeurs ont ete re-ecrits a 22:10–22:12,
+`SOMMES-SHA256.txt` portait 17:38. Un client qui comparait sa somme ce soir-la
+lisait un fichier qui ne correspondait plus a ce qu'il telechargeait — le
+README promet l'inverse. Corrigé : le fichier est recalcule sur les octets
+reellement publies (`gh release download` puis `sha256sum`), rejoue par la porte
+en mode complet, les quatre lignes correspondent a nouveau.
+
+**LA CAUSE RACINE, ET C'EST LA LECONS DU CHANTIER : UN TAG PORTE LE CODE, PAS
+LE HARNAIS.** `git log --oneline -1 v1.0.7` = 2627827 ; `grep -cE "set -x|dpkg
+-s|SOMMES"` sur `git show v1.0.7:.github/workflows/build-windows.yml` rend
+**0**, alors que `main` rend **19**. Autrement dit : le run 43109022436 a rejoue
+LE MOULIN D'HIER — `sudo apt-get update -qq` inconditionnel, aucun `set -x`,
+aucun chronometre, aucune generation de sommes (le fichier joint par `files:`
+du tag n'existe pas sous `release/`, donc seul le fichier que j'avais attache a
+la main restait sur la release). Preuve dans le journal : la 2e ligne du groupe
+d'etape est encore `sudo apt-get update -qq`, et aucune ligne `== +Ns`
+n'apparait.
+
+Ce n'est pas un defaut du dispatch : c'est le contrat de `--ref v1.0.7`, et le
+workflow le dit lui-meme (`if [[ "$GITHUB_REF" == refs/tags/v* ]]` lit le tag
+pour le `tag_name`, et `actions/checkout` checkout CE ref). La correction
+d'un harnais de publication ne PROFITE DONC PAS a la release en cours : il
+faudrait re-tagger, ce que la regle du depot interdit pour une version publiee.
+
+**CE QUI EN RESULTE, NOMME SANS ENROBIR :**
+
+- les quatre installeurs de v1.0.7 sont les binaires du run 43109022436 (le
+  code applicatif est celui de 2627827, c'est-a-dire bien les correctifs
+  snapshot/OCR/harnais : `git tag --contains 060d417` rend `v1.0.7`) ;
+- `SOMMES-SHA256.txt` est conforme a ces binaires, verifie par la porte en mode
+  complet ;
+- MAIS le smoke Amlioré (`set -x`, chronometre, `apt-get` conditionnel) et la
+  generation automatique des sommes N'ONT PAS TOURNE pour cette release : ils
+  tourneront pour la SUIVANTE, dont le tag portera `main`. C'est le prix de la
+  regle « ne jamais re-tagger une version publiee », et c'est pour cela que la
+  porte existe : elle rougit quand le fichier publié ne correspond plus, quel
+  que soit la cause de la derive.
+
+**LA PORTE DIT DESORMAIS OU LA VOIE EST JOUEE.** Sans AppImage de la version
+courante sous `release/`, `verify:smoke-installateurs` rend `SANS TERRAIN` en
+nommant l'absence **et l'endroit ou la voie est reellement jouee** (le job
+`build-linux` du workflow, qui affiche `SMOKE OK — AppImage : /api/settings
+200, jeton conforme, UI rendue`), au lieu d'un PASS sec qui laisserait croire
+qu'elle a lance quelque chose. Verifie dans les deux etats : `release/` deplace
+→ rc=0 en nommant ; `npm run build:linux` rejoue → rc=0 avec
+`OK E le VRAI AppImage repond : /api/settings 200, jeton 5e717e30 conforme, UI
+rendue`.
