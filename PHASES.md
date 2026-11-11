@@ -2859,3 +2859,83 @@ FORME (promesse, workflow, les quatre lignes du fichier). Le verdict est alors
 re-telecharge les 1,2 Go et recalcule les quatre sommes, et c'est ce mode qui
 doit etre joue a la publication. Un « VERT » muet sur ce qu'il n'a pas vu est
 la classe exacte du defaut du smoke AppImage.
+
+## Chantier 54 — Une porte ne doit dependre d'aucun paquet que le runner n'a pas (11/11)
+
+**LE FAIT MESURE.** Le commit 0c7e07e passe, le job `gates` du run 43064621842
+rougit : `PORTES=113 ROUGES=1`, `LISTE verify:smoke-installateurs`. Le journal
+du job ne donnait que le `RC` — le detail est dans l'ARTEFACT `gates-output`
+(`gh api repos/…/actions/artifacts/13876623762/zip`, artefact conserve 7 jours,
+que `run-all-gates.py` y ecrit les 2 500 derniers octets de chaque porte). A
+l'interieur :
+
+    ===== verify:smoke-installateurs rc=1 =====
+    ModuleNotFoundError: No module named 'yaml'
+    RuntimeError: PyYAML absent : impossible de juger le YAML (ce n'est pas un vert)
+
+La cause etait dans MA porte, pas dans le produit : elle appelait `import yaml`
+au premier controle. `grep -rln "import yaml" scripts/` ne la citait QU'ELLE :
+aucune autre porte du depot n'avait jamais rencontre le probleme, parce
+qu'aucune autre ne touchait a PyYAML. Ni `npm ci`, ni `actions/setup-python`,
+ni un `requirements.txt` (il n'existe pas) ne l'installent.
+
+**CE QUI EST GARDE, PARCE QUE C'EST LA SEULE CHOSE CORRECTE DU ROUGE :** la
+porte ne s'est pas tuee en vert. Un capteur qui ne peut pas juger doit rougir
+et le dire ; un capteur qui disparait en vert est le defaut que tout ce depot
+combattant. Le rouge etait donc le bon comportement — mais sur le MAUVAIS
+objet, et pendant 26 minutes de CI.
+
+**LA DEPENDANCE EST RETIREE, PAS DECLAREE.** Le cahier des charges interdit
+d'ajouter une dependance inutile. Or ce qui est juge est une propriete
+SYNTAXIQUE : « telle etape porte-t-elle `timeout-minutes`, `continue-on-error`,
+et quel est son `run:` ». Un lecteur maison (decomposition par INDENTATION, le
+tirage d'un item YAML est porte par son tiret) suffit.
+
+**UN LECTEUR MAISON NON CROISE SERAIT UNE COPIE DE MAUVAISE FOI.** Le controle
+a donc deux instruments : la maison DECOMPTE, et si PyYAML se trouve la, il
+CONTREDIT ou CONFIRME — desaccord = porte rouge. Ce croisement a immediatement
+trouve un defaut reel du lecteur maison : 5 962 octets contre 4 952, pour un
+texte ligne a ligne identique. La difference etait le RETRAIT COMMUN des blocs
+`run: |` (106 lignes x 10 espaces), que PyYAML demarie et pas lui. Corrigee par
+`textwrap.dedent`, appliquee AUSSI quand PyYAML est absent — sans quoi le
+verdict dependrait du paquetage du poste, ce qui est la classe exacte du defaut
+qu'on est en train de reparer. Le detail rendu nomme desormais l'instrument :
+`timeout-minutes=10 [lecteur maison seul (PyYAML absent du runner)]`.
+
+**QUATRE DEFAUTS DU LECTEUR, TOUS TROUVES PAR SES PROPRES MESURES :**
+
+1. `re.split(r"\n[ \t]+- (?=…)")` avec un groupe CAPTURANT rend les groupes en
+   elements separes : un seul bloc, donc l'etape smoke « absente » ;
+2. le filtre `- (?:name|uses|run|shell):` est faux : les premieres cles d'une
+   etape sont `uses: actions/checkout@v4`, `run: npm ci` ou `- id:` ;
+3. `timeout-minutes` n'etait pas dans les cles reconnues comme debut d'etape ;
+4. `^\s*run:\s*[|>]\s*\n((?:[ \t]{8,}.*\n?)+)` avalait les etapes suivantes
+   des qu'une cle etait indentee a 10 : la borne est maintenant « plus
+   indentifie que la cle `run:` ».
+
+**LA MORSURE ETAIT MORTE, ET C'EST LE VRAI DEF AUT DU CHANTIER.** La morsure A
+(« `continue-on-error: true` est tolere ») ne faisait pas rougir le juge. Deux
+causes successives, mesurees :
+
+1. son motif `- name: smoke AppImage` etait trouve dans le texte, donc `replace`
+   INSERAIT la cle AU MILIEU DU LIBELLE : l'etape ne portait rien ;
+2. le meme motif sans indentation ne matchait pas non plus.
+
+Le motif est donc ancre sur la LIGNE ENTIERE (`re.sub` en multiline) et la
+mutation est REFUSEE si le lecteur ne voit pas la cle muter — juger « le texte a
+change » ne suffit pas, c'est exactement ce qui a laisse la morsure dorme. Les
+quatre rougissent desormais, et le controle de vie est dans le juge, pas dans
+ma tete.
+
+**L'EXERCICE DE LA MORSURE NE DEPEND PAS DU POSTE.** La premiere version
+demandait le fait `continue-on-error` a `etape_smoke`, qui croise avec PyYAML
+quand le module est la : sur ce poste, le lecteur maison n'etait plus exerce et
+la morsure paraissait morte. Le fait est re-demande AU LECTEUR MAISON seul (le
+cross PyYAML reste une garantie, plus une source).
+
+**LA LECON, CONSIGNEE POUR LES PORTES SUIVANTES :** le lot complet ne rend que
+`RC <porte> n` dans le journal ; le texte de la porte est dans l'artefact
+`gates-output`. Un rouge CI se lit la, et une porte qui lève une exception
+d'environnement (`ModuleNotFoundError`, `FileNotFoundError`, binaire absent) est
+un defaut DE LA PORTE : elle doit nommer son absence et rendre SANS TERRAIN,
+comme `verif-audit-build.py` et les sondes « sonde sans terrain » du depot.

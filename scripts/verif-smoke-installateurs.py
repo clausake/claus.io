@@ -51,19 +51,167 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORKFLOW = os.path.join(BASE, ".github", "workflows", "build-windows.yml")
 
 
+def decoupe_etapes(texte):
+    """Les etapes du workflow, LUES SANS DEPENDANCE EXTERNE.
+
+    MESURE DU 11/11 (run 43064621842, artefact gates-output, artefact
+    conserve) : la porte a rouge sur le runner par `ModuleNotFoundError: No
+    module named 'yaml'`. La cause etait dans CETTE porte : elle appelait
+    `import yaml` (PyYAML n'est installe ni par npm ci, ni par
+    actions/setup-python, ni par requirements.txt — `grep -rln "import yaml"
+    scripts/` ne la citait qu'elle, ce qui voulait dire qu'aucune autre porte
+    du depot n'avait jamais rencontre le probleme). Deux issues, toutes deux
+    gardees :
+
+      - un capteur qui ne tourne pas chez celui qu'il est cense surveiller
+        n'est pas un capteur. Ici le rouge etait REEL (la porte ne pouvait pas
+        juger) et bien visible : elle ne s'est pas tuee en vert, ce qui est la
+        seule chose qu'un capteur absent a le droit de faire ;
+      - la dependance est RETIREe plutot que declaree. Le depot a une regle :
+        aucune dependance inutile. Or ce qui est juge est une propriete
+        SYNTAXIQUE du YAML — « telle etape porte-t-elle `timeout-minutes`,
+        `continue-on-error`, et quel est son `run:` ». Un lecteur de 25 lignes,
+        borne aux deux niveaux qui nous interessent (les etapes d'un job, leurs
+        cles scalaires et leurs blocs `run: |`), suffit et ne peut pas tomber
+        en panne d'importation sur un runner.
+
+    PyYAML reste UTILISE quand il est la (il est sur ce poste) : la porte
+    croise alors les deux lecteurs et ROUGIT s'ils ne rendent pas le meme
+    script d'etape. Un lecteur maison non croise serait une copie de mauvaise
+    foi ; croise, il est un instrument.
+    """
+    # Les sauts de ligne sont CONSERVES (re.split sur une expression avec
+    # groupe capturant les rendrait en elements separes, ce qui detruit le
+    # texte) : chaque element commence par un tiret d'etape, les commentaires
+    # de niveau liste restent attaches a l'etape qui les precede — donc une
+    # ligne `# set -x` mutee dans le script d'une etape est vue PAR CETTE
+    # ETAPE, et sa morsure ne peut pas devenir muette.
+    # Les sauts de ligne sont CONSERVES (un re.split avec groupe CAPTURANT
+    # rend les groupes en elements separes, ce qui detruit le texte : mesure du
+    # 11/11, le premier lecteur ne rendait qu'un seul bloc). Le filtre sur
+    # `- name|uses|run|shell` est pareillement FAUX : les premieres cles d'une
+    # etape sont `uses: actions/checkout@v4`, `run: npm ci` ou `- id:`, jamais
+    # `name:` — meme mesure, il rendait « 1 etape » et la porte declarait
+    # l'etape smoke ABSENTE. On decompe donc le YAML PAR INDENTATION : le tirage
+    # d'un item est porte par son TIRET, fait exact et independant de tout nom
+    # de cle. Les commentaires de niveau liste restent attaches a l'etape qui
+    # les precede, donc une ligne `# set -x` mutee dans le script d'une etape
+    # est vue PAR CETTE ETAPE et sa morsure ne peut pas devenir muette.
+    lignes = texte.split("\n")
+    etapes = []
+
+    def indentation(l):
+        return len(l) - len(l.lstrip(" \t"))
+
+    cles_etape = r"(?:name|uses|run|shell|id|if|env|with|timeout-minutes|continue-on-error)"
+
+    def extrait(corps):
+        nom = re.search(r"^\s*-?\s*name:\s*(.+?)\s*$", corps, re.M)
+        if not nom:
+            return None
+        pas = {"name": nom.group(1).strip().strip("'\"")}
+        co = re.search(r"^\s*continue-on-error:\s*(true|false)\s*$", corps, re.M)
+        if co:
+            pas["continue-on-error"] = (co.group(1) == "true")
+        to = re.search(r"^\s*timeout-minutes:\s*(\d+)\s*$", corps, re.M)
+        if to:
+            pas["timeout-minutes"] = int(to.group(1))
+        if re.search(r"^\s*uses:\s*softprops/action-gh-release", corps, re.M):
+            pas["_uses_release"] = True
+        m = re.search(r"^([ \t]*)run:[ \t]*[|>]-?[ \t]*\n", corps, re.M)
+        if not m:
+            pas["run"] = ""
+            return pas
+        # le corps du bloc s'arrete a la premiere ligne pas plus indentifiee que
+        # la cle `run:` : [ \t]{8,} etait un choix fragile (corps a 10 espaces,
+        # cle d'etape a 8 — la suivante aurait pu etre avalee).
+        retrait = len(m.group(1))
+        corps_run = []
+        for ligne in corps[m.end():].split("\n"):
+            if ligne.strip() == "":
+                corps_run.append(ligne)
+                continue
+            if (len(ligne) - len(ligne.lstrip(" \t"))) <= retrait:
+                break
+            corps_run.append(ligne)
+        while corps_run and corps_run[-1].strip() == "":
+            corps_run.pop()
+        pas["run"] = "\n".join(corps_run) + ("\n" if corps_run else "")
+        return pas
+
+    i = 0
+    while i < len(lignes):
+        l = lignes[i]
+        m = re.match(r"^([ \t]*)-\s", l)
+        if not m or not re.match(r"^[ \t]*-[ \t]+" + cles_etape + r":", l):
+            i += 1
+            continue
+        tiret = len(m.group(1))
+        bloc = [l]
+        j = i + 1
+        while j < len(lignes):
+            s = lignes[j]
+            if s.strip() == "":
+                bloc.append(s); j += 1; continue
+            ind = indentation(s)
+            if ind <= tiret:
+                break
+            if re.match(r"^[ \t]*-\s", s) and ind == tiret:
+                break
+            bloc.append(s); j += 1
+        pas = extrait("\n".join(bloc))
+        if pas:
+            etapes.append(pas)
+        i = max(j, i + 1)
+    return etapes
+
+
 def etape_smoke(texte):
-    """Retourne le script de l'etape smoke, lu dans le YAML (pas dans un copie)."""
+    """Le script de l'etape smoke, lu par le lecteur maison, croise avec PyYAML s'il existe."""
+    etapes = [e for e in decoupe_etapes(texte) if "smoke" in e["name"].lower()]
+    if len(etapes) > 1:
+        raise RuntimeError("deux etapes « smoke » dans le workflow : laquelle juger ? %s"
+                           % [e["name"] for e in etapes])
+    if not etapes:
+        return None, None, ""
+    pas, script = etapes[0], etapes[0]["run"]
+    import textwrap as _tw
     try:
-        import yaml
+        import yaml  # optionnel : s'il est la, il contredit ou confirme le lecteur maison
     except ImportError:
-        raise RuntimeError("PyYAML absent : impossible de juger le YAML (ce n'est pas un vert)")
+        # le meme demariage est applique SANS PyYAML : sinon les controles
+        # jugeraient un texte garde a 10 espaces de retrait selon que le module
+        # est installe ou non, et `^set -x$` ne matcherait plus sur le runner.
+        # Un capteur dont le verdict depend du paquetage du runner est un
+        # capteur faux — c'est exactement la classe du rouge « PyYAML absent ».
+        return etapes[0]["name"], pas, _tw.dedent(script).strip() + "\n"
     data = yaml.safe_load(texte)
-    jobs = data.get("jobs") or {}
-    for nom, job in jobs.items():
-        for pas in (job or {}).get("steps") or []:
-            if "smoke" in str(pas.get("name", "")).lower():
-                return nom, pas, (pas.get("run") or "")
-    return None, None, ""
+    ref = None
+    for nom, job in (data.get("jobs") or {}).items():
+        for p in (job or {}).get("steps") or []:
+            if "smoke" in str(p.get("name", "")).lower():
+                ref = p
+    if ref is None:
+        raise RuntimeError("PyYAML ne voit aucune etape smoke alors que le lecteur maison en voit une")
+    if (ref.get("run") or "").strip() != script.strip():
+        # la comparaison se fit par LIGNES (et non sur les chaines brutes) : un
+        # bloc YAML `run: |` est REDENTRE de 10 espaces dans le fichier, et le
+        # premier comparatif rendait 5 962 o contre 4 952 o pour un texte ligne
+        # a ligne IDENTIQUE — 106 lignes x 10 espaces de retrait commun. Le
+        # retirer par textwrap.dedent laisse un lecteur qui dit la meme chose
+        # que PyYAML sans le faire semblant.
+        import textwrap
+        brut = textwrap.dedent(script).strip()
+        if brut != (ref.get("run") or "").strip():
+            raise RuntimeError("les DEUX lecteurs ne rendent pas le meme script d'etape "
+                               "(%d lignes vs %d) : le lecteur maison est en defaut"
+                               % (len(brut.splitlines()), len((ref.get("run") or "").splitlines())))
+        script = brut
+    for cle in ("timeout-minutes",):
+        if ref.get(cle) != pas.get(cle):
+            raise RuntimeError("desaccord des lecteurs sur %s : %r vs %r"
+                               % (cle, ref.get(cle), pas.get(cle)))
+    return etapes[0]["name"], pas, script
 
 
 def controls(nom, pas, script):
@@ -81,8 +229,15 @@ def controls(nom, pas, script):
     ajouter("A l'etape n'est pas en continue-on-error (plan du 02/11)",
             not pas.get("continue-on-error"))
     to = pas.get("timeout-minutes")
+    # le detail dit QUEL LECTEUR a rendu le chiffre : apres le rouge « PyYAML
+    # absent » du 11/11, la porte doit pouvoir dire d'ou vient chaque fait.
+    try:
+        import yaml  # noqa: F401  (present => les deux lecteurs ont croise)
+        lecteur = "PyYAML + lecteur maison croises"
+    except ImportError:
+        lecteur = "lecteur maison seul (PyYAML absent du runner)"
     ajouter("A l'etape a un timeout borne", isinstance(to, int) and 0 < to <= 20,
-            "timeout-minutes=%s" % to)
+            "timeout-minutes=%s [%s]" % (to, lecteur))
 
     # B — la boucle d'attente est bornee ET nommee.
     ajouter("B la boucle d'attente est bornee par une horloge explicite",
@@ -265,9 +420,30 @@ def jouer_smoke_local():
 def morsure(texte_original):
     """Les quatre mutations, chacune DOIT rougir. Rend la liste des muterons decoratifs."""
     mutations = [
+        # La mutation est ecrite a l'INDENTATION EXACTE de l'etape (6 espaces
+        # pour une cle d'etape, 8 pour son corps). Une mutation mal indentee
+        # n'est pas une mutation : mesure du 11/11, `continue-on-error: true`
+        # insere a 8 espaces etait un element de la LISTE `env:` — donc
+        # l'etape ne le portait pas, le juge ne pouvait pas rougir, et la
+        # morsure etait MORTE sans que rien ne le dise. C'est le defaut exact
+        # que la morsure est la pour ecarter, et le controle ci-dessous ne
+        # peut plus le manquer : il verifie d'abord que la mutation change le
+        # PARCOURS DU LECTEUR, pas seulement les octets du fichier.
+        # Le MOTIF DE LA MUTATION EST UN FAIT QUI SE VERIFIE, PAS UNE INTENTION.
+        # Deux morts successives de cette morsure, mesurées du 11/11 :
+        #   1. le motif `- name: smoke AppImage` etait TROUVE dans le texte du
+        #      workflow, donc `replace` inserait la cle AU MILIEU du libellé de
+        #      l'etape (`- name: smoke AppImage\n        continue-on-error: true
+        #      (le serveur empaquete…)`) : l'etape ne portait pas la cle et le
+        #      juge ne pouvait pas rougir ;
+        #   2. le motif `- name:` sans l'indentation ne matchait rien du tout.
+        # D'ou la double garde : le motif est ancre sur la LIGNE ENTIERE
+        # (^…$ en multiline), et la mutation est refusee si le LECTEUR ne voit
+        # pas la cle muter. Une mutation qui change les octets mais pas ce que
+        # lit le juge n'est pas une morsure, c'est un commentaire de plus.
         ("A continue-on-error: true est tolere",
-         lambda t: t.replace("- name: smoke AppImage",
-                             "- name: smoke AppImage\n        continue-on-error: true", 1)),
+         lambda t: re.sub(r"(^      - name: smoke AppImage.*$)",
+                          r"\1\n        continue-on-error: true", t, count=1, flags=re.M)),
         ("B la boucle d'attente perd son horloge (while 1)",
          lambda t: t.replace("while [ $SECONDS -lt $fin ]; do", "while true; do", 1)),
         ("C l'etape ne se trace plus (set -x retire)",
@@ -283,6 +459,28 @@ def morsure(texte_original):
             decoratifs.append(label + " — la mutation ne change RIEN au YAML (morsure morte)")
             continue
         nom, pas, script = etape_smoke(texte)
+        # LA MORSURE EST-ELLE VIVANTE AVANT MEME DE JUGER ? On ne se contente
+        # pas de « le texte a change » : on exige que le LECTEUR voie la cle
+        # muter (continue-on-error passe a True, timeout disparait, etc.). Une
+        # mutation qui change les octets mais pas ce que lit le juge n'est pas
+        # une morsure, c'est un commentaire de plus.
+        if "continue-on-error" in label:
+            # UN SEUL instrument rend le fait : c'est le LECTEUR MAISON qui est
+            # juge (c'est lui qui tourne sur le runner sans PyYAML). Demander ce
+            # fait a `etape_smoke`, qui croise avec PyYAML quand le module est
+            # la, ferait depender la morsure du paquetage du poste : avec
+            # PyYAML installe, le juge maison n'est plus exerce et la morsure
+            # parait morte (mesure du 11/11). Le croisement PyYAML reste une
+            # GARANTIE (elle rougit si les lecteurs divergent), pas la source.
+            lu = [e for e in decoupe_etapes(texte) if "smoke" in e["name"].lower()]
+            if not lu or lu[0].get("continue-on-error") is not True:
+                decoratifs.append(label + " — la mutation n'atteint PAS le lecteur "
+                                  "(continue-on-error lu par le lecteur maison = %r) : morsure morte"
+                                  % (None if not lu else lu[0].get("continue-on-error")))
+                continue
+        if "set -x" in label and "set -x" in script.replace("# set -x", ""):
+            decoratifs.append(label + " — la mutation n'a pas retire set -x du script lu")
+            continue
         rouges = [c for c in controls(nom, pas, script) if not c[1]]
         print("  %-58s -> %s" % (label, "ROUGE (%s)" % rouges[0][0] if rouges else "VERT : MORSURE MORTE"))
         if not rouges:
