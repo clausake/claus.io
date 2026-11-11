@@ -452,6 +452,18 @@ DEFAUT = ["verify:split",
           # par des copies CRLF, rejoue les VRAIS juges, restaure les octets.
           # Sans lui, un juge depend du systeme de celui qui le lance.
           "verify:juges-crlf",
+          # Chantier D (document 1.0.6) : les « 6 vulnerabilites de build » du
+          # document, re-mesurees le 11/11. npm audit --omit=dev = 0 (la
+          # production est propre) ; npm audit = 6 moderees, toutes dans la
+          # chaine electron-builder. TROIS corrections ont ete jouees et
+          # rendent : l'override minimatch ne s'applique pas (npm ls montre
+          # 9.0.9 en place), et @electron/universal@3 fait MONTER l'audit a 8.
+          # npm audit fix --force est exclu par le cahier des charges et
+          # proposerait un retrogradation en electron-builder 25.1.x. La porte
+          # ne corrige donc pas : elle EMPECHE DE MENTIR en verrouillant le
+          # chiffre (6), la liste fermee des paquets d'empaquetage, l'absence
+          # d'import par le produit, et sa propre morsure.
+          "verify:audit-build",
           # Le meme contrat, mais par le CHEMIN UTILISATEUR : le clic
           # « Sauvegarder » doit TELECHARGER un ZIP reel (l'ancien code
           # faisait res.json() sur une reponse application/zip et partait en

@@ -2565,7 +2565,76 @@ silence) : `verify:harnais-windows` et `verify:juges-crlf` dans le job
 ni navigateur ni `dist/`) ; `verify:snapshot-stress` et `verify:ocr-corrompu`
 dans `verify-test`. `npm run verify:ci` : 20/20, CONTRAT TENU.
 
-Compte des portes re-mesure (lus dans `package.json` et dans `DEFAUT`, jamais
-recopies) : **114 declarees, 111 au lot**. Le README dit 238 tests unitaires
-(mesure : `Tests 238 passed (238)`, 22 files) — le document de mission
-citait 225/226 et 216 : ces chiffres etaient perimes.
+Compte des portes re-mesure (lues dans `package.json` et dans `DEFAUT`, jamais
+recopies) : **115 portes `verify:*` declarees, 112 au lot** (trois hors lot :
+`verify:all` lui-meme, `verify:ocr-modeles` et `verify:ocr-moteur`, jouees a la
+main par l'installeur — les poids OCR ne sont pas sous git). Le README dit 238
+tests unitaires (mesure : `Tests 238 passed (238)`, 22 files) — le document de
+mission citait 225/226 et 216 : ces chiffres etaient perimes.
+
+## Chantier D — Les « 6 vulnerabilites de build » : trois corrections jouees, refusees par mesure (11/11)
+
+## Chantier D — Les « 6 vulnerabilites de build » : trois corrections jouees, refusees par mesure (11/11)
+
+Le document de mission demande de corriger les six alertes de build. La
+re-mesure du 11/11, avant toute ecriture :
+
+    $ npm audit --omit=dev   -> found 0 vulnerabilities
+    $ npm audit              -> 6 moderate, 0 high, 0 critical
+
+Les six sont `@electron/universal`, `app-builder-lib`, `dmg-builder`,
+`electron-builder`, `electron-builder-squirrel-windows`, `minimatch` — la
+chaîne d'empaquetage, jamais livree au client. Electron est a 45.2.3 et
+electron-builder a 26.18.1 (correction du chantier 48).
+
+**LES TROIS CORRECTIONS ONT ETE JOUEES, PAS REFUSEES D'AVANCE.** Chacune par
+`package.json` + `npm install`, chacune jugee par la commande qui la mesure :
+
+1. `overrides: {"@electron/universal": {"minimatch": "^11.0.1"}}` →
+   `npm ls` rc=0 **mais l'override ne s'applique pas** :
+   `npm ls minimatch` rend `invalid: "^11.0.1" from node_modules/@electron/universal`
+   et la copie imbriquee reste `minimatch@9.0.9`. Audit : toujours 6.
+2. Le sens recommande par la doc npm, `overrides: {"minimatch": {"@electron/universal": "^11.0.1"}}`
+   → **mesure identique** : 9.0.9 en place, audit a 6. La cause est dans le
+   paquet : `@electron/universal@2.0.3` declare `minimatch: ^9.0.3` (dependance
+   DIRECTE, `require("minimatch")` dans son `dist/cjs`). npm refuse une majeure
+   hors range sans `--force`.
+3. `overrides: {"@electron/universal": "^3.0.6"}` (la version qui ne depend
+   plus de minimatch, verifiee : `npm view` ne liste que asar/debug/plist) →
+   appliquee, `npm ls` rc=0, **mais `npm audit` MONTE a 8** : `@electron/universal@3`
+   exige `@electron/asar@^4`, dont la chaîne est signalee a son tour.
+
+Un arbre de dependencies est revenu a l'etat consigne apres ces trois courses
+(`git checkout package-lock.json`, puis `npm ls` rc=0 et audit a 6 re-mesures).
+
+**POURQUOI RIEN N'EST FORCE.** `npm audit fix --force` est exclu par le cahier
+des charges, et c'est ce qu'il faudrait ici : sa correction proposee est un
+RETROGRADEMENT en electron-builder 25.1.x (une chaîne d'octobre 2024). Le
+chantier 48 avait deja refuse ce retrogradation pour la meme raison. Corriger
+deux alertes en en Creant deux autres n'est pas corriger.
+
+**LA PORTE NE CORRIGE DONC PAS, ELLE EMPECHE DE MENTIR.** `verify:audit-build`
+(python3 scripts/verif-audit-build.py) verrouille quatre faits, chacun rendu
+par la commande qui le produit : `npm audit --omit=dev` = 0 ; `npm audit` =
+**exactement 6** moderees, 0 elevee, 0 critique ; les six noms appartiennent a
+une liste FERMEE de paquets d'empaquetage (une alerte hors liste = une alerte
+de production, donc rouge) ; aucun paquet signale n'est importe par `src/`,
+`scripts/` ou `test/` (le juge s'exclut lui-meme de cette recherche : il nomme
+ce qu'il cherche, et un juge qui se signale lui-meme est un faux positif —
+mesure du 11/11, la premiere version rougissait sur sa propre ligne).
+
+Sa morsure est jouee et rejouee (quatre mutations, chacune annulee apres
+mesure) : `ATTENDU_BUILD` passe de 6 a 5 → rc=1 ; une severite `critical`
+injectee dans les severites lues → rc=1 ; la comparaison de la liste fermee
+ecrite a l'envers (`all(n in sans)` au lieu de `any(n not in sans)`) → rc=1 ;
+et la premiere version du juge rougissait sur SA PROPRE ligne (elle citait le
+nom `minimatch` en le cherchant) → le juge s'exclut desormais lui-meme de la
+recherche d'imports. Retablies, les quatre rendent `VERDICT : VERT`, rc=0.
+
+Ce que le chantier laisse ouvert, nomme pour ne pas le perdre : la seule voie
+qui pourrait faire baisser le chiffre sans `--force` est de monter
+electron-builder vers une version dont la chaîne ne depend plus de minimatch 9,
+ou d'attendre l'amont sur `@electron/universal`. Aucune des deux n'existe a la
+date de mesure (`npm view electron-builder` = 26.18.1, `@electron/universal` =
+3.0.6 et elle tire `@electron/asar@^4`, signale a son tour). La porte rouge
+sera le signal qu'une de ces deux situations a change.

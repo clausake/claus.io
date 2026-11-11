@@ -1,6 +1,6 @@
 {
   "name": "clausio",
-  "description": "claus.io — assistant culinaire IA open source (EUPL-1.2)",
+  "description": "claus.io \u2014 assistant culinaire IA open source (EUPL-1.2)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
   "version": "1.0.6",
@@ -110,6 +110,7 @@
     "verify:ocr-corrompu-e2e": "npx playwright test test/e2e/ocr-corrompu.spec.ts --reporter=line",
     "verify:harnais-windows": "python3 scripts/verif-harnais-windows.py",
     "verify:juges-crlf": "python3 scripts/verif-juges-crlf.py",
+    "verify:audit-build": "python3 scripts/verif-audit-build.py",
     "verify:export-ui": "npx playwright test test/e2e/export-ui.spec.ts --reporter=line",
     "verify:donnees-anciennes": "npx playwright test test/e2e/donnees-anciennes.spec.ts --reporter=line",
     "verify:audit": "node scripts/verify-audit.mjs",

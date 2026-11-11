@@ -1,11 +1,11 @@
 {
   "original_octets": 270908,
-  "original_sha256": "a6a26e2fe27826aacd3fa90951ea701228d8361555c4f43046133e464e71984b",
+  "original_sha256": "67eeae51a2580949ef366df101b811e0bfafce010da827094f0944dbf00e9d8b",
   "chaud_octets": 78486,
   "archives": [
     {
       "fichier": "phases/sprint-04-sprint-4-fiabilite-du-temps-reel-8-sept.md",
-      "titre": "## Sprint 4 — Fiabilite du temps reel (8 sept.)",
+      "titre": "## Sprint 4 \u2014 Fiabilite du temps reel (8 sept.)",
       "octets": 33521,
       "lignes": 505,
       "sha256": "1ac136f418fdec80b8eecf8b4e29565f979e336b8618e5ebb5f0fad929964088"
@@ -75,7 +75,7 @@
     },
     {
       "fichier": "phases/sprint-05-sprint-5-refermer-la-chaine-logistique-10-se.md",
-      "titre": "## Sprint 5 — Refermer la chaine logistique (10 sept.)",
+      "titre": "## Sprint 5 \u2014 Refermer la chaine logistique (10 sept.)",
       "octets": 21920,
       "lignes": 339,
       "sha256": "4de647e9b8bab8f55bec8d1abb6d5e3b4c44c31a44f3a429a86c95c03dc201d8"
