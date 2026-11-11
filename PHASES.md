@@ -2694,3 +2694,87 @@ du workflow ne couvre QUE l'AppImage Linux (les 40 dernieres lignes du log en
 cas d'echec) ; l'execution headless d'un NSIS ou d'un .dmg n'est pas implantee,
 et le workflow le NOMME au lieu de laisser croire que les trois plateformes
 sont couvertes.
+
+## Chantier 52 — Le smoke des installeurs ne rend plus un rouge sans temoin (11/11)
+
+**LE FAIT MESURE.** Le tag v1.0.7 (commit 2627827) lance le workflow
+`installateurs` (run 43049934179). Bilan : `build` (Windows x64) success,
+`build-mac` success, **`build-linux` failure**. Les deux installeurs que le
+client attend sont donc publies — `claus.io.Setup.1.0.7.exe` (311 272 941 o)
+et `claus.io-1.0.7-arm64.dmg` (316 221 469 o) — et `v1.0.6` n'a pas ete
+touche (ses cinq assets sont toujours la, re-mesures par
+`gh release view v1.0.6 --json assets`).
+
+**CE QUE LE ROUGE DISAIT : RIEN.** Le log du job `build-linux` compte 359
+lignes ; la 277e est `sudo apt-get update -qq`, ligne du script de l'etape, et
+le journal de l'etape s'ARRETE la. Aucune ligne `Get:` / `Unpacking` /
+`Setting up`, et **meme pas les `echo` du propre script** (`== AppImage juge :
+…` est absent). La cause de ce mutisme est dans le fonctionnement de GitHub :
+la sortie d'une etape n'est emise qu'A LA FIN de l'etape, donc une etape
+JIGEE (timeout 10 min) ne rend que le echoing du script et jamais ce qu'ont
+produit les commandes. Un rouge ici n'est pas un diagnostic, c'est un mur de
+600 secondes.
+
+**CE QUE LA MESURE SUR CE POSTE ÉCARTÉ.** Le MEME AppImage 1.0.7 (md5
+`25af96cb…`), lance par le MEME `xvfb-run` avec le MEME `TMPDIR`/`PORT`, ecrit
+son compte-rendu de pret et repond `200` sur `/api/settings` **en moins de
+45 s** (435 lignes de log serveur). Donc les 60 s de la boucle d'attente
+n'etaient PAS la cause. Le seul appel reseau de l'etape est `apt-get update`
+sur le miroir Ubuntu ARM — et `apt-get -qq` est précisément ce qui rend 0
+ligne.
+
+**LA CORRECTION (dans le YAML reel, pas dans un commentaire) :**
+
+- `set -x` en tete d'etape : chaque commande est ecrite AVANT d'etre jouee.
+  Une etape jigee revele desormais LA commande ou la pendule s'est arretee ;
+- un chronometre `horloge` (`== +Ns …`) ecrit AVANT chaque phase, la premiere
+  ligne etant emise avant toute commande : si `== +0s debut` manque d'un
+  futur journal, le probleme est la sortie du shell, pas l'AppImage ;
+- `apt-get` n'est appele **QUE pour ce qui manque** : sonde `command -v
+  xvfb-run` et `dpkg -s` sur les six paquets, et le `-qq` muselant est retire
+  (mesure locale : les six paquets sont deja poses → `manque=[]` → 0,095 s au
+  lieu d'un reseau qui peut mourir) ;
+- PIEGE CONSIGNE : `ldconfig -p | grep libnss3` rend VIDE sur ce poste alors
+  que `dpkg -l` montre le paquet installe et que l'AppImage demarre. S'en
+  servir comme sonde ferait tourner un apt-get inutile — exactement le temps
+  que la porte devait economiser. La sonde officielle est `dpkg -s`.
+
+**LA PORTE : `verify:smoke-installateurs`** (scripts/verif-smoke-installateurs.py,
+declaree dans `package.json` ET dans `DEFAUT`, branchée dans le job `unit-test`
+de `.gitlab-ci.yml`). Elle ne re-ecrit pas le shell du workflow : elle juge le
+YAML REEL (etape presente, pas en `continue-on-error`, timeout borne, boucle
+bornee par son horloge, chaque echec nomme sa cause, `set -x` + chronometre
+presents, `apt-get` conditionnel et non muselle), puis **relance le VRAI
+AppImage** construit par electron-builder et verifie /api/settings 200 + le
+jeton d'instance + `<div id="root">`. Sans installeur sous `release/`, elle
+rend `SANS_TERRAIN` en le nommant : pas un PASS gratuit.
+
+**LES MORSURES, TOUTES JOUEES.** Les quatre mutations du YAML (ajouter
+`continue-on-error: true`, remplacer la boucle chronometree par `while true`,
+commenter `set -x`, rendre `apt-get` inconditionnel et `-qq`) rendent
+chacune `VERDICT : ROUGE`, rc=1. Et trois defauts de LA PORTE elle-meme ont
+ete trouves par ses propres fautes, ce qui est le but d'une morsure :
+
+1. la premiere version jugeait `-qq` et `ldconfig` sur le texte BRUT du script,
+   donc elle rougissait sur les commentaires qui racontent le defaut → le juge
+   ne lit desormais que les lignes de commandement (`re.sub(r"#.*", "", …)`) ;
+2. le lanceur local laissait des AppImage orphelins, et le deuxieme lancement
+   rendait `rc=127` (xvfb-run meurt quand son affichage est pris) → le fils est
+   lance dans son propre groupe (`preexec_fn=os.setsid`) et tue par `killpg`,
+   avec un controle des survivants par `/proc` ;
+3. LA PLUS INSTRUCTIVE : la boucle d'attente appelait `orphelins()` puis le
+   message de faute rappelait `orphelins()`, et la variable `motif` n'existait
+   que dans la portee de la fermeture. Le second appel levait donc `NameError`
+   au moment precis ou la porte aurait du crier — la mesure montre le resultat
+   de cette classe de faute : la ligne `FAUTE … pid 3649738` a ete imprimee
+   puis `VERDICT : VERT` rendu quand meme, **rc=0**. Un capteur qui ne peut pas
+   crier n'est pas un capteur. Depuis, le verdict est rendu par LA MEME liste
+   que celle qui a fait tourner la boucle, et deux passages consecutifs rendent
+   `VERDICT : VERT`, rc=0, sans orphelin (`pgrep` confirme 0 ligne, la table
+   `/proc` aussi).
+
+Ce que la porte ne prouve pas, nomme : Windows et macOS n'ont TOUJOURS pas de
+smoke (l'execution headless d'un NSIS ou d'un .dmg n'est pas implantee — le
+workflow le dit a la ligne 183 au lieu de laisser croire que les trois
+plateformes sont couvertes). La preuve d'`EBUSY` sur le portable du client
+reste donc le test demande, pas cette porte.

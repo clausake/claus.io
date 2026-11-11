@@ -191,9 +191,53 @@ jobs:
           SMOKE_TMP: ${{ runner.temp }}/clausio-smoke
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb libnss3 libgbm1 \
-            libatk-bridge2.0-0t64 libcups2t64 libgtk-3-0t64 libasound2t64
+          # CHRONOMETRE + VERITE SUR LE CAPTEUR (mesure du 11/11, run
+          # 43049934179, job build-linux). Le log du job compte 359 lignes ; la
+          # 277e est `sudo apt-get update -qq` et le journal de l'etape
+          # s'ARRETE la : AUCUNE ligne `Get:`/`Unpacking`/`Setting up`, et MEME
+          # PAS les `echo` du propre script de l'etape. GitHub rend la
+          # sortie d'une etape qu'A LA FIN de cette etape : une etape JIGEE ne
+          # rend donc que le echoing du script, jamais ce qu'ont produit les
+          # commandes. Un rouge ici est un mur de 600 s sans temoin. Ce bloc
+          # rend le temoin possible et nomme l'outil qui le donne.
+          set -x                  # bash -x : CHAQUE commande est ecrite AVANT
+                                  # d'etre jouee. Une etape jigee revele ainsi
+                                  # LA commande exacte ou la pendule s'est arrete.
+          t0=$SECONDS
+          horloge() { echo "== +$((SECONDS - t0))s  $1"; }
+          horloge "debut"
+          # Mesure du 11/11 sur ce poste (le MEME AppImage 1.0.7, le MEME
+          # xvfb-run) : le compte-rendu de pret etait ecrit et GET
+          # /api/settings repondait 200 EN MOINS DE 45 s (435 lignes de log
+          # serveur). Les 60 s de la boucle ne sont DONC PAS la cause du rouge.
+          # Ce qui reste en cause possible : `apt-get update` sur le miroir
+          # Ubuntu ARM — le seul appel reseau de l'etape, et deja vu mourir en
+          # ETIMEDOUT sur ce depot (le CDN Microsoft, chantier 48). D'ou : on
+          # n'appelle apt-get QUE pour ce qui MANQUE vraiment.
+          # PIEGE MESURE DU 11/11 : `ldconfig -p | grep libnss3` rend VIDE sur
+          # ce poste ALORS QUE le paquet est installe (`dpkg -l` = 1) et que
+          # l'AppImage y demarre en 45 s. Une absence declaree par ldconfig est
+          # DONC UN FAUX POSITIF, et elle ferait tourner un apt-get inutile —
+          # exactement le temps que la porte est censee economiser. La sonde
+          # officielle est `dpkg -s` : son rc est le fait.
+          manque=""
+          command -v xvfb-run >/dev/null 2>&1 || manque="$manque xvfb"
+          for biblio in libnss3 libgbm1 libatk-bridge2.0-0t64 libcups2t64 \
+                        libgtk-3-0t64 libasound2t64; do
+            dpkg -s "$biblio" >/dev/null 2>&1 || manque="$manque $biblio"
+          done
+          horloge "paquets absents: [$manque]"
+          if [ -n "$manque" ]; then
+            # Pas de -qq ici : -qq avec Dpkg::Use-Pty=0 est justement ce qui
+            # rend 0 ligne sur 600 s (mesure du 11/11). Chaque paquet installe
+            # doit laisser sa trace dans le journal.
+            sudo apt-get -o Dpkg::Use-Pty=0 update
+            # shellcheck disable=SC2086
+            sudo apt-get -o Dpkg::Use-Pty=0 install -y $manque
+            horloge "apt-get termine"
+          else
+            horloge "apt-get SAUTE (les six paquets sont deja poses)"
+          fi
           APPIMAGE="$(ls release/*.AppImage)"
           echo "== AppImage juge : $APPIMAGE"
           mkdir -p "$SMOKE_TMP"
@@ -206,6 +250,7 @@ jobs:
           xvfb-run -a "$APPIMAGE" --appimage-extract-and-run --no-sandbox \
             --disable-gpu > "$SMOKE_TMP/smoke.log" 2>&1 &
           APP_PID=$!
+          horloge "AppImage lance (xvfb-run en arriere-plan)"
 
           echec() {
             echo "::error::SMOKE ECHEC — $1"
@@ -227,7 +272,7 @@ jobs:
             sleep 2
           done
           [ -n "$ok" ] || echec "aucun compte-rendu + 200 sur /api/settings en 60 s"
-          echo "== compte-rendu de pret recu + /api/settings -> 200"
+          horloge "compte-rendu de pret recu + /api/settings -> 200"
 
           # 2) identite : jeton du compte-rendu == en-tete X-Cookdrive-Instance
           attends="$(python3 -c "import json;print(json.load(open('$SMOKE_TMP/cookdrive-ready.json'))['instance'])")"
@@ -237,7 +282,7 @@ jobs:
           if [ "$attends" != "$rendu" ]; then
             echec "jeton d'instance divergent (compte-rendu != en-tete) — on sondait un autre serveur"
           fi
-          echo "== identite verifiee (jeton $attends)"
+          echo "== identite verifiee (jeton $attends)  (+$((SECONDS - t0))s)"
 
           # 3) GET / -> 200 avec l'UI embarquee. Le corps est tamponne avant le
           #    grep : `curl | grep -q` ferait quitter grep tot -> SIGPIPE -> curl

@@ -111,6 +111,7 @@
     "verify:harnais-windows": "python3 scripts/verif-harnais-windows.py",
     "verify:juges-crlf": "python3 scripts/verif-juges-crlf.py",
     "verify:audit-build": "python3 scripts/verif-audit-build.py",
+    "verify:smoke-installateurs": "python3 scripts/verif-smoke-installateurs.py",
     "verify:export-ui": "npx playwright test test/e2e/export-ui.spec.ts --reporter=line",
     "verify:donnees-anciennes": "npx playwright test test/e2e/donnees-anciennes.spec.ts --reporter=line",
     "verify:audit": "node scripts/verify-audit.mjs",

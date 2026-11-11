@@ -464,6 +464,15 @@ DEFAUT = ["verify:split",
           # chiffre (6), la liste fermee des paquets d'empaquetage, l'absence
           # d'import par le produit, et sa propre morsure.
           "verify:audit-build",
+          # Chantier 51 (les installeurs 1.0.7) : le smoke AppImage du workflow
+          # a ete JIGE en 10 minutes sans AUCUN temoin (le log du job s'arretait
+          # a la ligne d'apt-get, sans meme les echo du script). La porte joue le
+          # contrat de cette etape dans le YAML reel (bornee, non toleree,
+          # capteur vivant par set -x + chrono, apt-get conditionnel par dpkg -s)
+          # ET relance le vrai AppImage construit sur ce poste. Sans AppImage
+          # sous release/, elle rend SANS TERRAIN en le nommant : pas un PASS
+          # gratuit.
+          "verify:smoke-installateurs",
           # Le meme contrat, mais par le CHEMIN UTILISATEUR : le clic
           # « Sauvegarder » doit TELECHARGER un ZIP reel (l'ancien code
           # faisait res.json() sur une reponse application/zip et partait en

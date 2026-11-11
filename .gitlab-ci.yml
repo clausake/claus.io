@@ -81,6 +81,12 @@ unit-test:
     # l'audit a 8) : `npm audit fix --force` reste exclu. Si une septieme
     # alerte apparait ou si une alerte touche la production, cette porte rougit.
     - npm run verify:audit-build
+    # Chantier 51 : le smoke AppImage du workflow a rendu un rouge SANS TEMOIN
+    # (10 minutes, journal coupe a la ligne d'apt-get, meme pas les echo du
+    # script). Cette porte joue son contrat dans le YAML reel et rejoue le vrai
+    # AppImage quand il est construit ; sans installeur sous release/ elle nomme
+    # son absence au lieu de mentir en vert.
+    - npm run verify:smoke-installateurs
 
 # E2E (Playwright) : démarre le serveur Express (tsx) sur un port isolé et
 # vérifie les routes critiques (CRUD inventaire, licence, dashboard, HACCP).
