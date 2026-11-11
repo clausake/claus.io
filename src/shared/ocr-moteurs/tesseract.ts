@@ -11,6 +11,7 @@
 // qu'il n'est pas hors ligne: `horsLigne: false` est une donnee du produit,
 // affichee dans les Reglages, pas un commentaire de code.
 
+import fs from "fs";
 import { assemble, type LectureOcr } from "../ocr-commun.js";
 
 // L'import reste paresseux: le produit doit pouvoir demarrer sans reseau avec
@@ -18,8 +19,24 @@ import { assemble, type LectureOcr } from "../ocr-commun.js";
 export async function lireParCheminTesseract(cheminImage: string,
                                              langue = "fra"): Promise<LectureOcr> {
   const t0 = Date.now();
+  // Chantier B : on valide les OCTETS avant de donner le fichier au worker.
+  // Un PNG au CRC corrompu faisait TOMBER LE PROCESSUS (libpng part en
+  // uncaughtException depuis le worker, hors de portee d'un try/catch — mesure
+  // du 11/11). Ce qui n'est pas une image n'atteint donc jamais le moteur.
+  const { imageValide } = await import("../ocr-image.js");
+  const verdict = imageValide(fs.readFileSync(cheminImage));
+  if (!verdict.valide) {
+    throw new Error(`EntreeOcrInvalide: ${verdict.motif} (${cheminImage})`);
+  }
   const Tesseract = (await import("tesseract.js")).default;
-  const { data } = await Tesseract.recognize(cheminImage, langue);
+  let data: { text?: unknown } | undefined;
+  try {
+    ({ data } = await Tesseract.recognize(cheminImage, langue));
+  } catch (e) {
+    // Le moteur peut encore echouer (worker, langue absente) : on NOMME
+    // l'echec, on ne laisse jamais remonter un crash.
+    throw new Error(`EntreeOcrInvalide: tesseract a refuse l'image (${String((e as Error)?.message ?? e)})`);
+  }
   const texte = typeof data?.text === "string" ? data.text : "";
   if (texte.trim() === "") {
     throw new Error("SortieOcrInattendue: tesseract n'a rendu aucun texte");

@@ -415,6 +415,43 @@ DEFAUT = ["verify:split",
           # cette porte, la regression « export vide » ne serait vue par
           # aucun lot.
           "verify:export-sqlite",
+          # Chantier A (document 1.0.6) : 30 exports successifs du snapshot,
+          # SANS EBUSY. Le defaut mesure etait 3 echecs sur 30 sous Windows
+          # (SNAPSHOT_PUBLICATION_ECHEC) : le rename partait avant la fermeture
+          # attendue du handle de controle. La sonde exerce le MEME geste que la
+          # route /api/backup et le backup horaire ; sa morsure (controle
+          # d'integrite neutralise) la rend rouge.
+          "verify:snapshot-stress",
+          # Chantier B (document 1.0.6) : une image corrompue ne doit PAS tuer
+          # le serveur. Le defaut mesure est un PNG au CRC d'IHDR faux qui
+          # faisait partir le worker en uncaughtException (rc 77) — hors de
+          # portee d'un try/catch. La sonde joue l'entree corrompue sur la voie
+          # tesseract et exige une erreur NOMMEE, processus vivant. Morsure
+          # mesuree : sans la verification des CRC, rc=77.
+          "verify:ocr-corrompu",
+          # Le MEME defaut, vu par HTTP cette fois : les trois routes d'entree
+          # image (analyze-menu, documents/upload, recipes/scan) doivent REFUSER
+          # une image corrompue, le processus doit SURVIVRE, et la raison doit
+          # etre NOMMEE. Necessite dist/ (comme verify:reception).
+          "verify:ocr-corrompu-e2e",
+          # Chantier C (document 1.0.6) : AUCUN lancement du serveur ne passe
+          # par `node_modules/.bin/tsx`. Sous Windows ce fichier est un SCRIPT
+          # SHELL : node.exe le lisait comme du shell (« basedir=$(dirname ...)
+          # — SyntaxError ») et le serveur ne demarrait jamais (mesures du
+          # client sur verify:auth et verify:routes). Sous Linux le .bin marche,
+          # donc AUCUN test ne peut voir ce defaut : ce juge est le seul
+          # capteur possible hors d'une machine Windows. Il lit les LANCEMENTS
+          # et non les resultats, et son auto-test (faux negatifs + faux
+          # positifs) prouve qu'il peut rougir.
+          "verify:harnais-windows",
+          # Chantier C (document 1.0.6) : les juges qui LISENT du code doivent
+          # rendre le MEME verdict en LF et en CRLF. Le defaut mesure chez le
+          # client (09/11) : /\/\/.*$/ laisse survivre « statfsFn.sync » dans
+          # un commentaire CRLF (le $ multiline se place avant le \r) et le
+          # juge rougit sur un commentaire. Le controle remplace les sources
+          # par des copies CRLF, rejoue les VRAIS juges, restaure les octets.
+          # Sans lui, un juge depend du systeme de celui qui le lance.
+          "verify:juges-crlf",
           # Le meme contrat, mais par le CHEMIN UTILISATEUR : le clic
           # « Sauvegarder » doit TELECHARGER un ZIP reel (l'ancien code
           # faisait res.json() sur une reponse application/zip et partait en

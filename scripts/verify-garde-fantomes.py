@@ -79,8 +79,9 @@ def fils_serveur_de_ce_depot(racine):
     `fileURLToPath(import.meta.url)` est le contrat des juges, mais elle a un
     angle mort MESURÉ sur la CI GitHub (run 41001056219) : quand le dépôt est
     monté sur un chemin que la cmdline du fils ne porte pas — le runner
-    /home/runner/work/claus.io/claus.io lance `node <RACINE>/node_modules/.bin/tsx
-    server.ts` et tsx relance `node --require …/preflight.cjs … server.ts` avec
+    #    /home/runner/work/claus.io/claus.io demarre
+    #    `node <RACINE>/node_modules/tsx/dist/cli.mjs server.ts` et tsx relance
+    #    `node --require …/preflight.cjs … server.ts` avec
     pour seuls chemins son propre paquet — exiger la racine dans la cmdline
     rendait cette porte rouge « decorative » (fils_vus=0) au milieu d'un lot
     88/90 vert. La racine dérivée reste le motif PRÉFÉRÉ (elle distingue un
@@ -130,8 +131,20 @@ def main():
     port = str(port_libre())
     env = dict(os.environ, PORT=port, USER_DATA_PATH=donnees, NODE_ENV="development")
     tsx = chemin_tsx(BASE)
+    # Le temoin du harnais WINDOWS (chantier C, 11/11) : un defaut qu'aucun
+    # capteur ne peut voir n'est pas une porte. Sous Linux, le script shell
+    # fonctionne — c'est SOUS WINDOWS qu'il detruit le demarrage.
+    # Les deux assertions sont JOUEES, pas decrites ; chacune rougit le lot si
+    # on la casse (verifie le 11/11 en reintroduisant le defaut, rc=1).
+    if os.sep + ".bin" + os.sep + "tsx" in tsx:
+        print("ECHEC : chemin_tsx rend le SCRIPT SHELL (%s) — sous Windows, "
+              "node.exe le lit comme du shell et le serveur ne demarre jamais" % tsx)
+        return 1
+    if not tsx.endswith((".mjs", ".js")):
+        print("ECHEC : chemin_tsx ne rend pas le CLI JavaScript de tsx (%s)" % tsx)
+        return 1
     if not os.path.exists(tsx):
-        print("SANS TERRAIN : node_modules/.bin/tsx absent — lancer `npm ci`")
+        print("SANS TERRAIN : le CLI JavaScript de tsx est absent — lancer `npm ci`")
         return 0
     noeud = os.environ.get("NODE") or "node"
     journal = open(os.path.join(donnees, "serveur.log"), "w")

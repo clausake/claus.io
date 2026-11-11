@@ -2416,3 +2416,156 @@ de contrat metier, d'identite, de securite, de bundle et de livrable.
 Le README est mis a jour en LANGAGE PRODUIT (la release, la sauvegarde
 fiable, la reprise des donnees, le chemin reel des donnees) : aucune
 reference aux chantiers internes.
+
+## Chantier 50 — Le snapshot ne meurt plus sur son propre fichier (11/11)
+
+Le defaut mesure (document de verification 1.0.6) : sous Windows, 3 exports
+sur 30 rendaient `SNAPSHOT_PUBLICATION_ECHEC` avec `EBUSY` au niveau du
+`fs.renameSync(tmp, chemin)`. La cause est dans `src/services/snapshot-sqlite.ts`
+: le handle de CONTRÔLE ouvert pour `integrity_check` etait ferme sans que sa
+fermeture soit ATTENDUE, et le renommage partait pendant que NTFS tenait
+encore le fichier. ext4 ne verrouille pas un fichier ouvert : la faute etait
+invisible sur les postes Linux.
+
+Deux corrections, toutes deux dans le geste et non dans le message :
+
+- la fermeture est ATTENDUE (`await new Promise(r => brut.close(r))`) AVANT
+  toute publication ;
+- le renommage passe par `publierSnapshot(tmp, chemin)`, exporte : six
+  tentatives, delai croissant de 30 ms, retaille UNIQUEMENT sur les erreurs de
+  verrou temporaire (`EBUSY`, `EPERM`, `ENOTEMPTY`). `ENOENT` n'est PAS
+  retente — un fichier absent n'est pas un verrou, et le masquer serait
+  mentir sur la cause.
+
+Le meme geste fragile existait dans `src/services/db-backup.ts` (le backup
+horaire faisait son propre `fs.renameSync(snapshot.chemin, backupPath)`) : il
+publie desormais par `publierSnapshot`. `verifierBaseAutonome` attend sa
+fermeture comme le reste.
+
+Porte nouvelle : `verify:snapshot-stress` (dans `package.json` ET dans `DEFAUT`
+de `scripts/run-all-gates.py`) — `node scripts/probe-stress-snapshot.mjs 30`,
+qui ecrit une base, la fait vivre (une ecriture par export) et exige 30/30
+exports lisibles.
+
+La morsure est JOUEE, pas decrite. Un EBUSY ne se reproduit que sur NTFS, hors
+de portee de ce poste : la sonde embarque donc une morsure qui rougit ICI —
+`verifierBaseAutonome` doit REFUSER un fichier non-SQLite. Mesure du 11/11 :
+controle d'integrite neutralise → `VERDICT : ROUGE`, rc=1 ; retabli → rc=0.
+Sortie du lot : `STRESS SNAPSHOT : 30/30 exports reussis`,
+`MORSURE : le fichier cassee est bien rejete (integrite=ILLISIBLE: SQLITE_NOTADB)`.
+
+Ce qui reste a prouver hors de ce poste : la preuve definitive du correctif
+est un lot rejoue sur le poste du client (`C:\Users\claud\AppData\Local\
+Programs\clausio\`) ou sur un runner CI Windows. Cette porte prouve que le
+geste est correct et que le capteur rougit ; elle ne pretend pas avoir rejoue
+NTFS.
+
+## Chantier B — Une image corrompue ne descend plus le serveur (11/11)
+
+Le defaut mesure (document de verification 1.0.6) : un `POST` avec un PNG au
+CRC d'IHDR faux TUAIT LE PROCESSUS Node entier. Reproduit sur ce poste avant
+tout correctif :
+
+    libpng error: IHDR: CRC error
+    UNCAUGHT-EXCEPTION: Error: Error attempting to read image.   <- rc 77
+
+Le point qui rend le defaut perilleux : le worker de `tesseract.js` emet son
+erreur en `process.nextTick`. Un `try/catch` autour de `recognize()` NE
+L'ATTRAPE PAS (mesure du 11/11 : le meme appel encadre part quand meme en
+`uncaughtException`). La parade n'est donc pas d'attraper, c'est de ne pas
+donner au moteur ce qu'il ne peut pas lire.
+
+`src/shared/ocr-image.ts` (nouveau) valide les OCTETS avant le moteur et rend
+un MOTIF NOMME (jamais un booleen muet) : `IMAGE_VIDE`, `IMAGE_TROP_COURTE`,
+`IMAGE_TROP_GROSSE` (`OCTETS_MAX_IMAGE = 25 Mo`), `FORMAT_NON_IMAGE`. Pour PNG
+il ne s'arrete PAS a la signature : `pngStructurellementValide` verifie le
+CRC-32 de chaque chunk (`CRC_FAUX_dans_IHDR`, `TRONQUE_dans_X`, `IEND_ABSENT`).
+C'est LA mesure qui l'a impose — un fichier a VRAIE signature et CRC faux
+passait le controle des signatures et tuait quand meme (rc 77).
+
+Branche sur les DEUX voies qui recoivent une image : `ocr-moteurs/tesseract.ts`
+(la voie fichier) et `repliTesseract()` de `src/shared/llm.ts` — LA voie du
+crash mesure, qui recoit du base64 et n'a jamais passe par `readFileSync`. Le
+repli rend desormais un `LlmInjoignable` nomme, jamais un processus mort.
+
+Deux portes nouvelles, declarees dans `package.json` ET dans `DEFAUT` :
+
+- `verify:ocr-corrompu` — `npx tsx scripts/probe-ocr-corrompu.ts`, l'appel
+  DIRECT du moteur. Sa morsure est la plus parlante du lot : verification CRC
+  retiree du garde, la sonde rend `VERDICT : ROUGE — le processus a CRASHÉ`
+  avec rc=77 ; retablie, `VERDICT : VERT`, rc=0.
+- `verify:ocr-corrompu-e2e` — `test/e2e/ocr-corrompu.spec.ts`, les trois routes
+  d'entree image (`analyze-menu`, `documents/upload`, `recipes/scan`) joueesh
+  par HTTP : elles REFUSENT, le processus SURVIT, la raison remontee est
+  NOMMEE, et le service reste intact apres les attaques.
+
+Consigne a ne pas perdre, ecrite dans le spec : la voie exacte du crash (le
+repli de `llm.ts:224`) n'est declenchee que si le SDK `ollama` LEVE une erreur
+portant « Failed to load image » (`llm.ts:119`). Or le SDK RESOUT n'importe
+quel JSON 200 (mesure : `{error:"Failed to load image"}` rendu en 200 →
+RESOLU). Un faux amont ne peut donc pas faire lever le SDK, et AUCUNE route
+HTTP n'atteint ce repli avec ce harnais : juger cela par HTTP serait un
+capteur decoratif. C'est pourquoi la voie du repli est jouee a l'appel direct
+du moteur par la sonde, et que le spec e2e juge ce qu'il peut reellement voir.
+
+## Chantier C — Les harnais et les juges tiennent sous Windows (11/11)
+
+Deux familles de defauts, toutes deux INVISIBLES sous Linux, donc incapables
+de se signaler d'elles-memes :
+
+**Les lancements par le script shell.** Le chantier 46 avait corrige le
+harnais partage (`scripts/harnais-serveur.cjs`, `scripts/lib/tsx_cli.py`) :
+`node_modules/.bin/tsx` est un SCRIPT SHELL sous Windows, et node.exe le
+lisait comme du shell (« basedir=$(dirname ...) — SyntaxError »), le serveur
+ne demarrant jamais. Quatre lancements passaient ENCORE par le `.bin` :
+`probe-labor-cost-zero.py`, `probe-index-installe.py`, `instance-pentest.sh`,
+`verify-garde-fantomes.py`. Ils passent desormais par `chemin_tsx` (le vrai CLI
+JavaScript `dist/cli.mjs`, resolu par le paquet). Et `verify-garde-fantomes.py`
+NE SE CONTENTE PLUS de l'utiliser : il JOUE deux assertions sur le resolveur
+(il ne rend ni le script shell, ni un non-JavaScript), ce qui rend le defaut
+visible sur une machine ou il ne peut pas se produire.
+
+Porte nouvelle : `verify:harnais-windows` — `python3
+scripts/verif-harnais-windows.py`. Il lit les LANCEMENTS du depot (69 794
+lignes) et refuse toute INVOKE du script shell, en distinguant l'appel du
+recit par la GRAMMAIRE (element de liste d'arguments ou mot de commande apres
+`node `), pas par une liste de fichiers : un lancement deguise en commentaire
+reste une faute, et un texte qui raconte le defaut reste permis. Sa morsure est
+un auto-test de 9 lignes (4 qui doivent rougir, 5 qui ne doivent pas) : faux
+negatif = capteur decoratif, faux positif = lot rouge pour rien. Mesure du
+11/11 : defaut reintroduit dans `verify-garde-fantomes.py` → `VERDICT : ROUGE`,
+rc=1 ; retire → rc=0.
+
+**Les juges qui dependent du systeme qui les lance.** Le defaut mesure chez le
+client : « 1 echec, regex commentaire CRLF ». `test/unit/disque.test.ts`
+retirait les commentaires par `l.replace(/\/\/.*$/, "")`. Sur un fichier en
+CRLF — ce que produit un checkout Windows avec `core.autocrlf=true` — le `$`
+de RegExp (ancre multiline) se place AVANT le `\r` : la citation
+`statfsFn.sync` SURVIVAIT dans le pseudo-code et le juge rougissait sur un
+commentaire. Le retirage est corrige en `/^(\s*)\/\/.*(?=\r|$)/` (ancre de
+debut = pas de gloutonnerie sur `"https://…"`, lookahead = le `\r` est atteint).
+Et la REGLE ELLE-MEME est jouee par trois assertions : commentaire retire en
+LF, commentaire retire en CRLF, chaine contenant `//` laissee intacte. Morsures
+mesurees : retirer l'ancre `^\s*` → 3 fautes ; retirer le `(?=\r|$)` → 3
+fautes ; retabli → 7/7.
+
+Porte nouvelle : `verify:juges-crlf` — `python3 scripts/verif-juges-crlf.py`.
+Il ne re-ecrit PAS la regle des juges (un controle qui duplique la logique
+d'un juge ne juge que sa copie) : il remplace les sources jugees par des
+COPIES CRLF octet pour octet, relance les VRAIS juges par vitest, exige le
+MEME verdict, puis RESTAURE et verifie la restauration octet pour octet. II
+injecte aussi la citation du defaut (`statfsFn.sync`) dans un commentaire en
+LF et en CRLF : aucun juge ne doit rougir. Morsure mesuree du 11/11 : ancre
+CRLF retiree du juge → `VERDICT : ROUGE`, rc=1, trois fautes remontees dont
+« la route /health ne masque plus l'appel par un catch muet » ; retabli → rc=0.
+
+Branchement CI (pas seulement dans le lot local, sinon la regle se perd en
+silence) : `verify:harnais-windows` et `verify:juges-crlf` dans le job
+`unit-test` de `.gitlab-ci.yml` (aupres de vitest, ils ne demandent ni reseau
+ni navigateur ni `dist/`) ; `verify:snapshot-stress` et `verify:ocr-corrompu`
+dans `verify-test`. `npm run verify:ci` : 20/20, CONTRAT TENU.
+
+Compte des portes re-mesure (lus dans `package.json` et dans `DEFAUT`, jamais
+recopies) : **114 declarees, 111 au lot**. Le README dit 238 tests unitaires
+(mesure : `Tests 238 passed (238)`, 22 files) — le document de mission
+citait 225/226 et 216 : ces chiffres etaient perimes.

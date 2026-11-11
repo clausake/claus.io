@@ -30,14 +30,51 @@ describe("espaceLibreDisque (le disque, mesure et non suppose)", () => {
     expect(espaceLibreDisque(inexistant)).toBe(-1);
   });
 
-  // Le CODE est lu sans les commentaires : un commentaire qui CITE le
-  // defaut (pour l'expliquer) ne doit pas faire rougir le test.
+  // Le CODE est lu sans les commentaires de LIGNE : une fente `//` RECONNUE EN
+  // DEBUT DE LIGNE (aprs blanc) est un commentaire, tout le reste est du code.
+  // Un retirage glouton — couper au PREMIER `//` — effacerait `"https://…"` :
+  // le contre-exemple ci-dessous le refuse. Le retirage en milieu de ligne est
+  // delibrement ABSENT (voir la regle des contre-exemples).
+  //
+  // LA REGLE DE RETIRAGE EST JUGEE ICI, parce que le defaut s'est loge LA.
+  // Le premier harnais ecrivait `l.replace(/\/\/.*$/, "")`. Sur un fichier en
+  // CRLF — ce que produce un checkout Windows avec `core.autocrlf=true`, donc
+  // LE POSTE DU CLIENT, pas le notre — chaque ligne finit par un \r que `$`
+  // (ancre multiline, active par /m) place AVANT le \r. La ligne
+  //     // ... `statfsFn.sync` inexistante ...
+  // ne etait coupee qu'au \r : la citation SURVIVAIT et le test rougissait sur
+  // un commentaire. Le retirage doit donc atteindre le saut de ligne LUI-MEME
+  // (le \r est un caractere de fin de ligne, pas du contenu).
+  const retireCommentaires = (source: string): string =>
+    source.split("\n").map((l) => l.replace(/^(\s*)\/\/.*(?=\r|$)/, "$1")).join("\n");
+
   const codeSansCommentaires = (relatif: string): string =>
-    fs
-      .readFileSync(path.join(process.cwd(), relatif), "utf8")
-      .split("\n")
-      .map((l) => l.replace(/\/\/.*$/, ""))
-      .join("\n");
+    retireCommentaires(fs.readFileSync(path.join(process.cwd(), relatif), "utf8"));
+
+  // --- la REGLE DE RETIRAGE EST JOUEE, pas supposee ------------------------
+  // Sans ces trois assertions, le test dependrait du type de fin de ligne du
+  // checkout : vert sur notre Linux en LF, rouge sur le poste Windows du client
+  // (le defaut mesure ci-dessus). Un juge dont le resultat depend du systeme
+  // d'exploitation ne juge pas le produit.
+  const CITATION = "  // la route appelait `statfsFn.sync` — methode inexistante\n";
+  it("le retirage retire une citation de commentaire en LF", () => {
+    expect(retireCommentaires(CITATION).trim()).toBe("");
+  });
+  it("le retirage retire une citation de commentaire en CRLF (le poste du client)", () => {
+    // Le cas qui faisait rougir le juge sous Windows : meme texte, fins de
+    // ligne CRLF. L'ancienne regle (`/\/\/.*$/`) y LAISSAIT SURVIVRE
+    // « statfsFn.sync » et le test rougissait sur un commentaire.
+    expect(retireCommentaires(CITATION.replace(/\n/g, "\r\n")).trim()).toBe("");
+  });
+  it("le retirage ne mange pas une chaine qui contient // (le garde est strict)", () => {
+    // CONTRE-EXEMPLE : un retirage glouton (couper au PREMIER `//`, comme le
+    // faisait une regle sans ancre de debut) effacerait du code legitime. Le
+    // test rougit si le retirage redevient glouton.
+    const url = '  const url = "https://example.com/a";\n';
+    expect(retireCommentaires(url), "une chaine n'est pas un commentaire").toBe(url);
+    const cite = '  expect(code).not.toContain("statfs.sync"); // le defaut\n';
+    expect(retireCommentaires(cite), "le code d'une assertion survit intact").toBe(cite);
+  });
 
   it("la SOURCE utilise fs.statfsSync — pas statfs.sync (le defaut mesure)", () => {
     const code = codeSansCommentaires("src/services/disque.ts");

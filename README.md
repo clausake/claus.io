@@ -141,7 +141,7 @@ npm run build:linux   # Linux (AppImage, deb)
 
 ## Qualité
 
-Le projet est jugé par **106 portes automatiques** (`verify:*` déclarées dans `package.json`, dont 103 jouées au lot `npm run verify:all`) exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 226 tests unitaires, 44 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la **notice livrée** (les sept sections du guide PDF, dans ses cinq langues), la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
+Le projet est jugé par **114 portes automatiques** (`verify:*` déclarées dans `package.json`, dont 111 jouées au lot `npm run verify:all`) exécutées à chaque push (CI GitHub Actions) : types (zéro `:any`), 238 tests unitaires, 44 routes en contrats e2e, sécurité (sessions, rate-limit, audit trail, CSP), contrats métier, la **notice livrée** (les sept sections du guide PDF, dans ses cinq langues), la navigation **UI intégrale** (les 13 onglets jugés dans un vrai navigateur : rendu + console propre), et vérification cryptographique du journal des phases. Chaque porte a une morsure qui prouve qu'elle peut rougir.
 
 ```bash
 npm run verify:all            # le lot complet

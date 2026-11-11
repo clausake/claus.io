@@ -66,6 +66,14 @@ unit-test:
     # 3/3 CONFORMES par telechargement reel. Sans eux, unit-test rouge de fait.
     - python3 scripts/telecharger-ocr-modeles.py
     - npx vitest run
+    # Chantiers B et C du document 1.0.6 (11/11). Lesjuges lisent les
+    # LANCEMENTS (le script shell .bin/tsx, invisible sous Linux) et rejouent
+    # les tests unitaires sur des COPIES CRLF des sources (le defaut « regex
+    # commentaire CRLF » mesure chez le client). Ils ne demarrent aucun serveur
+    # et ne demandent ni reseau ni navigateur : leur place est ici, a cote de
+    # vitest, et non dans le job qui exige dist/.
+    - npm run verify:harnais-windows
+    - npm run verify:juges-crlf
 
 # E2E (Playwright) : démarre le serveur Express (tsx) sur un port isolé et
 # vérifie les routes critiques (CRUD inventaire, licence, dashboard, HACCP).
@@ -131,6 +139,14 @@ verify-test:
     - npm run verify:perf
     - npm run verify:sse
     - npm run verify:ratelimit
+    # Chantiers A et B du document 1.0.6 (11/11), branches ICI : la sonde de
+    # stress du snapshot exerce le MEME geste que /api/backup (30 exports,
+    # 0 EBUSY) et la sonde OCR corrompu joue l'entree qui faisait mourir le
+    # processus (rc 77). Aucune des deux ne demande dist/. Les deux autres
+    # regles de ces chantiers (lancements shell, juges CRLF) sont dans
+    # unit-test, aupres de vitest.
+    - npm run verify:snapshot-stress
+    - npm run verify:ocr-corrompu
   artifacts:
     paths:
       - dist/

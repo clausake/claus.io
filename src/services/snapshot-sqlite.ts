@@ -73,6 +73,51 @@ export function baseExiste(dbPath: string): boolean {
   }
 }
 
+/** Une attente reelle (pas une boucle occupee). */
+function attendre(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** L'erreur porte-t-elle un code « fichier temporairement verrouille » ?
+ *  Sous Windows, renommer un fichier encore tenu rend EBUSY ou EPERM ; la
+ *  poignee se libere quelques millisecondes plus tard. Sous POSIX, un ENOENT
+ *  sur le tmp signale un concurrent qui a deja deplace le fichier : ce n'est
+ *  pas un verrou, on ne retente pas. */
+function verrouTemporaire(e: unknown): boolean {
+  const code = String((e as { code?: string })?.code ?? "");
+  return code === "EBUSY" || code === "EPERM" || code === "ENOTEMPTY";
+}
+
+/**
+ * Renomme `tmp` vers `chemin` en ATTENDANT que plus aucune poignee ne tienne
+ * `tmp`, et en retentant un nombre BORNÉ de fois sur un verrou temporaire.
+ *
+ * Mesure du 11/11 (document de verification 1.0.6, chantier A) : 3 exports
+ * sur 30 echouaient en EBUSY sous Windows. Le rename partait alors que la
+ * poignee de controle venait a peine de se fermer ; sur NTFS le verrou n'est
+ * pas rendu a l'instant exact de la fermeture. On laisse donc un delai avant
+ * la premiere tentative, puis on retente sur EBUSY/EPERM.
+ *
+ * Exporte : le backup automatique (db-backup.ts) fait le MEME geste (deplacer
+ * un snapshot vers son nom final) et est cite dans les symptomes EBUSY.
+ */
+export async function publierSnapshot(tmp: string, chemin: string): Promise<void> {
+  const TENTATIVES = 6;
+  const DELAI_MS = 30;
+  let derniere: unknown = null;
+  for (let essai = 0; essai < TENTATIVES; essai++) {
+    try {
+      fs.renameSync(tmp, chemin);
+      return;
+    } catch (e) {
+      derniere = e;
+      if (!verrouTemporaire(e)) throw e; // un vrai defaut : on ne masque pas
+      await attendre(DELAI_MS * (essai + 1)); // court delai croissant
+    }
+  }
+  throw derniere instanceof Error ? derniere : new Error("renommage impossible");
+}
+
 /** Compter les lignes et lister les tables d'un fichier SQLite ouvert en RO. */
 function inspecter(chemin: string): Promise<{ tables: string[]; lignes: number }> {
   const brut = new sqlite3.Database(chemin, sqlite3.OPEN_READONLY);
@@ -221,18 +266,27 @@ export async function snapshotSqlite(
   }
 
   // 3. Controle AVANT livraison : relecture en lecture seule + integrite.
+  //
+  // ⚠ LE HANDLE DE CONTROLE DOIT ETRE FERME AVANT LE RENOMMAGE. Mesure du
+  // 11/11 (document de verification 1.0.6, chantier A) : sous Windows, 3
+  // exports sur 30 echouaient en SNAPSHOT_PUBLICATION_ECHEC / EBUSY sur le
+  // `renameSync(tmp -> …db)`. La cause est ici : la relecture ouvrait `tmp`
+  // et le refermait SANS ATTENDRE la fermeture (`close(() => undefined)`),
+  // puis l'etape 4 renommait. Sur NTFS, renommer un fichier encore tenu par
+  // une poignee ouverte, c'est EBUSY. Le controle est donc rendu, sa
+  // fermeture est ATTENDUE, et seulement ensuite on publie.
   if (verifier) {
     let verdict: string;
+    const brut = new sqlite3.Database(tmp, sqlite3.OPEN_READONLY);
     try {
-      const brut = new sqlite3.Database(tmp, sqlite3.OPEN_READONLY);
       verdict = await new Promise<string>((resolve, reject) => {
         brut.get("PRAGMA integrity_check;", (err, row) => {
           if (err) reject(err);
           else resolve(String((row as { integrity_check?: string })?.integrity_check ?? ""));
         });
       });
-      brut.close(() => undefined);
     } catch (e) {
+      await new Promise<void>((resolve) => brut.close(() => resolve()));
       if (!options.conserverSiEchec) nettoyer();
       throw new SnapshotErreur(
         "SNAPSHOT_ILLEGIBLE",
@@ -240,6 +294,9 @@ export async function snapshotSqlite(
         String((e as Error)?.message ?? e),
       );
     }
+    // La fermeture est ATTENDUE (cf. le bloc ci-dessus) : un handle restant
+    // sur `tmp` est exactement ce qui fait rougir le rename sous Windows.
+    await new Promise<void>((resolve) => brut.close(() => resolve()));
     if (verdict.trim().toLowerCase() !== "ok") {
       if (!options.conserverSiEchec) nettoyer();
       throw new SnapshotErreur(
@@ -250,9 +307,18 @@ export async function snapshotSqlite(
     }
   }
 
-  // 4. Publication atomique.
+  // 4. Publication atomique, AVEC RETAILLE sur EBUSY/EPERM.
+  //
+  // Le rename est atomique sur les deux systemes, mais Windows peut refuser
+  // temporairement EBUSY/EPERM : une poignee qui vient de se fermer (le
+  // garbage collector de SQLite, l'antivirus qui a ouvert le fichier neuf)
+  // n'a pas toujours rendu le verrou a l'instant ou on renomme. On retente
+  // donc un nombre BORNÉ de fois avec un court delai, sans quoi le premier
+  // coup dur (l'antivirus du poste du client) rendrait l'export impossible.
+  // Le delai est fait par une attente sur un timer reel, pas par une boucle
+  // occupee.
   try {
-    fs.renameSync(tmp, chemin);
+    await publierSnapshot(tmp, chemin);
   } catch (e) {
     if (!options.conserverSiEchec) nettoyer();
     throw new SnapshotErreur(
@@ -282,18 +348,22 @@ export async function verifierBaseAutonome(
   const vide = { autonome: false, integrite: "FICHIER_ABSENT", tables: [] as string[], lignes: 0 };
   if (!baseExiste(chemin)) return vide;
   let verdict = "";
+  const brut = new sqlite3.Database(chemin, sqlite3.OPEN_READONLY);
   try {
-    const brut = new sqlite3.Database(chemin, sqlite3.OPEN_READONLY);
     verdict = await new Promise<string>((resolve, reject) => {
       brut.get("PRAGMA integrity_check;", (err, row) => {
         if (err) reject(err);
         else resolve(String((row as { integrity_check?: string })?.integrity_check ?? ""));
       });
     });
-    brut.close(() => undefined);
   } catch (e) {
+    await new Promise<void>((resolve) => brut.close(() => resolve()));
     return { ...vide, integrite: `ILLISIBLE: ${String((e as Error)?.message ?? e)}` };
   }
+  // Fermeture ATTENDUE avant de lire les sidecars et de rendre le verdict :
+  // une poignee restee ouverte sur `chemin` ferait croire a un `-wal` encore
+  // present, et exposerait le fichier a un EBUSY si un appelant le renomme.
+  await new Promise<void>((resolve) => brut.close(() => resolve()));
   const autonome = verdict.trim().toLowerCase() === "ok" && !fs.existsSync(`${chemin}-wal`);
   const { tables, lignes } = await inspecter(chemin);
   return { autonome, integrite: verdict, tables, lignes };

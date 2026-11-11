@@ -20,7 +20,7 @@
 import fs from "fs";
 import path from "path";
 import type { Database } from "sqlite";
-import { snapshotSqlite, SnapshotErreur } from "./snapshot-sqlite.js";
+import { snapshotSqlite, publierSnapshot, SnapshotErreur } from "./snapshot-sqlite.js";
 
 const BACKUP_INTERVAL_MS = 3600000; // 1 heure
 const MAX_BACKUPS = 5;
@@ -56,7 +56,7 @@ export async function runDbBackup(dataDir: string, db: Database): Promise<string
     { conserverSiEchec: false },
   );
   try {
-    fs.renameSync(snapshot.chemin, backupPath);
+    await publierSnapshot(snapshot.chemin, backupPath);
   } catch (e) {
     try { fs.unlinkSync(snapshot.chemin); } catch { /* deja absent */ }
     throw new SnapshotErreur(

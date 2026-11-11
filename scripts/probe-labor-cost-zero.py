@@ -51,6 +51,7 @@ REPO = os.environ.get("COOKDRIVE_PROBE_REPO") or os.path.dirname(os.path.dirname
 os.chdir(REPO)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 import _sondes_serveur as ss
+from lib.tsx_cli import chemin_tsx  # chantier 46 : le vrai CLI JS de tsx
 NODE = shutil.which("node")
 assert NODE and "python" not in NODE.lower(), "mauvais interpreteur: " + str(NODE)
 
@@ -95,7 +96,7 @@ def http(method, path, payload=None):
 def boot():
     import subprocess
     ss.bootstrap(int(PORT))
-    ch = ss.Popen_sonde([NODE, "node_modules/.bin/tsx", "server.ts"],
+    ch = ss.Popen_sonde([NODE, chemin_tsx(REPO), "server.ts"],
                         env=dict(os.environ, COOKDRIVE_AUTH_OFF="1", PORT=str(PORT), USER_DATA_PATH=DATA),
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     stop = threading.Event()

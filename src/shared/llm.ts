@@ -211,12 +211,34 @@ async function genererOpenAiCompatible(
   return texte;
 }
 
-/** Le repli Tesseract (vision) — repris de generateWithOllama, même contrat. */
+/** Le repli Tesseract (vision) — repris de generateWithOllama, même contrat.
+ *
+ *  Chantier B (document 1.0.6, 11/11) : cette voie recevait les octets de
+ *  l'image directement en base64 et les donnait au worker. Un PNG au CRC
+ *  corrompu faisait TOMBER LE PROCESSUS entier : le « libpng error » du worker
+ *  part en uncaughtException depuis un process.nextTick, hors de portee d'un
+ *  try/catch (mesure du 11/11 : rc 77). On valide DONC les octets avant, et on
+ *  enveloppe l'appel : le repli ne peut plus tuer le serveur, il rend une
+ *  erreur nommee que la route renvoie en HTTP.
+ */
 async function repliTesseract(imageBase64: string): Promise<string> {
   const buffer = Buffer.from(imageBase64, "base64");
+  const { imageValide } = await import("./ocr-image.js");
+  const verdict = imageValide(buffer);
+  if (!verdict.valide) {
+    throw new LlmInjoignable(
+      "repli tesseract",
+      `image refusee avant le moteur : ${verdict.motif}`,
+    );
+  }
   const Tesseract = (await import("tesseract.js")).default;
-  const { data: { text } } = await Tesseract.recognize(buffer, "fra");
-  return text;
+  try {
+    const { data: { text } } = await Tesseract.recognize(buffer, "fra");
+    return text;
+  } catch (e) {
+    // Une erreur du worker devient une erreur NOMMEE, jamais un crash.
+    throw new LlmInjoignable("repli tesseract", String((e as Error)?.message ?? e));
+  }
 }
 
 /** La cible de diagnostic rendue à l'UI (le nom lisible du choix actuel). */
