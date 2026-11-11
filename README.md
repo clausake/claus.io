@@ -92,18 +92,18 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Installation
 
-**Étape 1 — télécharger.** Sur la [page des releases](https://github.com/clausake/claus.io/releases), une seule release est publiée : **v1.0.6**. Prenez le fichier de votre plateforme :
+**Étape 1 — télécharger.** Sur la [page des releases](https://github.com/clausake/claus.io/releases), une seule release est publiée : **v1.0.7**. Prenez le fichier de votre plateforme :
 
 | Plateforme | Fichier |
 |---|---|
-| Windows 10/11 x64 | `claus.io.Setup.1.0.6.exe` |
-| macOS (Apple Silicon) | `claus.io-1.0.6-arm64.dmg` |
-| Linux ARM64 (AppImage) | `claus.io-1.0.6-arm64.AppImage` |
-| Linux ARM64 (paquet) | `clausio_1.0.6_arm64.deb` |
+| Windows 10/11 x64 | `claus.io.Setup.1.0.7.exe` |
+| macOS (Apple Silicon) | `claus.io-1.0.7-arm64.dmg` |
+| Linux ARM64 (AppImage) | `claus.io-1.0.7-arm64.AppImage` |
+| Linux ARM64 (paquet) | `clausio_1.0.7_arm64.deb` |
 
 Chaque release publie aussi `SOMMES-SHA256.txt` : après téléchargement, comparez la somme de votre fichier (`sha256sum <fichier>` sous Linux/macOS, `Get-FileHash <fichier>` sous Windows) à la ligne du fichier qui porte son nom — si les deux sommes sont identiques, le téléchargement est intact.
 
-**Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.6-arm64.AppImage`.
+**Étape 2 — ouvrir.** Les images Windows et macOS sont non signées : une confirmation manuelle est demandée à la première ouverture (Windows : « Plus d'informations » → **Exécuter** dans SmartScreen ; macOS : **clic droit → Ouvrir**). L'AppImage se rend exécutable une fois : `chmod +x claus.io-1.0.7-arm64.AppImage`.
 
 **Étape 3 — premier lancement.** L'application démarre sur `http://127.0.0.1:3000` et crée sa base dans `%APPDATA%\ClausIO` (Windows) ou `~/.clausio` (macOS/Linux). Elle commence par vous demander de créer le **compte maître** (le vôtre, avec mot de passe) ; les comptes employé se déclarent ensuite dans l'onglet **Comptes** du menu, et les exports de la base comme l'archive de sauvegarde sont réservés au maître. Au tout premier lancement, un **kit d'exemples** est posé automatiquement, un par onglet : 1 élément en stock, 1 fiche en production, 1 document scanné, 1 doc HACCP. Il sert de repère de lecture ; il s'efface en un clic dans la section **« Kit de démonstration »** des Réglages (et ne revient pas tout seul). Si une **installation précédente** est retrouvée sur le poste, l'application le signale et **propose** de reprendre ses données (une copie de sécurité est conservée avant tout import ; vos données actuelles ne sont jamais écrasées).
 

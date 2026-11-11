@@ -3,7 +3,7 @@
   "description": "claus.io \u2014 assistant culinaire IA open source (EUPL-1.2)",
   "author": "ClausIO <clausake@localhost>",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

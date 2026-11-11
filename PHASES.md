@@ -2638,3 +2638,59 @@ ou d'attendre l'amont sur `@electron/universal`. Aucune des deux n'existe a la
 date de mesure (`npm view electron-builder` = 26.18.1, `@electron/universal` =
 3.0.6 et elle tire `@electron/asar@^4`, signale a son tour). La porte rouge
 sera le signal qu'une de ces deux situations a change.
+
+## Chantier 51 — Livraison 1.0.7 : les installeurs embarquent les correctifs (11/11)
+
+Les installeurs publies sous v1.0.6 datent du 10/11 (run 42772928071, commit
+de la livraison 1.0.6) : ils n'embarquent DONC PAS les correctifs des chantiers
+50, B, C et D joues le 11/11. Aucun tag ne porte ces commits (verifie :
+`git tag --contains 060d417` rend VIDE). Un client qui telecharge v1.0.6
+aujourd'hui recoit donc le snapshot d'hier.
+
+Pour tester sur le portable du client, il fallait un build neuf. Regle du
+depot : une version publiee n'est JAMAIS re-taguee, et `npm run verify:all` ne
+suffit pas a prouver un installeur — c'est le workflow `installateurs` qui
+construit chaque plateforme sur son hotes NATIF (Windows x64 sur
+windows-latest, macOS arm64 sur macos-latest, Linux arm64 sur ubuntu-24.04-arm,
+le cross-compile etant refuse pour sqlite3/argon2/onnxruntime/@napi-rs/canvas).
+
+**DECISION : bump en 1.0.7 + tag v1.0.7.** C'est la seule voie qui publie un
+build neuf SANS ecraser la release v1.0.6 deja telechargee par des clients (le
+workflow `installateurs` attache les fichiers a la release lue dans
+`package.json` lors d'un `workflow_dispatch` : un dispatch sans bump aurait
+ECRASE les quatre installeurs de v1.0.6 — le defaut consigne pour v0.1.0, dont
+les assets avaient ete remplaces au fil des corrections sans que la version
+annoncee bouge).
+
+Faits de la publication :
+
+- `package.json` : 1.0.6 → **1.0.7** (le nom des fichiers est porte par la
+  version : `claus.io.Setup.1.0.7.exe`, `claus.io-1.0.7-arm64.dmg`,
+  `claus.io-1.0.7-arm64.AppImage`, `clausio_1.0.7_arm64.deb`).
+- `README.md` : les six occurrences de 1.0.6 sont remplacees (la release
+  annoncee et les quatre noms de fichiers, plus le `chmod +x`). Mesure apres
+  coup : `grep -c "1.0.6" README.md` = 0.
+- Les mentions de « document de verification 1.0.6 » dans les commentaires de
+  code (llm.ts, ocr-image.ts, snapshot-sqlite.ts, les sondes et les specs)
+  sont DES REFERENCES AU DOCUMENT DE MISSION, pas a la version livree : elles
+  ne bougent pas, et un `grep` qui les confondrait avec la version ferait
+  bouger des traces de mesure.
+- Le texte de la release v1.0.7 est ecrit en LANGAGE PRODUIT (sauvegarde,
+  reprise des donnees, poste de travail) : aucune reference aux chantiers
+  internes, contrat du README.
+
+Preuves rejouees apres le bump : `npx tsc --noEmit` = 0, `verify:guide-notice`
+rc=0, `verify:bundle` TOUT PASS. Ce que la 1.0.7 embarque, chacun avec sa
+porte et sa morsure mesuree le 11/11 : l'export qui ne meurt plus sur son
+propre fichier sous Windows (EBUSY), une photo illisible qui ne descend plus
+l'application, les harnais et les juges qui tiennent sous Windows, et l'audit
+verrouille (production a zero alerte).
+
+Ce que cette livraison NE PROUVE PAS depuis ce poste : les trois installeurs
+sont construits par la CI, pas par ici. La preuve du correctif EBUSY et du
+`.bin` shell reste le portable du client (`C:\Users\claud\AppData\Local\
+Programs\clausio\`) — c'est exactement le but du test demande. Le smoke test
+du workflow ne couvre QUE l'AppImage Linux (les 40 dernieres lignes du log en
+cas d'echec) ; l'execution headless d'un NSIS ou d'un .dmg n'est pas implantee,
+et le workflow le NOMME au lieu de laisser croire que les trois plateformes
+sont couvertes.
