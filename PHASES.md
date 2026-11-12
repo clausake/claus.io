@@ -3001,3 +3001,63 @@ qu'elle a lance quelque chose. Verifie dans les deux etats : `release/` deplace
 → rc=0 en nommant ; `npm run build:linux` rejoue → rc=0 avec
 `OK E le VRAI AppImage repond : /api/settings 200, jeton 5e717e30 conforme, UI
 rendue`.
+
+## Chantier 56 — La page des releases ne presente plus qu'une seule version (11/11)
+
+**LA DEMANDE.** L'usager veut que la page des releases ne montre que la version
+en cours (`v1.0.7`) : les autres versions et leur historique doivent disparaitre.
+
+**CE QUI A ETE SUPPRIME, ET CE QUI NE L'A PAS ETE (la distinction est le
+chantier).** Trois objets differents porte le mot « version » sur GitHub :
+
+| Objet | Decision | Pourquoi |
+|---|---|---|
+| la RELEASE v1.0.6 et ses 5 assets (~1,2 Go) | **SUPPRIMEE** | c'est ce que voit le client : « version de logiciel + historique » |
+| la RELEASE v1.0.5 et ses 4 assets (~1,2 Go) | **SUPPRIMEE** | idem |
+| le **tag git** `v1.0.6`, `v1.0.5`… | **CONSERVE** | voir ci-dessous |
+
+**POURQUOI LES TAGS RESTENT, ET CE N'EST PAS UN OUBLI.** Trois raisons, chacune
+verifiee :
+
+1. `build-windows.yml` se declenche `on: push: tags: ['v*']` et lit son
+   `tag_name` dans `GITHUB_REF`. Supprimer un tag, c'est retirer le point de
+   repereture d'une publication ;
+2. la regle du depot interdit de re-tagger une version publiee : un tag efface
+   ne peut pas etre remis sur le meme commit sans violer cette regle ;
+3. un client qui a installe 1.0.6 doit pouvoir retrouver **le code** de ce qu'il
+   fait tourner (audit, reproductibilite).
+
+La page `/releases/tag/v1.0.6` repond encore 200 : mesure a l'appui, ce n'est
+**pas** une release — `AUCUN lien d'assets`, le corps ne contient plus ni
+« sauvegardes fiables » ni « Cette version corrige », et `…/download/v1.0.6/
+claus.io.Setup.1.0.6.exe` rend **404**. C'est la page du COMMIT, qui propose
+tout au plus le source, jamais un installeur.
+
+**L'ARCHIVAGE AVANT LA SUPPRESSION (la suppression est irreversible).** Le
+texte de v1.0.6 etait une NOTICE CLIENT en langage produit (2 212 octets :
+sauvegarde restaurable, exports reserves au maitre, reprise des donnees). Il a
+ete sauvegarde dans `/tmp/opencode/archives-releases/v1.0.6.body.md` AVANT
+`gh release delete`, avec l'inventaire des 9 assets et leurs tailles. Les
+binaires ne sont pas archives (2,4 Go) : ils sont reproductibles par
+`gh workflow run build-windows.yml --ref v1.0.6`, le tag etant reste.
+
+**LA PREUVE DE L'ETAT DEMANDE :**
+
+    $ gh release list
+    v1.0.7    Latest    v1.0.7    2026-11-11T15:39:35Z          ← une seule ligne
+
+    $ curl https://github.com/clausake/claus.io/releases
+      « v1.0.7 » cite : 13    « v1.0.6 » cite : 0    « v1.0.5 » cite : 0
+
+Et la version restante est intacte, verifiee par un GET reel (le `-I`/HEAD ne
+prouve rien : il rend `0 o` sur un fichier de 311 Mo, mesure du 11/11) :
+
+    GET Setup.1.0.7.exe -> 206  application/octet-stream
+    les 5 assets repondent 206 : exe, dmg, AppImage, deb, SOMMES-SHA256.txt
+
+**CE QUE LE MOT « HISTORIQUE » POURRAIT AVOIR VOULU DIRE D'AUTRE, et que je
+n'ai PAS fait sans le dire :** l'historique des COMMITS (`git log`) et les
+runs CI restent visibles sur le depot. L'utilisateur d'un logiciel ne les voit
+pas en telechargeant ; les supprimer serait detruire l'histoire du travail, ce
+qu'aucune demande de « page release propre » ne justifie. Si c'est cela qui
+etait vise, c'est une autre decision, et elle se prend autrement.
