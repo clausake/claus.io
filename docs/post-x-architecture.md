@@ -1,27 +1,22 @@
-# Post X — même style que le post source (adapté à claus.io)
+# Post X — version client (sans mention JSON)
 
 Texte à publier tel quel, avec la vidéo `public/demo-architecture.mp4` en pièce jointe :
 
 ---
 
-DEMÀNDE À TON AGENT DE MAPPER TOUTE L'ARCHITECTURE DE TON APP EN UNE SEULE PAGE HTML ET UN FICHIER JSON.
+CARTOGRAPHIE TOUTE L'ARCHITECTURE DE TON APPLICATION EN UNE SEULE PAGE HTML.
 
-Le HTML est pour toi.
+Pour tes clients.
 
-Le JSON est pour le prochain agent qui travaille sur une nouvelle fonctionnalité.
+Un clic et le système s'explique tout seul 👇🏻
 
-Ta codebase s'explique toute seule 👇🏻
-
-Carte interactive de claus.io (42 nœuds, 12 flux, clic = chemin surligné + étapes) :
+Découvrez claus.io en 30 secondes : 12 flux, 42 nœuds, le chemin s'allume à chaque clic.
 https://clausake.github.io/claus.io/architecture.html
-
-Le JSON, pour le prochain agent :
-https://clausake.github.io/claus.io/architecture.json
 
 ---
 
 ## Note d'ingénierie
 
-- Le post source utilise la même structure : une consigne en MAJUSCULES, puis deux phrases courtes qui séparent les deux publics (humain / agent), puis la punchline avec 👇🏻.
-- La vidéo source (18 s) montre un clic sur un flux, le chemin qui s'allume en jaune et les étapes détaillées à droite. La démo claus.io (14 s) reproduit exactement ce geste.
-- Les liens pointent vers la branche `gh-pages`, donc la page s'ouvre réellement dans le navigateur (un fichier HTML dans un dépôt GitHub ne s'exécute pas).
+- Même structure que le post source : une consigne en MAJUSCULES, deux phrases courtes, puis la punchline avec 👇🏻.
+- Aucune mention du fichier JSON ni d'agent : la page s'adresse aux clients.
+- La démo vidéo (14 s) montre le même geste que la vidéo source : clic sur un flux, chemin qui s'allume en jaune, étapes détaillées à droite.

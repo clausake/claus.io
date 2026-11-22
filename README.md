@@ -77,7 +77,7 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Architecture
 
-**[🗺️ Architecture & Flows](https://clausake.github.io/claus.io/architecture.html)** — la carte interactive : 42 nœuds, 62 liens, 12 flux réels. Cliquez un flux ou un nœud : le chemin s'allume et les étapes (fichier + rôle) s'affichent à droite. **[Démo 14 s](https://clausake.github.io/claus.io/public/demo-architecture.mp4)**. La même carte existe en **[JSON](https://clausake.github.io/claus.io/architecture.json)** pour le prochain agent qui travaille sur une fonctionnalité : `docs/architecture.json` est la source de vérité, la page en est générée par `node scripts/gen-architecture.mjs` (`--check` vérifie qu'elle est à jour).
+**[🗺️ Architecture & Flows](https://clausake.github.io/claus.io/architecture.html)** — la carte interactive pour découvrir le produit : 42 nœuds, 62 liens, 12 flux réels. Cliquez un flux ou un nœud : le chemin s'allume et les étapes (fichier + rôle) s'affichent à droite. **[Démo 14 s](https://clausake.github.io/claus.io/public/demo-architecture.mp4)**.
 
 - **Frontend** : React 19 + Vite + Tailwind CSS, 15 vues chargées à la demande
 - **Backend** : Express + SQLite (25 routeurs, **117 endpoints**, `server.ts` 401 lignes), `127.0.0.1:3000`

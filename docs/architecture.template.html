@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claus.io — Architecture &amp; Flows</title>
 <meta name="description" content="Cartographie interactive de l'architecture de claus.io v1.0.7 : le système en 30 secondes, un clic pour lire le chemin réel dans le code.">
-<!--
-  PAGE GENEREE — ne pas editer a la main.
-  Source : docs/architecture.json + docs/architecture.template.html
-  Regenerer : node scripts/gen-architecture.mjs
-  Le JSON est embarque ci-dessous : cette page fonctionne hors ligne, comme claus.io.
--->
+<!-- PAGE GENEREE — ne pas editer a la main. Regenerer : node scripts/gen-architecture.mjs -->
 <style>
   :root{
     --bg:#0a0d12; --panel:#0e131b; --panel2:#111823; --line:#1e2836;
@@ -109,8 +104,6 @@
     padding:7px 14px;border-top:1px solid var(--line);font:9px var(--mono);color:var(--faint);
     display:flex;justify-content:space-between;gap:8px;
   }
-  footer a{color:#67e8f9;text-decoration:none}
-  footer a:hover{text-decoration:underline}
   @media (max-width:900px){
     body{overflow:auto}
     main{display:block;height:auto}
@@ -135,7 +128,7 @@
     <div id="details"></div>
     <footer>
       <span id="meta"></span>
-      <a href="architecture.json" target="_blank" rel="noopener">voir le JSON ↗</a>
+      <span>claus.io · fonctionne hors ligne</span>
     </footer>
   </aside>
 </main>
@@ -219,7 +212,7 @@
     edgeEls.forEach(function(p){ p.classList.remove('hot','dim'); });
     document.querySelectorAll('.flow').forEach(function(b){ b.classList.remove('active'); });
     dtitle.textContent='ÉTAPES';
-    detail.innerHTML='<p class="why">Chaque flux ci-dessus est une vraie chaîne d\'appels du dépôt. Clique pour suivre le chemin : les nœuds et les liens concernés s\'allument, les étapes détaillées apparaissent ici. Le modèle de données complet est dans le JSON.</p>';
+    detail.innerHTML='<p class="why">Chaque flux ci-dessus est un vrai chemin de l\'application. Clique pour le suivre : les nœuds et les liens concernés s\'allument, les étapes apparaissent ici. Cette page fonctionne hors ligne, comme claus.io.</p>';
   }
   function selectFlow(id){
     activeFlow=id; activeNode=null;

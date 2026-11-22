@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "generated_at": "2026-11-22",
-  "source_of_truth": "Fait à partir du code de claus.io v1.0.7 (HEAD 04e0eb1). Les chemins et les comptes ont été mesurés, pas devinés. Régénérer la page avec : node scripts/gen-architecture.mjs",
+  "source_of_truth": "Fait à partir du code de claus.io v1.0.7 (HEAD 04e0eb1). Les chemins et les comptes ont été mesurés, pas devinés.",
   "product": {
     "name": "claus.io",
     "version": "1.0.7",
@@ -13,8 +13,7 @@
       "repo": "https://github.com/clausake/claus.io",
       "releases": "https://github.com/clausake/claus.io/releases",
       "ci": "https://github.com/clausake/claus.io/actions/workflows/ci.yml",
-      "architecture_map": "https://clausake.github.io/claus.io/architecture.html",
-      "architecture_json": "https://clausake.github.io/claus.io/architecture.json"
+      "architecture_map": "https://clausake.github.io/claus.io/architecture.html"
     },
     "metrics": {
       "route_modules": 25,
@@ -358,30 +357,5 @@
       "USER_DATA_PATH": "répertoire de données isolé pour une sonde",
       "COOKDRIVE_CLIENT_DB": "base client réelle pour les portes dépendant du terrain"
     }
-  },
-  "agent_handoff": {
-    "where_to_start": [
-      "Lire AGENTS.md (contrat des deux cerveaux) puis ce fichier.",
-      "Pour une route : src/routes/<module>.ts, puis src/db/init.ts pour les colonnes, puis le test test/e2e/ ou test/unit/ correspondant.",
-      "Pour une vue : src/components/<Vue>.tsx, déclarée dans lazy-views.ts, branchée dans App.tsx.",
-      "Pour une porte : package.json ET DEFAUT de scripts/run-all-gates.py, avec une morsure -mord si la porte juge quelque chose."
-    ],
-    "must_read": ["AGENTS.md", "README.md", "PHASES.md", "docs/architecture.json", ".env.example"],
-    "commands": {
-      "install": "npm ci",
-      "run": "npm run dev",
-      "types": "npm run lint",
-      "unit": "npm test",
-      "build": "npm run build && npm run build:server",
-      "all_gates": "npm run verify:all",
-      "read_verdict": "python3 scripts/lire-gates.py"
-    },
-    "forbidden": [
-      "Ne jamais mettre une variable COOKDRIVE_*OFF en production.",
-      "Ne jamais grepper test/gates.out directement (octets nuls).",
-      "Ne jamais écrire un chiffre sans la commande qui l'a produit dans le même tour.",
-      "Ne jamais faire écrire l'IA dans une table métier : elle passe par suggestions."
-    ],
-    "regenerate_map": "node scripts/gen-architecture.mjs"
   }
 }
