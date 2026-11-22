@@ -1,0 +1,387 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-22",
+  "source_of_truth": "Fait à partir du code de claus.io v1.0.7 (HEAD 04e0eb1). Les chemins et les comptes ont été mesurés, pas devinés. Régénérer la page avec : node scripts/gen-architecture.mjs",
+  "product": {
+    "name": "claus.io",
+    "version": "1.0.7",
+    "description": "Système expert de gestion de cuisine professionnelle : HACCP, inventaire, achats, fiches techniques, planning, analyse aromatique Epicure. IA 100 % locale ou absente.",
+    "license": "EUPL-1.2",
+    "runtime": "Node >= 22, React 19, Vite 6, Express 4, SQLite, Electron 41",
+    "languages": ["fr", "en", "de", "es", "it"],
+    "urls": {
+      "repo": "https://github.com/clausake/claus.io",
+      "releases": "https://github.com/clausake/claus.io/releases",
+      "ci": "https://github.com/clausake/claus.io/actions/workflows/ci.yml",
+      "architecture_map": "https://clausake.github.io/claus.io/architecture.html",
+      "architecture_json": "https://clausake.github.io/claus.io/architecture.json"
+    },
+    "metrics": {
+      "route_modules": 25,
+      "endpoints": 117,
+      "endpoints_by_method": { "GET": 48, "POST": 57, "PUT": 4, "DELETE": 8 },
+      "database_tables": 27,
+      "declared_gates": 117,
+      "gates_in_lot": 114,
+      "mutation_gates": 24,
+      "ui_lazy_views": 15,
+      "sidebar_tabs": 14,
+      "app_tab_ids": 15,
+      "e2e_tab_spec_entries": 12,
+      "ui_languages": 5,
+      "main_bundle_bytes": 506204
+    }
+  },
+  "conventions": [
+    { "id": "REGLE_D_OR", "rule": "L'AGENT N'ECRIT JAMAIS. L'humain clique et exécute.", "detail": "Le compte agent reçoit 403 AGENT_LECTURE_SEULE sur toute route mutable. Sa seule écriture est la table suggestions, appliquée ou rejetée par le maître." },
+    { "id": "UNE_INSTALLATION_UN_ETABLISSEMENT", "rule": "Une installation = un établissement.", "detail": "Aucun multi-site dans le schéma users." },
+    { "id": "PORTE_APPELEE", "rule": "Une porte que personne n'appelle n'est pas une porte.", "detail": "Toute porte verify:* doit être dans package.json ET dans DEFAUT de scripts/run-all-gates.py." },
+    { "id": "MORSURE", "rule": "Un PASS qui ne peut pas rougir n'est pas une mesure.", "detail": "24 portes -mord réintroduisent le défaut et exigent un échec nommé." },
+    { "id": "SORTIE_VIDE", "rule": "Une sortie vide n'est pas une réponse.", "detail": "Ne jamais grepper test/gates.out (octets nuls) : utiliser scripts/lire-gates.py." },
+    { "id": "HARNAIS", "rule": "Les variables COOKDRIVE_*OFF ne vont JAMAIS en production.", "detail": "Elles n'existent que pour harnaiser les portes (auth, rate-limit, agent, etc.)." }
+  ],
+  "layers": [
+    { "id": "acteurs", "label": "Acteurs", "hint": "Humain / agent" },
+    { "id": "client", "label": "Client & Desktop", "hint": "Electron / navigateur" },
+    { "id": "ui", "label": "Frontend React", "hint": "Vues + coque" },
+    { "id": "transport", "label": "Transport HTTP", "hint": "fetch / cookie / SSE" },
+    { "id": "api", "label": "API Express", "hint": "server.ts + middleware" },
+    { "id": "routes", "label": "Routes métier", "hint": "25 routeurs" },
+    { "id": "services", "label": "Services & moteurs", "hint": "LLM / OCR / audit" },
+    { "id": "data", "label": "Données", "hint": "SQLite / fichiers" },
+    { "id": "harnais", "label": "Harnais & distribution", "hint": "CI / portes / release" },
+    { "id": "externe", "label": "Externe", "hint": "Ollama / cloud / IoT" }
+  ],
+  "kinds": {
+    "human": { "label": "Humain", "color": "#f472b6" },
+    "agent": { "label": "Agent IA", "color": "#c084fc" },
+    "desktop": { "label": "Client / Desktop", "color": "#38bdf8" },
+    "ui": { "label": "Frontend", "color": "#818cf8" },
+    "transport": { "label": "Transport", "color": "#22d3ee" },
+    "api": { "label": "API", "color": "#fbbf24" },
+    "security": { "label": "Sécurité", "color": "#f87171" },
+    "route": { "label": "Route", "color": "#eab308" },
+    "service": { "label": "Service", "color": "#fb923c" },
+    "data": { "label": "Données", "color": "#34d399" },
+    "gate": { "label": "Harnais", "color": "#60a5fa" },
+    "external": { "label": "Externe", "color": "#94a3b8" }
+  },
+  "nodes": [
+    { "id": "user", "label": "Chef / utilisateur", "sub": "Celui qui valide", "layer": "acteurs", "kind": "human", "path": "—", "role": "Saisit, corrige et applique. Aucune écriture de la part de l'IA sans clic humain." },
+    { "id": "agent", "label": "Hermes (agent IA)", "sub": "Lit · surveille · propose", "layer": "acteurs", "kind": "agent", "path": "src/services/hermes.ts", "role": "Surveille ruptures, DLC, températures ; produit des suggestions. 403 sur les routes mutables." },
+    { "id": "electron", "label": "Electron shell", "sub": "main.cjs · 2 fichiers", "layer": "client", "kind": "desktop", "path": "electron/main.cjs, electron/ready-parity.cjs", "role": "Démarre le serveur (tsx en dev, dist-server en prod), vérifie le jeton X-Cookdrive-Instance, ouvre la fenêtre. Aucun IPC : le contrôle est HTTP." },
+    { "id": "browser", "label": "BrowserWindow / navigateur", "sub": "localhost:3000", "layer": "client", "kind": "desktop", "path": "index.html", "role": "Rend l'application web locale. Deux gestionnaires d'erreur inline peignent une carte de secours si #root reste vide." },
+    { "id": "app", "label": "App.tsx", "sub": "Coque · état · onglets", "layer": "ui", "kind": "ui", "path": "src/App.tsx", "role": "723 lignes : onglets, recherche, alertes, panier, notifications, raccourcis Ctrl+K / Alt+1-9, enveloppe tout dans AuthGate." },
+    { "id": "authgate", "label": "AuthGate / Identité", "sub": "setup · login · 401", "layer": "ui", "kind": "security", "path": "src/components/AuthGate.tsx, EcranIdentite.tsx", "role": "Vérifie /api/auth/me, distingue setup et login via /api/auth/etat, force la reconnexion sur l'événement cd-auth-expiree." },
+    { "id": "views", "label": "15 vues lazy", "sub": "lazy-views.ts", "layer": "ui", "kind": "ui", "path": "src/components/lazy-views.ts", "role": "Dashboard, Inventory, Menus, Fiches, Documents, AntiWaste, Production, Quality, Settings, Robots, Staff, Purchasing, Haccp, Epicure, Comptes." },
+    { "id": "cdfetch", "label": "cdFetch + client API", "sub": "401 → CustomEvent", "layer": "ui", "kind": "transport", "path": "src/lib/cdFetch.ts", "role": "Relaye les 401 en événement window cd-auth-expiree. La plupart des composants utilisent fetch('/api/...') direct (118 occurrences)." },
+    { "id": "i18n", "label": "i18n · 5 langues", "sub": "chunk séparé", "layer": "ui", "kind": "ui", "path": "src/data/translations.ts, src/data/translations/", "role": "fr, en, de, es, it ; repli sur fr. Seul manualChunk de Vite." },
+    { "id": "uikit", "label": "UI kit + ToastProvider", "sub": "8 composants", "layer": "ui", "kind": "ui", "path": "src/components/ui/", "role": "Badge, Button, Input, Modal, Skeleton, Table, Toast, index. Seul contexte React de l'application." },
+    { "id": "http", "label": "HTTP same-origin", "sub": "fetch · cd_session · SSE", "layer": "transport", "kind": "transport", "path": "server.ts:107-270", "role": "Tout passe par /api/... ; cookie HttpOnly SameSite=Strict ; /api/sensors/stream est une connexion EventSource longue." },
+    { "id": "server", "label": "server.ts", "sub": "401 lignes · PORT 3000", "layer": "api", "kind": "api", "path": "server.ts", "role": "helmet (CSP avec hash), express.json 10 Mo, compression (hors SSE), journal HTTP, en-tête d'instance, rate-limit, DB, sessions, audit, routeurs, static et catch-all SPA." },
+    { "id": "middleware", "label": "Middleware", "sub": "6 fichiers", "layer": "api", "kind": "security", "path": "src/middleware/", "role": "api-rate-limiter (lecture 600, écriture 150, suppression 40, auth 20, IA 60, upload 10 / fenêtre), auth (argon2, TTL 12 h, 401/403), garde-maitre, http-logger, validate, error-logger." },
+    { "id": "audit", "label": "logAudit", "sub": "trace de chaque écriture", "layer": "api", "kind": "security", "path": "src/services/audit.ts", "role": "Écrit actor_id, actor_kind (humain/agent/harnais/anonyme), route, action, entité dans audit_log. Obligatoire pour HACCP." },
+    { "id": "authroutes", "label": "/api/auth · /api/users", "sub": "8 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/auth.ts", "role": "setup, login (argon2), logout, me, etat, CRUD comptes maître." },
+    { "id": "inventory", "label": "/api/inventory", "sub": "7 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/inventory.ts", "role": "CRUD stock, import en masse, contrat exact de consommation, analyse IA. Identifiants uniques par nouvelId()." },
+    { "id": "documents", "label": "/api/documents", "sub": "5 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/documents.ts", "role": "Upload multer (25 Mo, 5 fichiers), extraction OCR/LLM, validation et rattachement aux lignes d'inventaire." },
+    { "id": "recipes", "label": "/api/recipes", "sub": "7 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/recipes.ts", "role": "Fiches techniques : CRUD, scan OCR, génération d'étapes par IA, marquage 'saved'." },
+    { "id": "purchasing", "label": "/api/purchasing · /api/suppliers", "sub": "14 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/suppliers.ts, supplierprices.ts", "role": "Prévision, commande + PDF, réception en stock, fournisseurs, mercuriales et import de prix." },
+    { "id": "haccp", "label": "/api/haccp · capteurs", "sub": "20 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/haccp.ts", "role": "Scan OCR, températures, webhook IoT à jeton, lots, nettoyage, production, actions correctives, documents, SSE d'alertes." },
+    { "id": "airoutes", "label": "/api/ai/chat · /api/voice", "sub": "2 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/ai.ts", "role": "Assistant culinaire et voix : historique assaini et borné, intention JSON, réponse de l'IA." },
+    { "id": "hermesroutes", "label": "/api/hermes · /api/surveillance", "sub": "4 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/hermes.ts, surveillance.ts", "role": "Construit le contexte, interroge le LLM, valide et inscrit des suggestions ; seuils de surveillance configurables." },
+    { "id": "suggestions", "label": "/api/suggestions", "sub": "5 endpoints", "layer": "routes", "kind": "security", "path": "src/routes/suggestions.ts", "role": "Seule écriture autorisée de l'agent : POST crée une suggestion ; le maître applique (rejeu audité de la route cible) ou rejette avec motif." },
+    { "id": "epicureroute", "label": "/api/epicure", "sub": "3 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/epicure.ts", "role": "Analyse aromatique, recommandations, liste du vocabulaire. Aucun LLM nécessaire." },
+    { "id": "dashboard", "label": "/api/dashboard", "sub": "3 endpoints", "layer": "routes", "kind": "route", "path": "src/routes/dashboard.ts", "role": "KPI, séries de food cost et de coût de main-d'œuvre, valeur du stock. Lecture seule, sans logAudit." },
+    { "id": "otherroutes", "label": "12 autres routeurs", "sub": "settings, search, staff…", "layer": "routes", "kind": "route", "path": "src/routes/", "role": "settings, backup, menu, menuplanning, staff, robots, search, admin, donnees, demo, health, antiwaste." },
+    { "id": "llm", "label": "Passerelle LLM", "sub": "src/shared/llm.ts", "layer": "services", "kind": "service", "path": "src/shared/llm.ts, fournisseur/", "role": "Une seule porte d'entrée : Ollama natif, serveurs OpenAI-compatible locaux, fournisseurs cloud en liste blanche, repli vision Tesseract, réparation JSON (jsonrepair)." },
+    { "id": "ocr", "label": "OCR", "sub": "PaddleOCR + Tesseract", "layer": "services", "kind": "service", "path": "src/shared/ocr.ts, shared/ocr-moteurs/", "role": "PaddleOCR PP-OCRv5 hors ligne (poids 12,8 Mo hors git) et repli tesseract.js. Contrôles de format, locale, DLC et gardes arithmétiques." },
+    { "id": "sensorhub", "label": "SensorHub (SSE)", "sub": "src/services/sensor-hub.ts", "layer": "services", "kind": "service", "path": "src/services/sensor-hub.ts", "role": "Singleton : attache les clients /api/sensors/stream, heartbeat, trames event/data, alimenté par le webhook IoT et le balayage de données périmées." },
+    { "id": "coffre", "label": "Coffre à clés", "sub": "safeStorage / 0600", "layer": "services", "kind": "security", "path": "src/services/coffre.ts", "role": "Stocke les clés API hors base ; /api/clef ne rend que l'état, jamais la valeur." },
+    { "id": "backup", "label": "Sauvegarde & snapshot", "sub": "ZIP horaire · rotation 5", "layer": "services", "kind": "service", "path": "src/services/db-backup.ts, snapshot-sqlite.ts", "role": "Sauvegarde automatique du répertoire de données et snapshot SQLite cohérent pour l'export maître." },
+    { "id": "epicure", "label": "Moteur Epicure", "sub": "CSV + safetensors", "layer": "services", "kind": "service", "path": "epicure.ts, epicure_*.csv, embeddings.*.safetensors", "role": "Embeddings d'ingrédients 300 d, substitutions et accords ; calcul local, 100 % hors ligne." },
+    { "id": "pdf", "label": "Exports PDF / CSV", "sub": "jspdf · papaparse", "layer": "services", "kind": "service", "path": "src/components/purchasing/orderPdf.ts, lib/fiches.ts", "role": "Bons de commande, fiches, guides, exports HACCP et inventaire." },
+    { "id": "sqlite", "label": "SQLite", "sub": "27 tables · WAL", "layer": "data", "kind": "data", "path": "src/db/init.ts", "role": "agent_culinaire.db dans ~/.clausio (ou USER_DATA_PATH). 27 CREATE TABLE, migrations idempotentes ensureColumn(), index, purge des sessions expirées." },
+    { "id": "files", "label": "Fichiers locaux", "sub": "uploads · modèles OCR", "layer": "data", "kind": "data", "path": "uploads/, resources/ocr/modeles/", "role": "Pièces jointes, modèles OCR et ressources embarquées. Aucune donnée métier dans le cloud." },
+    { "id": "ci", "label": "CI GitHub", "sub": "7 jobs", "layer": "harnais", "kind": "gate", "path": ".github/workflows/ci.yml", "role": "types, build, sécurité, vitest, journal, e2e, gates. Chaque échec laisse un artifact lisible." },
+    { "id": "gates", "label": "verify:all", "sub": "114 portes · 24 morsures", "layer": "harnais", "kind": "gate", "path": "scripts/run-all-gates.py, scripts/lire-gates.py", "role": "JugeLU : chaque porte est un npm run, rc par porte, verdict GATES/ROUGES. lire-gates.py ne rend jamais de vide en silence." },
+    { "id": "release", "label": "Release + installateurs", "sub": "v1.0.7 · 4 plateformes", "layer": "harnais", "kind": "gate", "path": ".github/workflows/build-windows.yml", "role": "NSIS Windows, DMG Apple Silicon, AppImage + deb ARM64 construits sur runners natifs, smoke AppImage et SOMMES-SHA256.txt." },
+    { "id": "docs", "label": "AGENTS / PHASES", "sub": "contrat + journal ancré", "layer": "harnais", "kind": "gate", "path": "AGENTS.md, PHASES.md, docs/", "role": "Le contrat des deux cerveaux, le journal chronologique par chantier et les comptes rendus d'audit ; verify:split vérifie l'anti-perte du journal." },
+    { "id": "ollama", "label": "Ollama local", "sub": "11434 · 8080 · 1234 · 8000", "layer": "externe", "kind": "external", "path": "src/shared/serveurs-locaux.ts", "role": "Moteur d'inférence local par défaut, détecté au démarrage ; vision incluse." },
+    { "id": "cloud", "label": "Fournisseurs cloud", "sub": "liste blanche fermée", "layer": "externe", "kind": "external", "path": "src/shared/fournisseur/blanc.ts", "role": "OpenAI, Mistral, Anthropic, Cohere, DeepSeek — optionnel ; URL non remplaçable (anti evil-proxy)." },
+    { "id": "iot", "label": "Capteurs IoT", "sub": "webhook à jeton", "layer": "externe", "kind": "external", "path": "src/routes/haccp.ts", "role": "Envoient des relevés de température ; le webhook est authentifié par jeton, hors session." }
+  ],
+  "edges": [
+    { "from": "user", "to": "browser", "label": "utilise" },
+    { "from": "user", "to": "agent", "label": "demande" },
+    { "from": "agent", "to": "hermesroutes", "label": "propose" },
+    { "from": "electron", "to": "browser", "label": "ouvre" },
+    { "from": "electron", "to": "server", "label": "spawn / require" },
+    { "from": "browser", "to": "app", "label": "React" },
+    { "from": "app", "to": "authgate", "label": "garde" },
+    { "from": "app", "to": "views", "label": "Suspense" },
+    { "from": "app", "to": "i18n", "label": "langue" },
+    { "from": "app", "to": "uikit", "label": "Toast" },
+    { "from": "views", "to": "cdfetch", "label": "fetch /api" },
+    { "from": "authgate", "to": "cdfetch", "label": "session" },
+    { "from": "cdfetch", "to": "http", "label": "cookie cd_session" },
+    { "from": "http", "to": "server", "label": "requête" },
+    { "from": "server", "to": "middleware", "label": "1· rate-limit" },
+    { "from": "middleware", "to": "middleware", "label": "2· session" },
+    { "from": "middleware", "to": "authroutes", "label": "identité" },
+    { "from": "middleware", "to": "authgate", "label": "401 / 403" },
+    { "from": "server", "to": "audit", "label": "journal" },
+    { "from": "server", "to": "authroutes", "label": "monte" },
+    { "from": "server", "to": "inventory", "label": "monte" },
+    { "from": "server", "to": "documents", "label": "monte" },
+    { "from": "server", "to": "recipes", "label": "monte" },
+    { "from": "server", "to": "purchasing", "label": "monte" },
+    { "from": "server", "to": "haccp", "label": "monte" },
+    { "from": "server", "to": "airoutes", "label": "monte" },
+    { "from": "server", "to": "hermesroutes", "label": "monte" },
+    { "from": "server", "to": "suggestions", "label": "monte" },
+    { "from": "server", "to": "epicureroute", "label": "monte" },
+    { "from": "server", "to": "dashboard", "label": "monte" },
+    { "from": "server", "to": "otherroutes", "label": "monte" },
+    { "from": "authroutes", "to": "sqlite", "label": "users · sessions" },
+    { "from": "inventory", "to": "sqlite", "label": "inventory" },
+    { "from": "documents", "to": "ocr", "label": "extraction" },
+    { "from": "ocr", "to": "llm", "label": "repli / JSON" },
+    { "from": "documents", "to": "sqlite", "label": "documents" },
+    { "from": "recipes", "to": "sqlite", "label": "recipes" },
+    { "from": "purchasing", "to": "pdf", "label": "bon de commande" },
+    { "from": "purchasing", "to": "sqlite", "label": "suppliers" },
+    { "from": "haccp", "to": "sensorhub", "label": "relevés" },
+    { "from": "haccp", "to": "sqlite", "label": "HACCP" },
+    { "from": "sensorhub", "to": "http", "label": "SSE" },
+    { "from": "iot", "to": "haccp", "label": "webhook jeton" },
+    { "from": "airoutes", "to": "llm", "label": "prompt" },
+    { "from": "hermesroutes", "to": "llm", "label": "contexte" },
+    { "from": "hermesroutes", "to": "suggestions", "label": "write" },
+    { "from": "suggestions", "to": "sqlite", "label": "suggestions" },
+    { "from": "suggestions", "to": "audit", "label": "application humaine" },
+    { "from": "llm", "to": "ollama", "label": "défaut local" },
+    { "from": "llm", "to": "cloud", "label": "optionnel" },
+    { "from": "llm", "to": "coffre", "label": "clés API" },
+    { "from": "epicureroute", "to": "epicure", "label": "analyse" },
+    { "from": "epicure", "to": "files", "label": "CSV · embeddings" },
+    { "from": "dashboard", "to": "sqlite", "label": "agrégats" },
+    { "from": "server", "to": "backup", "label": "démarrage" },
+    { "from": "backup", "to": "files", "label": "ZIP · snapshot" },
+    { "from": "middleware", "to": "audit", "label": "actor_kind" },
+    { "from": "docs", "to": "ci", "label": "contrat" },
+    { "from": "ci", "to": "gates", "label": "verify:all" },
+    { "from": "gates", "to": "release", "label": "tag v*" },
+    { "from": "release", "to": "electron", "label": "installeur" },
+    { "from": "release", "to": "user", "label": "téléchargement" }
+  ],
+  "flows": [
+    {
+      "id": "identite",
+      "title": "Ouvrir l'app · créer le compte maître",
+      "summary": "Premier lancement : base vierge, assistant de configuration, premier compte argon2.",
+      "nodes": ["user", "electron", "server", "authgate", "authroutes", "sqlite", "app"],
+      "steps": [
+        { "n": 1, "node": "electron", "action": "Démarre le serveur et vérifie le jeton d'instance", "file": "electron/main.cjs", "detail": "ready-parity.cjs lit COOKDRIVE_READY ou le fichier de comptes rendu ; le BrowserWindow ne s'ouvre qu'après correspondance du jeton." },
+        { "n": 2, "node": "server", "action": "Initialise la base et monte les routeurs", "file": "server.ts:107-270", "detail": "initDatabase() crée 27 tables et applique les migrations ensureColumn() ; l'assistant ne se lance que si la base est vierge et sans marqueur." },
+        { "n": 3, "node": "authgate", "action": "Distingue setup et login", "file": "src/components/AuthGate.tsx", "detail": "GET /api/auth/me échoue en 401 → GET /api/auth/etat choisit l'écran de création du premier compte." },
+        { "n": 4, "node": "authroutes", "action": "Crée le compte maître", "file": "src/routes/auth.ts", "detail": "POST /api/auth/setup refuse toute création si un utilisateur existe déjà ; le mot de passe est haché argon2." },
+        { "n": 5, "node": "sqlite", "action": "Persiste users et sessions", "file": "src/db/init.ts", "detail": "La table users porte role CHECK(maitre|staff|agent) et active ; sessions stocke token_hash (SHA-256) et expires_at (12 h)." }
+      ],
+      "gates": ["verify:auth", "verify:ready", "verify:instance-guard"]
+    },
+    {
+      "id": "session",
+      "title": "Se connecter · session argon2",
+      "summary": "Cookie HttpOnly SameSite=Strict, 401 AUTH_REQUISE / 403 AGENT_LECTURE_SEULE.",
+      "nodes": ["user", "authgate", "cdfetch", "http", "middleware", "authroutes", "sqlite", "app"],
+      "steps": [
+        { "n": 1, "node": "authgate", "action": "Affiche l'écran d'identité", "file": "src/components/EcranIdentite.tsx", "detail": "Login ou setup selon /api/auth/etat." },
+        { "n": 2, "node": "authroutes", "action": "Vérifie le mot de passe", "file": "src/routes/auth.ts", "detail": "POST /api/auth/login compare le hash argon2 et crée une session ; /api/auth/logout la détruit." },
+        { "n": 3, "node": "middleware", "action": "Pose le cookie et garde les routes", "file": "src/middleware/auth.ts", "detail": "sessionMiddleware charge cd_session ; sessionGate répond 401 AUTH_REQUISE ou 403 AGENT_LECTURE_SEULE / MAITRE_REQUIS." },
+        { "n": 4, "node": "cdfetch", "action": "Relaye une expiration", "file": "src/lib/cdFetch.ts", "detail": "Tout 401 devient window 'cd-auth-expiree' ; AuthGate force la reconnexion sans perdre le fil." },
+        { "n": 5, "node": "sqlite", "action": "Purge les sessions expirées", "file": "src/db/init.ts", "detail": "Au démarrage, les lignes sessions dont expires_at est passé sont supprimées." }
+      ],
+      "gates": ["verify:auth", "verify:auth-barriere", "verify:ratelimit"]
+    },
+    {
+      "id": "inventaire",
+      "title": "Ajuster un stock",
+      "summary": "CRUD à clef unique sous rafale, alertes recalculées, dashboard mis à jour.",
+      "nodes": ["user", "views", "cdfetch", "http", "middleware", "inventory", "sqlite", "audit", "dashboard"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Édite la quantité dans InventoryAudit", "file": "src/components/InventoryAudit.tsx", "detail": "Les champs sont validés côté client puis envoyés en POST/PUT /api/inventory." },
+        { "n": 2, "node": "middleware", "action": "Autorise et journalise", "file": "src/middleware/auth.ts, src/services/audit.ts", "detail": "La session humaine passe ; l'agent est refusé 403 ; logAudit consigne la route, l'acteur et l'entité." },
+        { "n": 3, "node": "inventory", "action": "Applique le delta ou la ligne", "file": "src/routes/inventory.ts", "detail": "POST /api/inventory/consume porte un contrat de delta exact ; nouvelId() garantit des clefs distinctes même dans la même milliseconde." },
+        { "n": 4, "node": "sqlite", "action": "Écrit inventory et alertes", "file": "src/db/init.ts", "detail": "Les seuils minStock alimentent la table alerts ; POST /api/alerts/scan peut les recalculer." },
+        { "n": 5, "node": "dashboard", "action": "Relit les KPI", "file": "src/routes/dashboard.ts", "detail": "GET /api/dashboard/stats et stock-data renvoient la valeur du stock et les alertes critiques à la prochaine visite." }
+      ],
+      "gates": ["verify:consume", "verify:inventory-put", "verify:ids-uniques", "verify:audit"]
+    },
+    {
+      "id": "facture",
+      "title": "Scanner une facture (OCR → écriture)",
+      "summary": "Upload multer, OCR Paddle/Tesseract, réparation JSON LLM, rattachement aux fournisseurs et stocks.",
+      "nodes": ["user", "views", "cdfetch", "http", "middleware", "documents", "ocr", "llm", "sqlite", "purchasing", "audit"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Dépose le fichier dans DocumentManager", "file": "src/components/DocumentManager.tsx", "detail": "POST /api/documents/upload passe par uploadLimiter et multer memoryStorage (25 Mo/fichier, 5 fichiers, extensions exécutables bloquées)." },
+        { "n": 2, "node": "documents", "action": "Crée le document", "file": "src/routes/documents.ts", "detail": "Ligne documents avec statut brouillon ; l'identifiant vient de nouvelId()." },
+        { "n": 3, "node": "ocr", "action": "Extrait les lignes et totaux", "file": "src/shared/ocr.ts, shared/ocr-moteurs/paddle.ts", "detail": "PaddleOCR PP-OCRv5 hors ligne ; bandes d'image et gardes de locale (date, nombre, mots-clés) pour ne pas perdre 'Total HT'." },
+        { "n": 4, "node": "llm", "action": "Structure le résultat", "file": "src/shared/llm.ts", "detail": "jsonrepair répare le JSON du modèle ; à défaut, extraction déterministe et validation par document-items.ts." },
+        { "n": 5, "node": "purchasing", "action": "Alimente prix fournisseur et inventaire", "file": "src/routes/supplierprices.ts", "detail": "Le prix par référence est calculé puis vérifié depuis la facture (is_verified_from_invoice)." },
+        { "n": 6, "node": "audit", "action": "Trace la validation", "file": "src/routes/documents.ts", "detail": "POST /api/documents/:id/validate est signé par l'humain et inscrit dans audit_log." }
+      ],
+      "gates": ["verify:documents-validate", "verify:document-items", "verify:extraction", "verify:ocr-corrompu"]
+    },
+    {
+      "id": "fiche-ia",
+      "title": "Créer une fiche technique avec l'IA",
+      "summary": "L'IA pré-remplit, le chef édite et valide ; la fiche n'est jamais enregistrée sans clic humain.",
+      "nodes": ["user", "views", "airoutes", "llm", "ollama", "cloud", "recipes", "sqlite", "audit"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Discute dans CulinaryChat (onglet Ingénierie)", "file": "src/components/MenuAnalysis.tsx, CulinaryChat.tsx", "detail": "L'historique de chat vit dans un module store useSyncExternalStore, pas dans une base." },
+        { "n": 2, "node": "airoutes", "action": "Envoie le prompt borné", "file": "src/routes/ai.ts", "detail": "POST /api/ai/chat : historique assaini et tronqué par recette-chat.historiqueSur (budget ai : 60 appels / 5 min)." },
+        { "n": 3, "node": "llm", "action": "Génère la fiche", "file": "src/shared/llm.ts", "detail": "Ollama local par défaut ; repli OCR vision ; cloud en liste blanche uniquement." },
+        { "n": 4, "node": "views", "action": "Ouvre la fiche dans FichesTechniques", "file": "src/components/FichesTechniques.tsx", "detail": "ficheDepuisChat est passé par App.tsx ; le chef corrige ingrédients, quantités, allergènes et étapes." },
+        { "n": 5, "node": "recipes", "action": "Enregistre après validation", "file": "src/routes/recipes.ts", "detail": "POST /api/recipes crée la fiche et ses recipe_ingredients ; PUT /api/recipes/:id/save marque la fiche comme validée." },
+        { "n": 6, "node": "audit", "action": "Consigne l'écriture", "file": "src/services/audit.ts", "detail": "actor_kind=humain : l'IA n'a jamais écrit elle-même." }
+      ],
+      "gates": ["verify:recipes", "verify:mode-agent", "verify:mode-manuel", "verify:llm-porte"]
+    },
+    {
+      "id": "achats",
+      "title": "Commande fournisseur → réception",
+      "summary": "Panier consolidé, bon de commande PDF, réception qui réinjecte le stock.",
+      "nodes": ["user", "views", "cdfetch", "http", "purchasing", "pdf", "sqlite", "inventory", "audit"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Consolide le panier par fournisseur", "file": "src/components/Purchasing.tsx", "detail": "Les prix viennent de supplier_prices, dus ou vérifiés depuis facture." },
+        { "n": 2, "node": "purchasing", "action": "Calcule la prévision", "file": "src/routes/suppliers.ts", "detail": "GET /api/purchasing/forecast agrège les besoins et les seuils d'inventaire." },
+        { "n": 3, "node": "pdf", "action": "Génère le bon de commande", "file": "src/components/purchasing/orderPdf.ts", "detail": "jspdf + autotable, numérotation et coordonnées fournisseur." },
+        { "n": 4, "node": "user", "action": "Valide et envoie", "file": "src/components/Purchasing.tsx", "detail": "POST /api/purchasing/order crée la commande avec la signature de l'utilisateur." },
+        { "n": 5, "node": "inventory", "action": "Reçoit la livraison", "file": "src/routes/suppliers.ts", "detail": "POST /api/purchasing/orders/:id/receive crée les lots et incrémente le stock, avec DLC et température de réception." }
+      ],
+      "gates": ["verify:purchasing", "verify:supplier-price", "verify:forecast", "verify:post-inventory"]
+    },
+    {
+      "id": "haccp",
+      "title": "Température IoT en direct (SSE)",
+      "summary": "Webhook à jeton → base → SensorHub → EventSource → action corrective tracée.",
+      "nodes": ["iot", "haccp", "sqlite", "sensorhub", "http", "views", "audit"],
+      "steps": [
+        { "n": 1, "node": "iot", "action": "Poste un relevé", "file": "src/routes/haccp.ts", "detail": "POST /api/haccp/webhook/iot-report est authentifié par jeton de capteur, hors session (iot_sensors.webhook_token)." },
+        { "n": 2, "node": "sqlite", "action": "Écrit temperature_logs", "file": "src/db/init.ts", "detail": "Les lectures manuelles passent par POST /api/haccp/temperature et portent la même trace." },
+        { "n": 3, "node": "sensorhub", "action": "Diffuse l'événement", "file": "src/services/sensor-hub.ts", "detail": "GET /api/sensors/stream est exempt de rate-limit : Content-Type text/event-stream, retry 2500, heartbeat : ping, trames event/data." },
+        { "n": 4, "node": "views", "action": "Affiche en direct", "file": "src/components/Haccp.tsx", "detail": "new EventSource('/api/sensors/stream') avec écouteurs sensor, sensors et stale." },
+        { "n": 5, "node": "haccp", "action": "Ouvre une action corrective", "file": "src/routes/haccp.ts", "detail": "POST /api/haccp/corrective-action est obligatoirement tracé (CE 852/2004 art. 5)." }
+      ],
+      "gates": ["verify:sse", "verify:haccp", "verify:audit", "verify:ratelimit"]
+    },
+    {
+      "id": "hermes",
+      "title": "Hermes propose · l'humain applique",
+      "summary": "La seule écriture de l'agent est une suggestion ; le maître applique ou rejette avec motif.",
+      "nodes": ["sqlite", "agent", "hermesroutes", "llm", "suggestions", "audit", "user"],
+      "steps": [
+        { "n": 1, "node": "agent", "action": "Surveille l'établissement", "file": "src/services/surveillance.ts", "detail": "Ruptures imminentes, stock mort, écarts d'inventaire, DLC proches, températures hors bornes ; seuils configurables." },
+        { "n": 2, "node": "hermesroutes", "action": "Construit le contexte et interroge le LLM", "file": "src/routes/hermes.ts, src/services/hermes.ts", "detail": "POST /api/hermes/reflechir : schéma + résumé dashboard ; COOKDRIVE_HERMES_FACTICE=1 rend un cerveau déterministe en CI." },
+        { "n": 3, "node": "suggestions", "action": "Écrit une suggestion validée", "file": "src/routes/suggestions.ts", "detail": "POST /api/suggestions est la seule route mutable ouverte à l'agent ; route cible et payload sont en liste blanche." },
+        { "n": 4, "node": "user", "action": "Applique ou rejette", "file": "src/routes/suggestions.ts", "detail": "POST /api/suggestions/:id/applique rejoue la route cible SOUS LA SIGNATURE DU MAÎTRE ; /:id/rejete exige un motif." },
+        { "n": 5, "node": "audit", "action": "Trace la décision", "file": "src/services/audit.ts", "detail": "actor_kind=agent pour la suggestion, humain pour l'application : la chaîne de responsabilité est complète." }
+      ],
+      "gates": ["verify:hermes", "verify:suggestions", "verify:surveillance", "verify:mode-mord"]
+    },
+    {
+      "id": "planning",
+      "title": "Plan de production",
+      "summary": "Des fiches et du planning au volume de couverts, avec des identifiants uniques sous rafale.",
+      "nodes": ["views", "cdfetch", "http", "otherroutes", "sqlite", "recipes"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Ajuste le nombre de couverts", "file": "src/components/ProductionPlan.tsx", "detail": "Le plan recalcule les quantités à partir des fiches et du panier." },
+        { "n": 2, "node": "otherroutes", "action": "Écrit la planification", "file": "src/routes/menuplanning.ts", "detail": "POST /api/menu-planning utilise nouvelId() : sous 40 écritures parallèles, l'ancienne horloge nue produisait 33 refus." },
+        { "n": 3, "node": "sqlite", "action": "Conserve les lignes", "file": "src/db/init.ts", "detail": "La table menu_planning est indexée ; U3/U4 du verify:ids-uniques relisent 240 lignes et vérifient 240 identifiants distincts." }
+      ],
+      "gates": ["verify:ids-uniques", "verify:ids-uniques-mord", "verify:routes"]
+    },
+    {
+      "id": "epicure",
+      "title": "Accords aromatiques (Epicure)",
+      "summary": "Analyse 100 % locale : embeddings 300 d, substitutions et accords, sans LLM.",
+      "nodes": ["user", "views", "cdfetch", "http", "epicureroute", "epicure", "files"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Choisissez un ingrédient dans Epicure Studio", "file": "src/components/EpicureStudio.tsx", "detail": "La jauge d'harmonie est un SVG 2D ; aucun moteur 3D n'est embarqué." },
+        { "n": 2, "node": "epicureroute", "action": "Demande l'analyse", "file": "src/routes/epicure.ts", "detail": "POST /api/epicure/analyze, GET /api/epicure/recommendations, GET /api/epicure/vocab-list." },
+        { "n": 3, "node": "epicure", "action": "Calcule les proximités", "file": "epicure.ts", "detail": "EpicureModel charge epicure_*.csv et les trois embeddings.*.safetensors depuis le chemin empaqueté (résolu sans process.cwd())." }
+      ],
+      "gates": ["verify:chemins-empaquete", "verify:routes", "verify:bundle"]
+    },
+    {
+      "id": "dashboard",
+      "title": "Lire le tableau de bord",
+      "summary": "Food cost, labor cost, stock et alertes : agrégats SQLite tracés dans des courbes.",
+      "nodes": ["user", "views", "cdfetch", "http", "dashboard", "sqlite"],
+      "steps": [
+        { "n": 1, "node": "views", "action": "Ouvre l'onglet Tableau de bord", "file": "src/components/DashboardOverview.tsx", "detail": "Trois appels : /api/dashboard/stats, cost-data, stock-data ; rendu Recharts." },
+        { "n": 2, "node": "dashboard", "action": "Agrège les écritures", "file": "src/routes/dashboard.ts", "detail": "food cost = achats fournisseurs ; labor cost = planning × taux horaires ; la journée en cours est incluse." },
+        { "n": 3, "node": "sqlite", "action": "Fournit les données", "file": "src/db/init.ts", "detail": "Route strictement en lecture : aucun logAudit, aucune écriture." }
+      ],
+      "gates": ["verify:dashboard", "verify:kpi", "verify:labor-cost-zero"]
+    },
+    {
+      "id": "distribution",
+      "title": "Du commit à l'installateur",
+      "summary": "CI à sept jobs, 114 portes jugées, puis quatre assets signés par sommes SHA-256.",
+      "nodes": ["docs", "ci", "gates", "release", "electron", "user"],
+      "steps": [
+        { "n": 1, "node": "docs", "action": "Le contrat et le journal voyagent avec le code", "file": "AGENTS.md, PHASES.md", "detail": "verify:split recolle le journal et vérifie l'ancre .orig contre le blob git commité." },
+        { "n": 2, "node": "ci", "action": "Sept jobs parallèles", "file": ".github/workflows/ci.yml", "detail": "types, build (< 620 ko), sécurité, vitest, journal, e2e, gates. Les échecs laissent des artifacts." },
+        { "n": 3, "node": "gates", "action": "Juge LU les 114 portes", "file": "scripts/run-all-gates.py, scripts/lire-gates.py", "detail": "Une porte absente de DEFAUT ou de package.json n'est pas une porte ; un PASS sans morsure n'est pas une mesure." },
+        { "n": 4, "node": "release", "action": "Compile sur runners natifs", "file": ".github/workflows/build-windows.yml", "detail": "Windows NSIS (windows-latest), macOS DMG (macos-latest), Linux AppImage + deb (ubuntu-24.04-arm), smoke AppImage sous xvfb, SOMMES-SHA256.txt." },
+        { "n": 5, "node": "user", "action": "Télécharge et installe", "file": "README.md", "detail": "Une installation = un établissement ; les données restent dans ~/.clausio ou %APPDATA%/ClausIO." }
+      ],
+      "gates": ["verify:all", "verify:split", "verify:sommes-release", "verify:smoke-installateurs", "verify:livrable"]
+    }
+  ],
+  "tables": [
+    "inventory", "recipes", "recipe_ingredients", "documents", "document_items", "alerts", "inventory_prices", "supplier_prices", "temperature_logs", "suppliers", "batches", "corrective_actions", "haccp_documents", "cleaning_records", "production_records", "production_batches", "traceability_labels", "robots", "staff", "staff_schedule", "menu_planning", "iot_sensors", "users", "sessions", "audit_log", "suggestions", "demo_kit"
+  ],
+  "gates_summary": {
+    "declared": 117,
+    "in_lot": 114,
+    "mutation_gates": 24,
+    "runner": "python3 scripts/run-all-gates.py",
+    "read": "python3 scripts/lire-gates.py",
+    "rule": "Une porte doit figurer dans package.json ET dans DEFAUT de scripts/run-all-gates.py (sinon PORTES_INCONNUES rc=2).",
+    "env_exemples": {
+      "COOKDRIVE_AUTH_OFF": "harnais uniquement : désactive la garde de session",
+      "COOKDRIVE_RATELIMIT_OFF": "harnais uniquement : désactive le limiteur",
+      "COOKDRIVE_AGENT_OFF": "coupe le mode agent (suggestions fermées)",
+      "COOKDRIVE_HERMES_FACTICE": "cerveau déterministe en CI",
+      "USER_DATA_PATH": "répertoire de données isolé pour une sonde",
+      "COOKDRIVE_CLIENT_DB": "base client réelle pour les portes dépendant du terrain"
+    }
+  },
+  "agent_handoff": {
+    "where_to_start": [
+      "Lire AGENTS.md (contrat des deux cerveaux) puis ce fichier.",
+      "Pour une route : src/routes/<module>.ts, puis src/db/init.ts pour les colonnes, puis le test test/e2e/ ou test/unit/ correspondant.",
+      "Pour une vue : src/components/<Vue>.tsx, déclarée dans lazy-views.ts, branchée dans App.tsx.",
+      "Pour une porte : package.json ET DEFAUT de scripts/run-all-gates.py, avec une morsure -mord si la porte juge quelque chose."
+    ],
+    "must_read": ["AGENTS.md", "README.md", "PHASES.md", "docs/architecture.json", ".env.example"],
+    "commands": {
+      "install": "npm ci",
+      "run": "npm run dev",
+      "types": "npm run lint",
+      "unit": "npm test",
+      "build": "npm run build && npm run build:server",
+      "all_gates": "npm run verify:all",
+      "read_verdict": "python3 scripts/lire-gates.py"
+    },
+    "forbidden": [
+      "Ne jamais mettre une variable COOKDRIVE_*OFF en production.",
+      "Ne jamais grepper test/gates.out directement (octets nuls).",
+      "Ne jamais écrire un chiffre sans la commande qui l'a produit dans le même tour.",
+      "Ne jamais faire écrire l'IA dans une table métier : elle passe par suggestions."
+    ],
+    "regenerate_map": "node scripts/gen-architecture.mjs"
+  }
+}
