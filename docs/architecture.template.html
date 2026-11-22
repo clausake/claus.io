@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claus.io — Architecture &amp; Flows</title>
+<meta name="description" content="Cartographie interactive de l'architecture de claus.io v1.0.7 : le système en 30 secondes, un clic pour lire le chemin réel dans le code.">
+<!--
+  PAGE GENEREE — ne pas editer a la main.
+  Source : docs/architecture.json + docs/architecture.template.html
+  Regenerer : node scripts/gen-architecture.mjs
+  Le JSON est embarque ci-dessous : cette page fonctionne hors ligne, comme claus.io.
+-->
+<style>
+  :root{
+    --bg:#0a0d12; --panel:#0e131b; --panel2:#111823; --line:#1e2836;
+    --ink:#e8edf5; --muted:#7f8da3; --faint:#586679; --gold:#eab308;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:13px; overflow:hidden;
+  }
+  header{
+    padding:12px 18px 10px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#0d1219,#0a0d12);
+  }
+  h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.2px}
+  h1 span{color:var(--gold)}
+  .sub{margin-top:3px;color:var(--muted);font-size:11px}
+  .sub b{color:#cbd5e1;font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:9.5px;font-family:var(--mono)}
+  .dot{width:7px;height:7px;border-radius:2px;display:inline-block}
+  main{display:flex;height:calc(100vh - 92px);min-height:0}
+  #stage{
+    flex:1;min-width:0;overflow:auto;position:relative;
+    background-image:
+      radial-gradient(900px 420px at 30% -10%,rgba(234,179,8,.055),transparent 70%),
+      linear-gradient(rgba(148,163,184,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(148,163,184,.035) 1px,transparent 1px);
+    background-size:auto,26px 26px,26px 26px;
+  }
+  #canvas{position:relative}
+  .layer-head{
+    position:absolute;top:9px;font-family:var(--mono);font-size:9px;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+    border-bottom:1px solid var(--line);padding-bottom:4px;white-space:nowrap;
+  }
+  .node{
+    position:absolute;width:154px;height:46px;padding:6px 8px 5px 10px;
+    border:1px solid var(--nc);border-left:3px solid var(--nc);border-radius:4px;
+    background:linear-gradient(180deg,#121a25,#0e141d); cursor:pointer;
+    transition:opacity .18s,transform .18s,border-color .18s,box-shadow .18s;
+    overflow:hidden;
+  }
+  .node:hover{transform:translateY(-1px);background:linear-gradient(180deg,#172130,#111925)}
+  .node .t{font:600 10.5px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .s{font:9px var(--mono);color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node.dim{opacity:.23}
+  .node.hot{border-color:var(--gold);border-left-color:var(--gold);box-shadow:0 0 0 1px rgba(234,179,8,.25),0 0 18px rgba(234,179,8,.18);opacity:1;z-index:3}
+  .node.hot .s{color:#d6c078}
+  #wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+  #wires path{fill:none;stroke:#334155;stroke-width:1.05;opacity:.5;transition:stroke .18s,opacity .18s,stroke-width .18s}
+  #wires path.dim{opacity:.08}
+  #wires path.hot{stroke:var(--gold);stroke-width:2;opacity:1;filter:drop-shadow(0 0 4px rgba(234,179,8,.5));stroke-dasharray:7 5;animation:flow 1.4s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  aside{
+    width:326px;flex:none;border-left:1px solid var(--line);background:var(--panel);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .panel-head{padding:11px 14px 9px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .panel-head h2{margin:0;font:600 10px var(--mono);letter-spacing:.18em;color:var(--muted)}
+  .btn{
+    background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:3px;
+    font:9.5px var(--mono);padding:4px 7px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--gold);color:var(--gold)}
+  #flows{overflow:auto;max-height:47%;padding:5px}
+  .flow{
+    display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;
+    border-left:2px solid #263247;border-radius:3px;padding:7px 8px;margin:2px 0;cursor:pointer;color:var(--ink);
+  }
+  .flow:hover{background:#131b27}
+  .flow.active{background:#1a1a10;border-color:rgba(234,179,8,.45);border-left-color:var(--gold)}
+  .flow .ft{font:600 10.5px var(--sans)}
+  .flow .fs{font:9px var(--mono);color:var(--muted);margin-top:3px;line-height:1.35}
+  #details{border-top:1px solid var(--line);overflow:auto;flex:1;padding:10px 14px 20px}
+  #details h3{margin:0 0 3px;font:600 11px var(--sans);color:var(--gold)}
+  #details .why{font:9.5px var(--mono);color:var(--muted);line-height:1.5;margin:0 0 12px}
+  .step{display:grid;grid-template-columns:20px 1fr;gap:8px;padding:0 0 13px;position:relative}
+  .step:before{content:"";position:absolute;left:9px;top:18px;bottom:0;width:1px;background:#263247}
+  .step:last-child:before{display:none}
+  .num{
+    width:19px;height:19px;border:1px solid var(--gold);border-radius:50%;color:var(--gold);
+    font:600 9px var(--mono);display:flex;align-items:center;justify-content:center;background:#0d1117;z-index:1;
+  }
+  .act{font:600 10.5px var(--sans);line-height:1.35}
+  .file{font:9px var(--mono);color:#67e8f9;margin:3px 0;word-break:break-all}
+  .det{font:9.5px var(--mono);color:var(--muted);line-height:1.5}
+  .gates{margin-top:10px;display:flex;flex-wrap:wrap;gap:4px}
+  .gate{font:8.5px var(--mono);color:#93c5fd;border:1px solid #1e3a5f;border-radius:2px;padding:2px 4px}
+  .rel{display:block;width:100%;text-align:left;margin:4px 0;background:#121a25;border:1px solid var(--line);color:var(--ink);border-radius:3px;padding:6px 8px;font:10px var(--sans);cursor:pointer}
+  .rel:hover{border-color:var(--gold)}
+  footer{
+    padding:7px 14px;border-top:1px solid var(--line);font:9px var(--mono);color:var(--faint);
+    display:flex;justify-content:space-between;gap:8px;
+  }
+  footer a{color:#67e8f9;text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  @media (max-width:900px){
+    body{overflow:auto}
+    main{display:block;height:auto}
+    #stage{height:60vh}
+    aside{width:100%;border-left:0;border-top:1px solid var(--line)}
+    #flows{max-height:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>claus.io <span>— Architecture &amp; Flows</span></h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="legend" id="legend"></div>
+</header>
+<main>
+  <div id="stage"><div id="canvas"><svg id="wires"></svg></div></div>
+  <aside>
+    <div class="panel-head"><h2>FLUX</h2><button class="btn" id="reset">réinitialiser</button></div>
+    <div id="flows"></div>
+    <div class="panel-head"><h2 id="detail-title">ÉTAPES</h2></div>
+    <div id="details"></div>
+    <footer>
+      <span id="meta"></span>
+      <a href="architecture.json" target="_blank" rel="noopener">voir le JSON ↗</a>
+    </footer>
+  </aside>
+</main>
+<script id="arch-data" type="application/json">__ARCH_DATA__</script>
+<script>
+(function(){
+  "use strict";
+  var DATA = JSON.parse(document.getElementById('arch-data').textContent);
+  var byId = {}; DATA.nodes.forEach(function(n){ byId[n.id]=n; });
+  var buckets = {}; DATA.nodes.forEach(function(n){ (buckets[n.layer]=buckets[n.layer]||[]).push(n); });
+  var COL=176, ROW=54, PX=26, PY=44, NW=154, NH=46;
+  var maxRows = Math.max.apply(null,Object.keys(buckets).map(function(k){return buckets[k].length;}));
+  var W = PX*2 + DATA.layers.length*COL;
+  var H = PY*2 + maxRows*ROW;
+  var canvas=document.getElementById('canvas'), stage=document.getElementById('stage'), wires=document.getElementById('wires');
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  wires.setAttribute('viewBox','0 0 '+W+' '+H);
+  wires.style.width=W+'px'; wires.style.height=H+'px';
+
+  document.getElementById('subtitle').innerHTML =
+    'Le système en 30 secondes, mesuré dans le code. <b>Clique un flux ou un nœud</b> pour lire le chemin réel, étape par étape.';
+  var legend=document.getElementById('legend');
+  Object.keys(DATA.kinds).forEach(function(k){
+    var s=document.createElement('span');
+    s.innerHTML='<i class="dot" style="background:'+DATA.kinds[k].color+'"></i>'+DATA.kinds[k].label;
+    legend.appendChild(s);
+  });
+  document.getElementById('meta').textContent =
+    DATA.product.version+' · '+DATA.product.metrics.endpoints+' endpoints · '+DATA.product.metrics.database_tables+
+    ' tables · '+DATA.product.metrics.gates_in_lot+' portes';
+
+  DATA.layers.forEach(function(l,i){
+    var h=document.createElement('div'); h.className='layer-head';
+    h.style.left=(PX+i*COL)+'px'; h.style.width=(COL-14)+'px';
+    h.textContent=(i+1)+' · '+l.label; canvas.appendChild(h);
+  });
+
+  DATA.nodes.forEach(function(n){
+    var li=DATA.layers.findIndex(function(l){return l.id===n.layer;});
+    var ri=buckets[n.layer].indexOf(n);
+    n._x=PX+li*COL+6; n._y=PY+ri*ROW;
+    var el=document.createElement('div'); el.className='node'; el.dataset.node=n.id;
+    el.style.left=n._x+'px'; el.style.top=n._y+'px';
+    var c=DATA.kinds[n.kind] ? DATA.kinds[n.kind].color : '#94a3b8';
+    el.style.setProperty('--nc',c+'99');
+    el.innerHTML='<div class="t">'+esc(n.label)+'</div><div class="s">'+esc(n.sub)+'</div>';
+    el.title=n.role+'\n'+n.path;
+    el.addEventListener('click',function(){ selectNode(n.id); });
+    canvas.appendChild(el);
+  });
+
+  var edgeEls=DATA.edges.map(function(e,idx){
+    var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',pathFor(e)); p.dataset.edge=idx; wires.appendChild(p); return p;
+  });
+
+  function pathFor(e){
+    var a=byId[e.from], b=byId[e.to]; if(!a||!b) return '';
+    if(a===b){
+      var x=a._x+NW-8, y=a._y+8;
+      return 'M'+x+' '+y+' C'+(x+34)+' '+(y-30)+' '+(x-40)+' '+(y-30)+' '+(x-4)+' '+(y+NH/2);
+    }
+    var x1=a._x+NW, y1=a._y+NH/2, x2=b._x, y2=b._y+NH/2;
+    var bend=Math.max(26,Math.abs(x2-x1)*0.45);
+    return 'M'+x1+' '+y1+' C'+(x1+bend)+' '+y1+' '+(x2-bend)+' '+y2+' '+x2+' '+y2;
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var flowBox=document.getElementById('flows'), detail=document.getElementById('details'), dtitle=document.getElementById('detail-title');
+  DATA.flows.forEach(function(f){
+    var b=document.createElement('button'); b.className='flow'; b.dataset.flow=f.id;
+    b.innerHTML='<div class="ft">'+esc(f.title)+'</div><div class="fs">'+esc(f.summary)+'</div>';
+    b.addEventListener('click',function(){ selectFlow(f.id); });
+    flowBox.appendChild(b);
+  });
+
+  var activeFlow=null, activeNode=null;
+  function clear(){
+    activeFlow=null; activeNode=null;
+    document.querySelectorAll('.node').forEach(function(el){ el.classList.remove('hot','dim'); });
+    edgeEls.forEach(function(p){ p.classList.remove('hot','dim'); });
+    document.querySelectorAll('.flow').forEach(function(b){ b.classList.remove('active'); });
+    dtitle.textContent='ÉTAPES';
+    detail.innerHTML='<p class="why">Chaque flux ci-dessus est une vraie chaîne d\'appels du dépôt. Clique pour suivre le chemin : les nœuds et les liens concernés s\'allument, les étapes détaillées apparaissent ici. Le modèle de données complet est dans le JSON.</p>';
+  }
+  function selectFlow(id){
+    activeFlow=id; activeNode=null;
+    var f=DATA.flows.find(function(x){return x.id===id;}); if(!f) return;
+    paint(f.nodes, f.nodes);
+    document.querySelectorAll('.flow').forEach(function(b){ b.classList.toggle('active',b.dataset.flow===id); });
+    dtitle.textContent='ÉTAPES · '+f.nodes.length+' nœuds';
+    var html='<h3>'+esc(f.title)+'</h3><p class="why">'+esc(f.summary)+'</p>';
+    f.steps.forEach(function(s){
+      html+='<div class="step"><div class="num">'+s.n+'</div><div><div class="act">'+esc(s.action)+'</div>'+
+            '<div class="file">'+esc(s.file)+'</div><div class="det">'+esc(s.detail)+'</div></div></div>';
+    });
+    if(f.gates && f.gates.length){
+      html+='<div class="gates">'+f.gates.map(function(g){return '<span class="gate">'+esc(g)+'</span>';}).join('')+'</div>';
+    }
+    detail.innerHTML=html; detail.scrollTop=0;
+    focusNode(f.nodes[f.nodes.length-1]);
+  }
+  function selectNode(id){
+    activeNode=id; activeFlow=null;
+    var n=byId[id]; if(!n) return;
+    var linked=DATA.flows.filter(function(f){return f.nodes.indexOf(id)>=0;});
+    var set={}, edges={}; set[id]=1;
+    linked.forEach(function(f){ f.nodes.forEach(function(x){set[x]=1;}); });
+    DATA.edges.forEach(function(e,i){ if(set[e.from]&&set[e.to]) edges[i]=1; });
+    paint(Object.keys(set),Object.keys(set),edges);
+    document.querySelectorAll('.flow').forEach(function(b){ b.classList.remove('active'); });
+    dtitle.textContent='NŒUD';
+    var html='<h3>'+esc(n.label)+'</h3><p class="why">'+esc(n.role)+'</p>'+
+             '<div class="file">'+esc(n.path)+'</div><p class="why">Couche : '+esc((DATA.layers.find(function(l){return l.id===n.layer;})||{}).label||n.layer)+
+             ' · '+linked.length+' flux traversent ce nœud.</p>';
+    linked.forEach(function(f){
+      html+='<button class="rel" data-go="'+esc(f.id)+'">→ '+esc(f.title)+'</button>';
+    });
+    detail.innerHTML=html; detail.scrollTop=0;
+    Array.prototype.forEach.call(detail.querySelectorAll('[data-go]'),function(b){
+      b.addEventListener('click',function(){ selectFlow(b.dataset.go); });
+    });
+    focusNode(id);
+  }
+  function paint(nodes,hotNodes,edgeSet){
+    var ns={}, hs={}; nodes.forEach(function(x){ns[x]=1;}); hotNodes.forEach(function(x){hs[x]=1;});
+    document.querySelectorAll('.node').forEach(function(el){
+      var id=el.dataset.node;
+      el.classList.toggle('hot',!!hs[id]);
+      el.classList.toggle('dim',!ns[id]);
+    });
+    edgeEls.forEach(function(p,i){
+      var e=DATA.edges[i];
+      var isHot = edgeSet ? !!edgeSet[i] : (!!hs[e.from]&&!!hs[e.to]);
+      p.classList.toggle('hot',isHot);
+      p.classList.toggle('dim',!isHot);
+    });
+  }
+  function focusNode(id){
+    var n=byId[id]; if(!n) return;
+    var left=n._x-W/2+NW/2;
+    stage.scrollTo({left:Math.max(0,left),behavior:'smooth'});
+  }
+  document.getElementById('reset').addEventListener('click',clear);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') clear(); });
+  clear();
+})();
+</script>
+</body>
+</html>

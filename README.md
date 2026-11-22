@@ -77,12 +77,15 @@ La liste des serveurs locaux est détectée automatiquement au démarrage (ports
 
 ## Architecture
 
-- **Frontend** : React 19 + Vite + Tailwind CSS, lazy-loading par vue
-- **Backend** : Express + SQLite (20 routeurs, `server.ts` 258 lignes), `127.0.0.1:3000`
-- **Desktop** : Electron 45 (Windows NSIS, macOS DMG, Linux AppImage/deb)
+**[🗺️ Architecture & Flows](https://clausake.github.io/claus.io/architecture.html)** — la carte interactive : 42 nœuds, 62 liens, 12 flux réels. Cliquez un flux ou un nœud : le chemin s'allume et les étapes (fichier + rôle) s'affichent à droite. **[Démo 14 s](https://clausake.github.io/claus.io/public/demo-architecture.mp4)**. La même carte existe en **[JSON](https://clausake.github.io/claus.io/architecture.json)** pour le prochain agent qui travaille sur une fonctionnalité : `docs/architecture.json` est la source de vérité, la page en est générée par `node scripts/gen-architecture.mjs` (`--check` vérifie qu'elle est à jour).
+
+- **Frontend** : React 19 + Vite + Tailwind CSS, 15 vues chargées à la demande
+- **Backend** : Express + SQLite (25 routeurs, **117 endpoints**, `server.ts` 401 lignes), `127.0.0.1:3000`
+- **Desktop** : Electron 41 (Windows NSIS, macOS DMG, Linux AppImage/deb), aucun IPC : le client parle au serveur en HTTP local
 - **OCR** : PaddleOCR PP-OCRv5 (12,8 Mo, hors ligne) + repli Tesseract
 - **Epicure** : embeddings d'ingrédients 300d (arXiv:2605.22391)
 - **Identité** : sessions argon2, audit trail de chaque écriture (règlement CE 852/2004 art. 5)
+- **Règle d'or** : l'agent lit et propose ; l'humain clique et exécute. Sa seule écriture est la table `suggestions`.
 
 ## Prérequis
 
