@@ -115,7 +115,7 @@ jobs:
 
   # ── Lot 2 : unites ────────────────────────────────────────────────────────
   vitest:
-    name: vitest (226 tests)
+    name: vitest (unités + portes agents)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
