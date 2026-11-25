@@ -66,6 +66,14 @@ const ECRITURES_AGENT = new Set([
   // Chantier 5 : le cerveau Hermes n'ecrit que ses propositions dans SA
   // table (contexte -> consigne -> LLM injecte -> suggestions).
   "/hermes/reflechir",
+  // GH-600 (domaines 2/5) : les outils MCP et l'orchestration sont exemptes
+  // POUR LA MEME RAISON que Hermes — leur registre ne contient aucun outil
+  // ecrivant dans le metier. /mcp/appel ne peut deposer que dans suggestions
+  // (validerProposition + ROUTES_CIBLES), /orchestration/* idem. Le role est
+  // re-juge dans chaque route (staff refuse, agent coupe sous AGENT_OFF).
+  "/mcp/appel",
+  "/orchestration/run",
+  "/orchestration/reprendre",
   // MODE SANS AGENT (§8) : quand COOKDRIVE_AGENT_OFF=1, ces exemptions sont
   // FERMEES (voir plus bas) — l'agent ne propose plus rien, la boite lui rend
   // 404 et la gate 403 sur toute ecriture.

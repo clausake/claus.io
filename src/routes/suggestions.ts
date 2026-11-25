@@ -40,8 +40,10 @@ export const ROUTES_CIBLES = new Set([
   "/api/haccp/iot-sensors", "/api/robots/assign",
 ]);
 
-const TYPES = ["stock", "achat", "menu", "haccp", "general", "anomalie"];
-const PRIORITES = ["basse", "normale", "haute"];
+// Exportees (GH-600) : le registre d'outils MCP et l'orchestration jugent
+// les memes enums que la boite — une seule source de verite, pas une copie.
+export const TYPES = ["stock", "achat", "menu", "haccp", "general", "anomalie"];
+export const PRIORITES = ["basse", "normale", "haute"];
 
 function currentUser(res: { locals: Record<string, unknown> }): SessionUser | undefined {
   return res.locals.user as SessionUser | undefined;

@@ -68,6 +68,8 @@ import aiRouter from "./src/routes/ai.js";
 import suggestionsRouter from "./src/routes/suggestions.js";
 import surveillanceRouter from "./src/routes/surveillance.js";
 import hermesRouter from "./src/routes/hermes.js";
+import mcpRouter from "./src/routes/mcp.js";
+import orchestrationRouter from "./src/routes/orchestration.js";
 import demoRouter from "./src/routes/demo.js";
 import donneesRouter from "./src/routes/donnees.js";
 import { metierVierge, dejaSeme, semer } from "./src/routes/demo.js";
@@ -246,6 +248,11 @@ async function startServer() {
   // Cerveau Hermes (chantier 5) : contexte -> consigne -> LLM injecte ->
   // propositions validees -> suggestions. LLM JAMAIS juge par une porte.
   app.use(hermesRouter(db, logAudit));
+  // GH-600 : registre d'outils MCP (lecture + proposition) et orchestration
+  // multi-agents. Meme regle que Hermes : aucun outil n'ecrit dans le metier,
+  // les runs et leurs handoffs sont des artifacts auditables (§8).
+  app.use(mcpRouter(db, logAudit));
+  app.use(orchestrationRouter(db, logAudit));
   // Reprise des donnees d'une ancienne installation (chantier 49) : le
   // chemin REELLEMENT actif + la proposition d'import des bases anciennes
   // detectees en lecture seule.

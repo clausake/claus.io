@@ -8,6 +8,11 @@ Application de bureau **100 % locale** : vos données (fournisseurs, factures, s
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](https://nodejs.org)
 
+> Cartographie des 6 domaines du certificat **GH-600 (Agentic AI Developer)**
+> couverts par le dépôt — registre MCP, orchestration multi-agents, évals et
+> garde-fous §8 : [docs/GH-600.md](docs/GH-600.md). Ce n'est pas une
+> certification : l'examen reste individuel.
+
 <!-- Le « ?v= » n'est pas décoratif : l'URL brute d'une image est servie avec
      cache-control max-age=300 et les navigateurs (et les proxys) gardent la
      copie précédente du même chemin. Un lecteur qui avait ouvert le README

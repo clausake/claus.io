@@ -501,6 +501,34 @@ export async function initDatabase(): Promise<DbInitResult> {
     CREATE INDEX IF NOT EXISTS idx_demo_kit_entite ON demo_kit(entite);
   `);
 
+  // GH-600 (domaines 3 et 5) — traces d'orchestration multi-agents. Une
+  // table de RUN (statut durable, reprisable) et une table de HANDOFFS
+  // (artifacts inspectables : contexte lu, analyse, verdict du verificateur).
+  // CREATE TABLE IF NOT EXISTS : aucune migration destructive, les bases
+  // d'avant restent lisibles (porte verify:donnees-anciennes). Aucun agent
+  // n'ecrit ici directement : ces tables sont des artefacts d'audit, pas du
+  // metier, et elles ne remplacent pas la boite de suggestions (§8).
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id TEXT PRIMARY KEY,
+      statut TEXT NOT NULL DEFAULT 'en_cours' CHECK(statut IN ('en_cours','termine','echeche')),
+      etape_courante TEXT,
+      erreur TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS agent_handoffs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id TEXT NOT NULL,
+      etape INTEGER NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('observateur','analyste','verificateur')),
+      action TEXT NOT NULL,
+      artifact TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_handoffs_run ON agent_handoffs(run_id, etape);
+  `);
+
   // Purge des sessions expirees : la table ne doit pas grossir sans limite
   // sur une installation qui tourne des mois.
   await db.run("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);

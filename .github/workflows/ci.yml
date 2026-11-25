@@ -125,6 +125,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test -- --reporter=default
+      - name: portes agents (outils MCP + orchestration + evals)
+        run: npm run verify:agents
+      - name: portes agents HTTP (vrai serveur, routes montees)
+        run: npm run verify:agents-http
+      - name: mordant agents (les fautes injectees doivent rougir)
+        run: npm run verify:agents-mord
       - name: artifact vitest (si rouge)
         if: failure()
         uses: actions/upload-artifact@v4
